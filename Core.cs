@@ -54,6 +54,7 @@ internal static class Core
         _ = new LocalizationService();
 
         NEW_SHARED_KEY = Convert.FromBase64String(SecretManager.GetNewSharedKey());
+        LayoutService.Initialize();
 
         if (SystemService.PrefabCollectionSystem._PrefabGuidToEntityMap.TryGetValue(PrefabGUIDs.SetBonus_AllLeech_T09, out Entity prefabEntity)
             && prefabEntity.TryGetBuffer<ModifyUnitStatBuff_DOTS>(out var buffer))
@@ -68,6 +69,7 @@ internal static class Core
         _client = null;
         _systemService = null;
         CanvasService = null;
+        LayoutService.Reset();
         _initialized = false;
         _localCharacter = Entity.Null;
         _localUser = Entity.Null;

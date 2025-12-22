@@ -44,6 +44,7 @@ internal class CanvasService
     static BufferLookup<ModifyUnitStatBuff_DOTS> ModifyUnitStatBuffLookup
         => ClientChatSystemPatch.ModifyUnitStatBuffLookup;
     static bool Eclipsed { get; } = Plugin.Eclipsed;
+    static bool AttributeBuffs => Plugin.AttributeBuffsEnabled;
     public static WaitForSeconds WaitForSeconds { get; } = Eclipsed
         ? new WaitForSeconds(0.1f)
         : new WaitForSeconds(1f);
@@ -75,6 +76,31 @@ internal class CanvasService
             Core.Log.LogError($"Failed to initialize UI elements: {ex}");
         }
     }
+
+    public void RebuildLayout()
+    {
+        _ready = false;
+        LayoutService.Reset();
+        ResetState();
+
+        _barNumber = 0;
+        _graphBarNumber = 0;
+        _windowOffset = 0f;
+
+        FindSprites();
+
+        try
+        {
+            InitializeUI();
+            InitializeAbilitySlotButtons();
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"Failed to rebuild UI elements: {ex}");
+        }
+
+        _ready = true;
+    }
     public static IEnumerator CanvasUpdateLoop()
     {
         while (true)
@@ -102,7 +128,7 @@ internal class CanvasService
                 }
             }
 
-            var buffer = TryGetSourceBuffer();
+            var buffer = AttributeBuffs ? TryGetSourceBuffer() : default;
 
             if (_legacyBar)
             {
@@ -130,7 +156,7 @@ internal class CanvasService
                 }
             }
 
-            if (StatBuffActive)
+            if (StatBuffActive && AttributeBuffs)
             {
                 try
                 {
@@ -417,6 +443,16 @@ internal class CanvasService
                 if (keyValuePair.Value && AbilitySlotNamePaths.ContainsKey(keyValuePair.Key))
                 {
                     GameObject abilitySlotObject = GameObject.Find(AbilitySlotNamePaths[keyValuePair.Key]);
+                    if (abilitySlotObject == null)
+                    {
+                        continue;
+                    }
+
+                    if (abilitySlotObject.GetComponent<SimpleStunButton>() != null)
+                    {
+                        continue;
+                    }
+
                     SimpleStunButton stunButton = abilitySlotObject.AddComponent<SimpleStunButton>();
 
                     if (keyValuePair.Key.Equals(UIElement.Professions))
@@ -1707,6 +1743,8 @@ internal class CanvasService
                     rectTransform.localScale = adaptiveElement.KeyboardMouseScale;
                 }
             }
+
+            LayoutService.ApplyLayoutsForInput(isGamepad);
         }
     }
     public static class ConfigureHUD
@@ -1738,6 +1776,7 @@ internal class CanvasService
 
                         shiftSlotObject.transform.SetParent(abilitiesTransform, false);
                         shiftSlotObject.SetActive(false);
+                        LayoutService.RegisterElement("ShiftSlot", rectTransform);
 
                         shiftSlotEntry = shiftSlotObject.GetComponent<AbilityBarEntry>();
                         shiftSlotEntry._CurrentUIState.CachedInputVersion = 3;
@@ -1806,16 +1845,13 @@ internal class CanvasService
         public static void ConfigureQuestWindow(ref GameObject questObject, UIElement questType, Color headerColor,
             ref LocalizedText header, ref LocalizedText subHeader, ref Image questIcon)
         {
+            bool compactQuests = LayoutService.CurrentOptions.CompactQuests;
+
             // Instantiate quest tooltip
-            questObject = UnityEngine.Object.Instantiate(_canvasBase.BottomBarParentPrefab.FakeTooltip.gameObject);
+            questObject = UnityEngine.Object.Instantiate(_canvasBase.BottomBarParentPrefab.FakeTooltip.gameObject, _bottomBarCanvas.transform, false);
             RectTransform questTransform = questObject.GetComponent<RectTransform>();
 
-            // Prevent quest window from being destroyed on scene load and move to scene
-            UnityEngine.Object.DontDestroyOnLoad(questObject);
-            SceneManager.MoveGameObjectToScene(questObject, SceneManager.GetSceneByName("VRisingWorld"));
-
-            // Set parent and activate quest window
-            questTransform.SetParent(_bottomBarCanvas.transform, false);
+            // Activate quest window
             questTransform.gameObject.layer = _layer;
             questObject.SetActive(true);
 
@@ -1864,12 +1900,13 @@ internal class CanvasService
                 }
             }
 
-            tooltipIconTransform.sizeDelta = new Vector2(tooltipIconTransform.sizeDelta.x * 0.35f, tooltipIconTransform.sizeDelta.y * 0.35f);
+            float iconScale = 0.35f;
+            tooltipIconTransform.sizeDelta = new Vector2(tooltipIconTransform.sizeDelta.x * iconScale, tooltipIconTransform.sizeDelta.y * iconScale);
 
             // Set LocalizedText for QuestHeaders
             GameObject subHeaderObject = FindTargetUIObject(iconNameObject.transform, "TooltipSubHeader");
             header = FindTargetUIObject(iconNameObject.transform, "TooltipHeader").GetComponent<LocalizedText>();
-            header.Text.fontSize *= 2f;
+            header.Text.fontSize *= compactQuests ? 1.5f : 2f;
             header.Text.color = headerColor;
             subHeader = subHeaderObject.GetComponent<LocalizedText>();
             subHeader.Text.enableAutoSizing = false;
@@ -1882,7 +1919,9 @@ internal class CanvasService
             subHeaderFitter.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
 
             // Size window
-            questTransform.sizeDelta = new Vector2(questTransform.sizeDelta.x * 0.65f, questTransform.sizeDelta.y);
+            float widthScale = compactQuests ? 0.55f : 0.65f;
+            float heightScale = compactQuests ? 0.7f : 1f;
+            questTransform.sizeDelta = new Vector2(questTransform.sizeDelta.x * widthScale, questTransform.sizeDelta.y * heightScale);
 
             // Set anchor and pivots
             questTransform.anchorMin = new Vector2(1, _windowOffset); // Anchored to bottom-right
@@ -1917,7 +1956,8 @@ internal class CanvasService
             // Add to active objects
             DataHUD.GameObjects.Add(questType, questObject);
             ObjectStates.Add(questObject, true);
-            _windowOffset += 0.075f;
+            LayoutService.RegisterElement($"Quest.{questType}", questTransform);
+            _windowOffset += compactQuests ? 0.055f : 0.075f;
 
             // Register positions
             RegisterAdaptiveElement(
@@ -1941,29 +1981,35 @@ internal class CanvasService
             ref LocalizedText firstText, ref LocalizedText secondText, ref LocalizedText thirdText)
         {
             // Instantiate the bar object from the prefab
-            barGameObject = UnityEngine.Object.Instantiate(_canvasBase.TargetInfoParent.gameObject);
-            // barGameObject = UIHelper.InstantiateGameObjectUnderAnchor(_canvasBase.TargetInfoParent.gameObject, _targetInfoPanelCanvas.transform);
-            // barGameObject = UIHelper.InstantiateGameObject(_canvasBase.TargetInfoParent.gameObject);
-            // UIHelper.SetParent(barGameObject.transform, _targetInfoPanelCanvas.transform, false);
-
-            // DontDestroyOnLoad, change scene
-            UnityEngine.Object.DontDestroyOnLoad(barGameObject);
-            SceneManager.MoveGameObjectToScene(barGameObject, SceneManager.GetSceneByName("VRisingWorld"));
-
+            barGameObject = UnityEngine.Object.Instantiate(_canvasBase.TargetInfoParent.gameObject, _targetInfoPanelCanvas.transform, false);
             RectTransform barRectTransform = barGameObject.GetComponent<RectTransform>();
-            // barRectTransform.SetParent(_bottomBarCanvas.transform, false);
-            barRectTransform.SetParent(_targetInfoPanelCanvas.transform, false);
             barRectTransform.gameObject.layer = _layer;
 
-            // Set anchor and pivot to middle-upper-right
-            float offsetY = BAR_HEIGHT_SPACING * _barNumber;
-            float offsetX = 1f - BAR_WIDTH_SPACING;
-            barRectTransform.anchorMin = new Vector2(offsetX, 0.6f - offsetY);
-            barRectTransform.anchorMax = new Vector2(offsetX, 0.6f - offsetY);
-            barRectTransform.pivot = new Vector2(offsetX, 0.6f - offsetY);
+            bool verticalBars = LayoutService.CurrentOptions.VerticalBars;
 
-            // Best scale found so far for different resolutions
-            barRectTransform.localScale = new Vector3(0.7f, 0.7f, 1f);
+            if (verticalBars)
+            {
+                float offsetX = 0.94f - (_barNumber * 0.03f);
+                float offsetY = 0.52f;
+                barRectTransform.anchorMin = new Vector2(offsetX, offsetY);
+                barRectTransform.anchorMax = new Vector2(offsetX, offsetY);
+                barRectTransform.pivot = new Vector2(offsetX, offsetY);
+                barRectTransform.localScale = new Vector3(0.5f, 1f, 1f);
+                barRectTransform.localRotation = Quaternion.Euler(0, 0, -90);
+            }
+            else
+            {
+                // Set anchor and pivot to middle-upper-right
+                float offsetY = BAR_HEIGHT_SPACING * _barNumber;
+                float offsetX = 1f - BAR_WIDTH_SPACING;
+                barRectTransform.anchorMin = new Vector2(offsetX, 0.6f - offsetY);
+                barRectTransform.anchorMax = new Vector2(offsetX, 0.6f - offsetY);
+                barRectTransform.pivot = new Vector2(offsetX, 0.6f - offsetY);
+
+                // Best scale found so far for different resolutions
+                barRectTransform.localScale = new Vector3(0.7f, 0.7f, 1f);
+                barRectTransform.localRotation = Quaternion.identity;
+            }
 
             // Assign fill, header, and level text components
             fill = FindTargetUIObject(barRectTransform.transform, "Fill").GetComponent<Image>();
@@ -1977,7 +2023,7 @@ internal class CanvasService
 
             // Set header text
             header.ForceSet(element.ToString());
-            header.Text.fontSize *= 1.5f;
+            header.Text.fontSize *= verticalBars ? 1.1f : 1.5f;
             _horizontalBarHeaderFontSize = header.Text.fontSize;
 
             // Set these to 0 so don't appear, deactivating instead seemed funky
@@ -1988,26 +2034,34 @@ internal class CanvasService
             informationPanelObject = FindTargetUIObject(barRectTransform.transform, "InformationPanel");
             ConfigureInformationPanel(ref informationPanelObject, ref firstText, ref secondText, ref thirdText, element);
 
+            if (verticalBars)
+            {
+                RectTransform headerRect = header.GetComponent<RectTransform>();
+                headerRect.localRotation = Quaternion.identity;
+
+                RectTransform levelRect = level.GetComponent<RectTransform>();
+                levelRect.localRotation = Quaternion.identity;
+
+                informationPanelObject.SetActive(true);
+                firstText.enabled = true;
+                secondText.enabled = true;
+                thirdText.enabled = true;
+            }
+
             // Increment for spacing
             _barNumber++;
             barGameObject.SetActive(true);
 
             ObjectStates.Add(barGameObject, true);
             DataHUD.GameObjects.Add(element, barGameObject);
+            LayoutService.RegisterElement($"Bar.{element}", barRectTransform);
         }
         public static void ConfigureVerticalProgressBar(ref GameObject barGameObject, ref Image progressFill, ref Image maxFill,
             ref LocalizedText level, Profession profession)
         {
             // Instantiate the bar object from the prefab
-            barGameObject = UnityEngine.Object.Instantiate(_canvasBase.TargetInfoParent.gameObject);
-            // barGameObject = UIHelper.InstantiateGameObject(_canvasBase.TargetInfoParent.gameObject);
-            // UIHelper.SetParent(barGameObject.transform, _targetInfoPanelCanvas.transform, false);
-
-            UnityEngine.Object.DontDestroyOnLoad(barGameObject);
-            SceneManager.MoveGameObjectToScene(barGameObject, SceneManager.GetSceneByName("VRisingWorld"));
-
+            barGameObject = UnityEngine.Object.Instantiate(_canvasBase.TargetInfoParent.gameObject, _targetInfoPanelCanvas.transform, false);
             RectTransform barRectTransform = barGameObject.GetComponent<RectTransform>();
-            barRectTransform.SetParent(_targetInfoPanelCanvas.transform, false);
             barRectTransform.gameObject.layer = _layer;
 
             // Define the number of professions (bars)
@@ -2074,6 +2128,7 @@ internal class CanvasService
 
             ObjectStates.Add(barGameObject, true);
             ProfessionObjects.Add(barGameObject);
+            LayoutService.RegisterElement($"Profession.{profession}", barRectTransform);
 
             // Keyboard/Mouse layout
             float offsetX_KM = padding + barWidth * _graphBarNumber / 1.4f;

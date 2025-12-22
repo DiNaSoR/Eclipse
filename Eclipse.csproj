@@ -16,6 +16,15 @@
 	<EnablePreviewFeatures>true</EnablePreviewFeatures>
 	</PropertyGroup>
 
+	<PropertyGroup>
+		<ClientInstallPath Condition="Exists('$(MSBuildProjectDirectory)\..\VRising')">$(MSBuildProjectDirectory)\..\VRising</ClientInstallPath>
+		<ClientInstallPath Condition="'$(ClientInstallPath)'==''">C:\Program Files (x86)\Steam\steamapps\common\VRising</ClientInstallPath>
+		<ClientInteropPath>$(ClientInstallPath)\BepInEx\interop</ClientInteropPath>
+		<ServerInteropPath Condition="Exists('$(MSBuildProjectDirectory)\..\BepInEx\interop')">$(MSBuildProjectDirectory)\..\BepInEx\interop</ServerInteropPath>
+		<InteropPath Condition="Exists('$(ClientInteropPath)')">$(ClientInteropPath)</InteropPath>
+		<InteropPath Condition="'$(InteropPath)'=='' and Exists('$(ServerInteropPath)')">$(ServerInteropPath)</InteropPath>
+	</PropertyGroup>
+
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
 		<Optimize>True</Optimize>
 	</PropertyGroup>
@@ -28,11 +37,22 @@
 	<ItemGroup>
 		<PackageReference Include="BepInEx.PluginInfoProps" Version="2.1.0" />
 		<PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.733" />
+	</ItemGroup>
+
+	<ItemGroup Condition="!Exists('$(InteropPath)')">
 		<PackageReference Include="VRising.Unhollowed.Client" Version="1.1.9.9219901" />
 	</ItemGroup>
+
+	<ItemGroup Condition="Exists('$(InteropPath)')">
+		<ClientInteropAssemblies Include="$(InteropPath)\*.dll" />
+		<Reference Include="@(ClientInteropAssemblies)">
+			<HintPath>%(ClientInteropAssemblies.FullPath)</HintPath>
+			<Private>false</Private>
+		</Reference>
+	</ItemGroup>
 	
-	<Target Name="BuildToClient" AfterTargets="Build">
-		<Copy SourceFiles="$(TargetDir)$(ProjectName).dll" DestinationFolder="C:\Program Files (x86)\Steam\steamapps\common\VRising\BepInEx\plugins" />
+	<Target Name="BuildToClient" AfterTargets="Build" Condition="Exists('$(ClientInstallPath)\BepInEx\plugins')">
+		<Copy SourceFiles="$(TargetDir)$(ProjectName).dll" DestinationFolder="$(ClientInstallPath)\BepInEx\plugins" />
 	</Target>
 	
 </Project>
