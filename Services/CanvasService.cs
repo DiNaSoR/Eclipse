@@ -9,6 +9,7 @@ using ProjectM.UI;
 using Stunlock.Core;
 using StunShared.UI;
 using System.Collections;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using TMPro;
@@ -219,6 +220,28 @@ internal class CanvasService
                     Core.Log.LogError($"Error updating professions(2): {e}");
                 }
             }
+            if (_classUi)
+            {
+                try
+                {
+                    UpdateClassPanels();
+                }
+                catch (Exception e)
+                {
+                    Core.Log.LogError($"Error updating class panels: {e}");
+                }
+            }
+            if (_tabsUi)
+            {
+                try
+                {
+                    UpdateTabPanels();
+                }
+                catch (Exception e)
+                {
+                    Core.Log.LogError($"Error updating tabs panel: {e}");
+                }
+            }
             // if (_killSwitch) yield break;
 
             try
@@ -346,6 +369,38 @@ internal class CanvasService
         AdaptiveElements.Clear();
 
         Sprites.Clear();
+
+        _classListObject = null;
+        _classListHeader = null;
+        _classListSubHeader = null;
+        _classListEntriesRoot = null;
+        _classListEntryTemplate = null;
+        _classListEntries.Clear();
+        _classListEntryButtons.Clear();
+
+        _classSpellsObject = null;
+        _classSpellsHeader = null;
+        _classSpellsSubHeader = null;
+        _classSpellsEntriesRoot = null;
+        _classSpellsEntryTemplate = null;
+        _classSpellsEntries.Clear();
+        _classSpellsEntryButtons.Clear();
+
+        _tabsNavObject = null;
+        _tabsNavHeader = null;
+        _tabsNavSubHeader = null;
+        _tabsNavEntriesRoot = null;
+        _tabsNavEntryTemplate = null;
+        _tabsNavEntries.Clear();
+        _tabsNavEntryButtons.Clear();
+
+        _tabsContentObject = null;
+        _tabsContentHeader = null;
+        _tabsContentSubHeader = null;
+        _tabsContentEntriesRoot = null;
+        _tabsContentEntryTemplate = null;
+        _tabsContentEntries.Clear();
+        _tabsContentEntryButtons.Clear();
     }
     public static class InitializeHUD
     {
@@ -425,6 +480,28 @@ internal class CanvasService
                 ConfigureVerticalProgressBar(ref _harvestingGameObject, ref _harvestingProgressFill, ref _harvestingFill, ref _harvestingLevelText, Profession.Harvesting);
                 ConfigureVerticalProgressBar(ref _miningBarGameObject, ref _miningProgressFill, ref _miningFill, ref _miningLevelText, Profession.Mining);
                 ConfigureVerticalProgressBar(ref _woodcuttingBarGameObject, ref _woodcuttingProgressFill, ref _woodcuttingFill, ref _woodcuttingLevelText, Profession.Woodcutting);
+            }
+
+            if (_classUi)
+            {
+                ConfigureClassWindow(ref _classListObject, "Classes.List", "Classes", Color.white,
+                    new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(40f, 210f),
+                    ref _classListHeader, ref _classListSubHeader, ref _classListEntriesRoot, ref _classListEntryTemplate);
+
+                ConfigureClassWindow(ref _classSpellsObject, "Classes.Spells", "Class Spells", Color.white,
+                    new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(40f, 410f),
+                    ref _classSpellsHeader, ref _classSpellsSubHeader, ref _classSpellsEntriesRoot, ref _classSpellsEntryTemplate);
+            }
+
+            if (_tabsUi)
+            {
+                ConfigureClassWindow(ref _tabsNavObject, "Tabs.Nav", "Eclipse", Color.white,
+                    TabsNavAnchor, TabsNavPivot, TabsNavPosition,
+                    ref _tabsNavHeader, ref _tabsNavSubHeader, ref _tabsNavEntriesRoot, ref _tabsNavEntryTemplate);
+
+                ConfigureClassWindow(ref _tabsContentObject, "Tabs.Content", "Prestige", Color.white,
+                    TabsContentAnchor, TabsContentPivot, TabsContentPosition,
+                    ref _tabsContentHeader, ref _tabsContentSubHeader, ref _tabsContentEntriesRoot, ref _tabsContentEntryTemplate);
             }
 
             if (_shiftSlot)
@@ -835,6 +912,61 @@ internal class CanvasService
         public static string _weeklyTarget = "";
         public static bool _weeklyVBlood = false;
 
+        public static GameObject _classListObject;
+        public static LocalizedText _classListHeader;
+        public static LocalizedText _classListSubHeader;
+        public static Transform _classListEntriesRoot;
+        public static GameObject _classListEntryTemplate;
+        public static readonly List<LocalizedText> _classListEntries = [];
+        public static readonly List<SimpleStunButton> _classListEntryButtons = [];
+
+        public static GameObject _classSpellsObject;
+        public static LocalizedText _classSpellsHeader;
+        public static LocalizedText _classSpellsSubHeader;
+        public static Transform _classSpellsEntriesRoot;
+        public static GameObject _classSpellsEntryTemplate;
+        public static readonly List<LocalizedText> _classSpellsEntries = [];
+        public static readonly List<SimpleStunButton> _classSpellsEntryButtons = [];
+
+        public enum TabType
+        {
+            Prestige,
+            Exoform,
+            Battles
+        }
+
+        public static readonly List<TabType> TabOrder =
+        [
+            TabType.Prestige,
+            TabType.Exoform,
+            TabType.Battles
+        ];
+
+        public static readonly Dictionary<TabType, string> TabLabels = new()
+        {
+            { TabType.Prestige, "Prestige" },
+            { TabType.Exoform, "Exoform" },
+            { TabType.Battles, "Familiar Battles" }
+        };
+
+        public static TabType _activeTab = TabType.Prestige;
+
+        public static GameObject _tabsNavObject;
+        public static LocalizedText _tabsNavHeader;
+        public static LocalizedText _tabsNavSubHeader;
+        public static Transform _tabsNavEntriesRoot;
+        public static GameObject _tabsNavEntryTemplate;
+        public static readonly List<LocalizedText> _tabsNavEntries = [];
+        public static readonly List<SimpleStunButton> _tabsNavEntryButtons = [];
+
+        public static GameObject _tabsContentObject;
+        public static LocalizedText _tabsContentHeader;
+        public static LocalizedText _tabsContentSubHeader;
+        public static Transform _tabsContentEntriesRoot;
+        public static GameObject _tabsContentEntryTemplate;
+        public static readonly List<LocalizedText> _tabsContentEntries = [];
+        public static readonly List<SimpleStunButton> _tabsContentEntryButtons = [];
+
         public static PrefabGUID _abilityGroupPrefabGUID;
 
         public static AbilityTooltipData _abilityTooltipData;
@@ -876,6 +1008,13 @@ internal class CanvasService
         public static float _horizontalBarHeaderFontSize;
         public static float _windowOffset;
         public static readonly Color BrightGold = new(1f, 0.8f, 0f, 1f);
+
+        public static readonly Vector2 TabsNavAnchor = new(0f, 0f);
+        public static readonly Vector2 TabsNavPivot = new(0f, 0f);
+        public static readonly Vector2 TabsNavPosition = new(480f, 560f);
+        public static readonly Vector2 TabsContentAnchor = new(0f, 0f);
+        public static readonly Vector2 TabsContentPivot = new(0f, 0f);
+        public static readonly Vector2 TabsContentPosition = new(480f, 320f);
 
         public const float BAR_HEIGHT_SPACING = 0.075f;
         public const float BAR_WIDTH_SPACING = 0.065f;
@@ -1321,6 +1460,629 @@ internal class CanvasService
                 fill.fillAmount = level / MAX_PROFESSION_LEVEL;
             }
         }
+        public static void UpdateClassPanels()
+        {
+            if (_killSwitch || _classListObject == null || _classSpellsObject == null)
+            {
+                return;
+            }
+
+            if (!_classDataReady)
+            {
+                _classListSubHeader?.ForceSet("Awaiting class data...");
+                ClearEntries(_classListEntries, _classListEntryButtons);
+                _classSpellsSubHeader?.ForceSet(string.Empty);
+                ClearEntries(_classSpellsEntries, _classSpellsEntryButtons);
+                return;
+            }
+
+            if (!_classSystemEnabled)
+            {
+                _classListSubHeader?.ForceSet("Classes are disabled.");
+                ClearEntries(_classListEntries, _classListEntryButtons);
+                _classSpellsSubHeader?.ForceSet(string.Empty);
+                ClearEntries(_classSpellsEntries, _classSpellsEntryButtons);
+                return;
+            }
+
+            _classListHeader?.ForceSet("Classes");
+            string classStatus = _classType == PlayerClass.None
+                ? "Select a class."
+                : $"Current: {FormatClassName(_classType)}";
+            _classListSubHeader?.ForceSet(classStatus);
+
+            List<PlayerClass> classTypes = Enum.GetValues(typeof(PlayerClass))
+                .Cast<PlayerClass>()
+                .Where(playerClass => playerClass != PlayerClass.None)
+                .ToList();
+
+            EnsureEntries(_classListEntries, _classListEntryButtons, _classListEntriesRoot, _classListEntryTemplate, classTypes.Count, "ClassEntry");
+
+            if (_classListEntries.Count < classTypes.Count)
+            {
+                return;
+            }
+
+            for (int i = 0; i < classTypes.Count; i++)
+            {
+                PlayerClass playerClass = classTypes[i];
+                int classIndex = i + 1;
+
+                LocalizedText entryText = _classListEntries[i];
+                entryText.ForceSet($"{classIndex} | {FormatClassName(playerClass)}");
+
+                if (ClassColorHexMap.TryGetValue(playerClass, out Color classColor))
+                {
+                    entryText.Text.color = classColor;
+                }
+
+                entryText.Text.fontStyle = _classType == playerClass ? FontStyles.Bold : FontStyles.Normal;
+
+                string command = _classType == PlayerClass.None
+                    ? $".class s {classIndex}"
+                    : $".class c {classIndex}";
+
+                ConfigureCommandButton(_classListEntryButtons[i], command, true);
+            }
+
+            if (classTypes.Count == 0)
+            {
+                return;
+            }
+
+            PlayerClass spellsClass = _classType == PlayerClass.None ? classTypes[0] : _classType;
+            _classSpellsHeader?.ForceSet("Class Spells");
+            string shiftStatus = _classShiftSlotEnabled ? "Shift ready" : "Shift disabled";
+            _classSpellsSubHeader?.ForceSet($"{FormatClassName(spellsClass)} spells ({shiftStatus})");
+
+            _classSpells.TryGetValue(spellsClass, out List<int> classSpells);
+            classSpells ??= [];
+
+            List<(int Index, int SpellId)> spellEntries = [];
+
+            if (_defaultClassSpell != 0)
+            {
+                spellEntries.Add((0, _defaultClassSpell));
+            }
+
+            for (int i = 0; i < classSpells.Count; i++)
+            {
+                spellEntries.Add((i + 1, classSpells[i]));
+            }
+
+            EnsureEntries(_classSpellsEntries, _classSpellsEntryButtons, _classSpellsEntriesRoot, _classSpellsEntryTemplate, spellEntries.Count, "SpellEntry");
+
+            if (_classSpellsEntries.Count < spellEntries.Count)
+            {
+                return;
+            }
+
+            int activeIndex = _shiftSpellIndex >= 0 ? _shiftSpellIndex + 1 : -1;
+
+            for (int i = 0; i < spellEntries.Count; i++)
+            {
+                var (index, spellId) = spellEntries[i];
+                PrefabGUID spellPrefab = new(spellId);
+                string spellName = spellPrefab.GetLocalizedName();
+                if (string.IsNullOrEmpty(spellName) || spellName.Equals("LocalizationKey.Empty"))
+                {
+                    spellName = spellPrefab.GetPrefabName();
+                }
+
+                int requiredPrestige = index < _classSpellUnlockLevels.Count ? _classSpellUnlockLevels[index] : 0;
+                string requirement = requiredPrestige > 0 ? $" (P{requiredPrestige})" : string.Empty;
+
+                LocalizedText entryText = _classSpellsEntries[i];
+                entryText.ForceSet($"{index} | {spellName}{requirement}");
+                entryText.Text.fontStyle = index == activeIndex ? FontStyles.Bold : FontStyles.Normal;
+
+                bool canUse = _classShiftSlotEnabled;
+                ConfigureCommandButton(_classSpellsEntryButtons[i], $".class csp {index}", canUse);
+            }
+        }
+        /// <summary>
+        /// Updates the tab navigation and active tab content panels.
+        /// </summary>
+        public static void UpdateTabPanels()
+        {
+            if (_killSwitch || _tabsNavObject == null || _tabsContentObject == null)
+            {
+                return;
+            }
+
+            UpdateTabNavigation();
+            UpdateTabContent();
+        }
+        /// <summary>
+        /// Updates the tab navigation entries and selection state.
+        /// </summary>
+        static void UpdateTabNavigation()
+        {
+            _tabsNavHeader?.ForceSet("Eclipse");
+            _tabsNavSubHeader?.ForceSet("Select a tab.");
+
+            EnsureEntries(_tabsNavEntries, _tabsNavEntryButtons, _tabsNavEntriesRoot, _tabsNavEntryTemplate, TabOrder.Count, "Tab");
+
+            if (_tabsNavEntries.Count < TabOrder.Count)
+            {
+                return;
+            }
+
+            for (int i = 0; i < TabOrder.Count; i++)
+            {
+                TabType tab = TabOrder[i];
+                TabType capturedTab = tab;
+                string label = TabLabels.TryGetValue(tab, out string tabLabel) ? tabLabel : tab.ToString();
+
+                LocalizedText entryText = _tabsNavEntries[i];
+                entryText.Text.color = Color.white;
+                entryText.Text.fontStyle = _activeTab == tab ? FontStyles.Bold : FontStyles.Normal;
+                entryText.ForceSet($"{i + 1} | {label}");
+
+                ConfigureActionButton(_tabsNavEntryButtons[i], () => _activeTab = capturedTab, true);
+            }
+        }
+        /// <summary>
+        /// Updates the active tab content panel based on current tab selection.
+        /// </summary>
+        static void UpdateTabContent()
+        {
+            switch (_activeTab)
+            {
+                case TabType.Exoform:
+                    UpdateExoFormTab();
+                    break;
+                case TabType.Battles:
+                    UpdateFamiliarBattleTab();
+                    break;
+                default:
+                    UpdatePrestigeTab();
+                    break;
+            }
+        }
+        /// <summary>
+        /// Updates the prestige leaderboard tab content.
+        /// </summary>
+        static void UpdatePrestigeTab()
+        {
+            _tabsContentHeader?.ForceSet("Prestige Leaderboard");
+
+            if (!_prestigeDataReady)
+            {
+                _tabsContentSubHeader?.ForceSet("Awaiting prestige data...");
+                ClearEntries(_tabsContentEntries, _tabsContentEntryButtons);
+                return;
+            }
+
+            if (!_prestigeSystemEnabled)
+            {
+                _tabsContentSubHeader?.ForceSet("Prestige system disabled.");
+                ClearEntries(_tabsContentEntries, _tabsContentEntryButtons);
+                return;
+            }
+
+            if (!_prestigeLeaderboardEnabled)
+            {
+                _tabsContentSubHeader?.ForceSet("Prestige leaderboard disabled.");
+                ClearEntries(_tabsContentEntries, _tabsContentEntryButtons);
+                return;
+            }
+
+            if (_prestigeLeaderboardOrder.Count == 0)
+            {
+                _tabsContentSubHeader?.ForceSet("No prestige data available.");
+                ClearEntries(_tabsContentEntries, _tabsContentEntryButtons);
+                return;
+            }
+
+            if (_prestigeLeaderboardIndex >= _prestigeLeaderboardOrder.Count)
+            {
+                _prestigeLeaderboardIndex = 0;
+            }
+
+            string typeKey = _prestigeLeaderboardOrder[_prestigeLeaderboardIndex];
+            string displayType = SplitPascalCase(typeKey);
+            _tabsContentSubHeader?.ForceSet("Click type to cycle.");
+
+            _prestigeLeaderboards.TryGetValue(typeKey, out List<PrestigeLeaderboardEntry> leaderboard);
+            leaderboard ??= [];
+
+            List<TabEntry> entries =
+            [
+                new TabEntry($"Type: {displayType}", FontStyles.Bold, action: CyclePrestigeType, enabled: _prestigeLeaderboardOrder.Count > 1)
+            ];
+
+            if (leaderboard.Count == 0)
+            {
+                entries.Add(new TabEntry("No prestige entries yet.", FontStyles.Normal));
+            }
+            else
+            {
+                for (int i = 0; i < leaderboard.Count; i++)
+                {
+                    PrestigeLeaderboardEntry entry = leaderboard[i];
+                    FontStyles style = i == 0 ? FontStyles.Bold : FontStyles.Normal;
+                    entries.Add(new TabEntry($"{i + 1} | {entry.Name}: {entry.Value}", style));
+                }
+            }
+
+            ApplyTabEntries(entries, "PrestigeEntry");
+        }
+        /// <summary>
+        /// Updates the exoform and shapeshift tab content.
+        /// </summary>
+        static void UpdateExoFormTab()
+        {
+            _tabsContentHeader?.ForceSet("Exoforms");
+
+            if (!_exoFormDataReady)
+            {
+                _tabsContentSubHeader?.ForceSet("Awaiting exoform data...");
+                ClearEntries(_tabsContentEntries, _tabsContentEntryButtons);
+                return;
+            }
+
+            if (!_exoFormEnabled)
+            {
+                _tabsContentSubHeader?.ForceSet("Exo prestiging disabled.");
+                ClearEntries(_tabsContentEntries, _tabsContentEntryButtons);
+                return;
+            }
+
+            string currentForm = string.IsNullOrWhiteSpace(_exoFormCurrentForm)
+                ? "None"
+                : SplitPascalCase(_exoFormCurrentForm);
+
+            _tabsContentSubHeader?.ForceSet($"Current: {currentForm}");
+
+            bool canToggleTaunt = _exoFormPrestiges > 0;
+            string chargeLine = _exoFormMaxDuration > 0f
+                ? $"Charge: {_exoFormCharge:0.0}/{_exoFormMaxDuration:0.0}s"
+                : "Charge: --";
+
+            string tauntStatus = _exoFormTauntEnabled ? "<color=green>On</color>" : "<color=red>Off</color>";
+
+            List<TabEntry> entries =
+            [
+                new TabEntry($"Exo Prestiges: {_exoFormPrestiges}", FontStyles.Normal),
+                new TabEntry(chargeLine, FontStyles.Normal),
+                new TabEntry($"Taunt to Exoform: {tauntStatus}", FontStyles.Normal, command: ".prestige exoform", enabled: canToggleTaunt),
+                new TabEntry($"Current Form: {currentForm}", FontStyles.Normal),
+                new TabEntry("Forms", FontStyles.Bold)
+            ];
+
+            for (int i = 0; i < _exoFormEntries.Count; i++)
+            {
+                ExoFormEntry form = _exoFormEntries[i];
+                string formName = SplitPascalCase(form.FormName);
+                string status = form.Unlocked ? "Unlocked" : "Locked";
+                FontStyles style = form.FormName.Equals(_exoFormCurrentForm, StringComparison.OrdinalIgnoreCase)
+                    ? FontStyles.Bold
+                    : FontStyles.Normal;
+
+                entries.Add(new TabEntry($"{i + 1} | {formName} ({status})", style,
+                    command: $".prestige sf {form.FormName}", enabled: form.Unlocked));
+            }
+
+            ExoFormEntry activeForm = ResolveActiveExoForm();
+            if (activeForm != null && activeForm.Abilities.Count > 0)
+            {
+                entries.Add(new TabEntry("Abilities", FontStyles.Bold));
+
+                foreach (ExoFormAbilityData ability in activeForm.Abilities)
+                {
+                    string abilityName = ResolveAbilityName(ability.AbilityId);
+                    entries.Add(new TabEntry($" - {abilityName} ({ability.Cooldown:0.0}s)", FontStyles.Normal));
+                }
+            }
+
+            ApplyTabEntries(entries, "ExoformEntry");
+        }
+        /// <summary>
+        /// Updates the familiar battle tab content.
+        /// </summary>
+        static void UpdateFamiliarBattleTab()
+        {
+            _tabsContentHeader?.ForceSet("Familiar Battles");
+
+            if (!_familiarBattleDataReady)
+            {
+                _tabsContentSubHeader?.ForceSet("Awaiting familiar battle data...");
+                ClearEntries(_tabsContentEntries, _tabsContentEntryButtons);
+                return;
+            }
+
+            if (!_familiarSystemEnabled)
+            {
+                _tabsContentSubHeader?.ForceSet("Familiars are disabled.");
+                ClearEntries(_tabsContentEntries, _tabsContentEntryButtons);
+                return;
+            }
+
+            if (!_familiarBattlesEnabled)
+            {
+                _tabsContentSubHeader?.ForceSet("Familiar battles disabled.");
+                ClearEntries(_tabsContentEntries, _tabsContentEntryButtons);
+                return;
+            }
+
+            string activeGroupName = string.IsNullOrWhiteSpace(_familiarActiveBattleGroup)
+                ? "None"
+                : _familiarActiveBattleGroup;
+
+            _tabsContentSubHeader?.ForceSet($"Active group: {activeGroupName}");
+
+            List<TabEntry> entries = [];
+
+            if (_familiarBattleGroups.Count == 0)
+            {
+                entries.Add(new TabEntry("No battle groups available.", FontStyles.Normal));
+                ApplyTabEntries(entries, "FamiliarEntry");
+                return;
+            }
+
+            entries.Add(new TabEntry("Groups", FontStyles.Bold));
+
+            for (int i = 0; i < _familiarBattleGroups.Count; i++)
+            {
+                FamiliarBattleGroupData group = _familiarBattleGroups[i];
+                bool isActive = group.Name.Equals(_familiarActiveBattleGroup, StringComparison.OrdinalIgnoreCase);
+                FontStyles style = isActive ? FontStyles.Bold : FontStyles.Normal;
+                string suffix = isActive ? " (Active)" : string.Empty;
+                entries.Add(new TabEntry($"{i + 1} | {group.Name}{suffix}", style,
+                    command: $".fam cbg {group.Name}", enabled: true));
+            }
+
+            FamiliarBattleGroupData activeGroup = FindBattleGroup(_familiarActiveBattleGroup) ?? _familiarBattleGroups[0];
+            entries.Add(new TabEntry("Slots", FontStyles.Bold));
+
+            for (int i = 0; i < activeGroup.Slots.Count; i++)
+            {
+                FamiliarBattleSlotData slot = activeGroup.Slots[i];
+                string slotText = FormatFamiliarSlot(slot, i + 1);
+                entries.Add(new TabEntry(slotText, FontStyles.Normal, command: $".fam sbg {i + 1}", enabled: true));
+            }
+
+            ApplyTabEntries(entries, "FamiliarEntry");
+        }
+        /// <summary>
+        /// Updates the selected prestige leaderboard type index.
+        /// </summary>
+        static void CyclePrestigeType()
+        {
+            if (_prestigeLeaderboardOrder.Count == 0)
+            {
+                return;
+            }
+
+            _prestigeLeaderboardIndex = (_prestigeLeaderboardIndex + 1) % _prestigeLeaderboardOrder.Count;
+        }
+        /// <summary>
+        /// Resolves the active exoform entry based on current form selection.
+        /// </summary>
+        /// <returns>The active exoform entry or null if none are available.</returns>
+        static ExoFormEntry ResolveActiveExoForm()
+        {
+            if (_exoFormEntries.Count == 0)
+            {
+                return null;
+            }
+
+            if (!string.IsNullOrWhiteSpace(_exoFormCurrentForm))
+            {
+                ExoFormEntry match = _exoFormEntries.FirstOrDefault(entry =>
+                    entry.FormName.Equals(_exoFormCurrentForm, StringComparison.OrdinalIgnoreCase));
+
+                if (match != null)
+                {
+                    return match;
+                }
+            }
+
+            return _exoFormEntries[0];
+        }
+        /// <summary>
+        /// Resolves an ability display name from a prefab identifier.
+        /// </summary>
+        /// <param name="abilityId">The ability prefab GUID hash.</param>
+        /// <returns>A display-friendly ability name.</returns>
+        static string ResolveAbilityName(int abilityId)
+        {
+            PrefabGUID abilityGuid = new(abilityId);
+            string abilityName = abilityGuid.GetLocalizedName();
+            if (string.IsNullOrEmpty(abilityName) || abilityName.Equals("LocalizationKey.Empty"))
+            {
+                abilityName = abilityGuid.GetPrefabName();
+            }
+
+            if (string.IsNullOrEmpty(abilityName))
+            {
+                return $"Ability {abilityId}";
+            }
+
+            Match match = AbilitySpellRegex.Match(abilityName);
+            if (match.Success)
+            {
+                return match.Value.Replace('_', ' ');
+            }
+
+            return abilityName;
+        }
+        /// <summary>
+        /// Finds a familiar battle group by name.
+        /// </summary>
+        /// <param name="groupName">The group name to match.</param>
+        /// <returns>The matching battle group or null if not found.</returns>
+        static FamiliarBattleGroupData FindBattleGroup(string groupName)
+        {
+            if (string.IsNullOrWhiteSpace(groupName))
+            {
+                return null;
+            }
+
+            return _familiarBattleGroups.FirstOrDefault(group =>
+                group.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase));
+        }
+        /// <summary>
+        /// Formats a familiar battle slot display line.
+        /// </summary>
+        /// <param name="slot">The slot data.</param>
+        /// <param name="slotIndex">The 1-based slot index.</param>
+        /// <returns>A formatted slot line.</returns>
+        static string FormatFamiliarSlot(FamiliarBattleSlotData slot, int slotIndex)
+        {
+            if (slot.Id == 0)
+            {
+                return $"Slot {slotIndex}: <color=grey>Empty</color>";
+            }
+
+            string name = string.IsNullOrWhiteSpace(slot.Name) ? $"Familiar {slot.Id}" : slot.Name;
+            string prestige = slot.Prestige > 0 ? $" P{slot.Prestige}" : string.Empty;
+            return $"Slot {slotIndex}: {name} (Lv {slot.Level}{prestige})";
+        }
+        /// <summary>
+        /// Applies tab entries to the content panel.
+        /// </summary>
+        /// <param name="entries">The tab entries to display.</param>
+        /// <param name="namePrefix">Name prefix for created entry objects.</param>
+        static void ApplyTabEntries(List<TabEntry> entries, string namePrefix)
+        {
+            EnsureEntries(_tabsContentEntries, _tabsContentEntryButtons, _tabsContentEntriesRoot, _tabsContentEntryTemplate, entries.Count, namePrefix);
+
+            if (_tabsContentEntries.Count < entries.Count)
+            {
+                return;
+            }
+
+            for (int i = 0; i < entries.Count; i++)
+            {
+                TabEntry entry = entries[i];
+                LocalizedText entryText = _tabsContentEntries[i];
+
+                entryText.Text.color = Color.white;
+                entryText.Text.fontStyle = entry.Style;
+                entryText.ForceSet(entry.Text);
+
+                if (entry.Action != null)
+                {
+                    ConfigureActionButton(_tabsContentEntryButtons[i], entry.Action, entry.Enabled);
+                }
+                else
+                {
+                    ConfigureCommandButton(_tabsContentEntryButtons[i], entry.Command, entry.Enabled);
+                }
+            }
+        }
+        /// <summary>
+        /// Represents a single tab entry row.
+        /// </summary>
+        readonly struct TabEntry
+        {
+            public string Text { get; }
+            public string Command { get; }
+            public Action Action { get; }
+            public bool Enabled { get; }
+            public FontStyles Style { get; }
+
+            public TabEntry(string text, FontStyles style, string command = "", Action action = null, bool enabled = false)
+            {
+                Text = text;
+                Command = command;
+                Action = action;
+                Enabled = enabled;
+                Style = style;
+            }
+        }
+        static void ClearEntries(List<LocalizedText> entries, List<SimpleStunButton> buttons)
+        {
+            for (int i = 0; i < entries.Count; i++)
+            {
+                entries[i].ForceSet(string.Empty);
+                entries[i].gameObject.SetActive(false);
+
+                if (i < buttons.Count)
+                {
+                    ConfigureCommandButton(buttons[i], string.Empty, false);
+                }
+            }
+        }
+        static void EnsureEntries(List<LocalizedText> entries, List<SimpleStunButton> buttons, Transform root,
+            GameObject template, int count, string namePrefix)
+        {
+            if (root == null || template == null)
+            {
+                return;
+            }
+
+            while (entries.Count < count)
+            {
+                int index = entries.Count;
+                GameObject entryObject = UnityEngine.Object.Instantiate(template, root, false);
+                entryObject.name = $"{namePrefix}_{index + 1}";
+                entryObject.SetActive(true);
+
+                LocalizedText localizedText = entryObject.GetComponent<LocalizedText>();
+                if (!TryBindLocalizedText(localizedText, $"{namePrefix}_{index + 1}"))
+                {
+                    UnityEngine.Object.Destroy(entryObject);
+                    return;
+                }
+                localizedText.Text.enableAutoSizing = false;
+                localizedText.Text.enableWordWrapping = false;
+                localizedText.Text.raycastTarget = true;
+
+            ApplyTransparentGraphic(entryObject, $"{namePrefix}_{index + 1}");
+
+                SimpleStunButton button = entryObject.GetComponent<SimpleStunButton>() ?? entryObject.AddComponent<SimpleStunButton>();
+
+                entries.Add(localizedText);
+                buttons.Add(button);
+            }
+
+            for (int i = 0; i < entries.Count; i++)
+            {
+                bool isActive = i < count;
+                entries[i].gameObject.SetActive(isActive);
+            }
+        }
+        static void ConfigureCommandButton(SimpleStunButton button, string command, bool enabled)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            button.onClick.RemoveAllListeners();
+
+            if (!enabled || string.IsNullOrWhiteSpace(command))
+            {
+                return;
+            }
+
+            button.onClick.AddListener((UnityAction)(() => Quips.SendCommand(command)));
+        }
+        /// <summary>
+        /// Binds a UI button to a local action.
+        /// </summary>
+        /// <param name="button">The button to configure.</param>
+        /// <param name="action">The action to invoke on click.</param>
+        /// <param name="enabled">Whether the button should accept input.</param>
+        static void ConfigureActionButton(SimpleStunButton button, Action action, bool enabled)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            button.onClick.RemoveAllListeners();
+
+            if (!enabled || action == null)
+            {
+                return;
+            }
+
+            button.onClick.AddListener((UnityAction)(() => action()));
+        }
         public static void UpdateBar(float progress, int level, int maxLevel,
             int prestiges, LocalizedText levelText, LocalizedText barHeader,
             Image fill, UIElement element, string type = "")
@@ -1757,6 +2519,8 @@ internal class CanvasService
         public static readonly bool _professionBars = Plugin.Professions;
         public static readonly bool _questTracker = Plugin.Quests;
         public static readonly bool _shiftSlot = Plugin.ShiftSlot;
+        public static readonly bool _classUi = Plugin.ClassUi;
+        public static readonly bool _tabsUi = Plugin.TabsUi;
         public static void ConfigureShiftSlot(ref GameObject shiftSlotObject, ref AbilityBarEntry shiftSlotEntry, ref AbilityBarEntry.UIState uiState, ref GameObject cooldownObject,
             ref TextMeshProUGUI cooldownText, ref GameObject chargeCooldownTextObject, ref Image cooldownFill,
             ref TextMeshProUGUI chargeCooldownText, ref Image chargeCooldownFillImage, ref GameObject chargeCooldownFillObject,
@@ -1975,6 +2739,272 @@ internal class CanvasService
                 controllerScale: questTransform.localScale * 0.85f
             // controllerScale: questTransform.localScale
             );
+        }
+        public static void ConfigureClassWindow(ref GameObject classObject, string layoutKey, string title, Color headerColor,
+            Vector2 anchor, Vector2 pivot, Vector2 anchoredPosition,
+            ref LocalizedText header, ref LocalizedText subHeader, ref Transform entriesRoot, ref GameObject entryTemplate)
+        {
+            if (_canvasBase?.BottomBarParentPrefab?.FakeTooltip == null || _bottomBarCanvas == null)
+            {
+                FailConfigureClassWindow(ref classObject, ref header, ref subHeader, ref entriesRoot, ref entryTemplate, layoutKey, "FakeTooltip prefab not found");
+                return;
+            }
+
+            classObject = UnityEngine.Object.Instantiate(_canvasBase.BottomBarParentPrefab.FakeTooltip.gameObject, _bottomBarCanvas.transform, false);
+            if (classObject == null)
+            {
+                FailConfigureClassWindow(ref classObject, ref header, ref subHeader, ref entriesRoot, ref entryTemplate, layoutKey, "failed to instantiate FakeTooltip");
+                return;
+            }
+            RectTransform classTransform = classObject.GetComponent<RectTransform>();
+            if (classTransform == null)
+            {
+                FailConfigureClassWindow(ref classObject, ref header, ref subHeader, ref entriesRoot, ref entryTemplate, layoutKey, "RectTransform not found");
+                return;
+            }
+
+            classTransform.gameObject.layer = _layer;
+            classObject.SetActive(true);
+
+            GameObject entries = FindTargetUIObject(classObject.transform, "InformationEntries");
+            if (entries == null)
+            {
+                FailConfigureClassWindow(ref classObject, ref header, ref subHeader, ref entriesRoot, ref entryTemplate, layoutKey, "InformationEntries not found");
+                return;
+            }
+
+            DeactivateChildrenExceptNamed(entries.transform, "TooltipHeader");
+
+            GameObject tooltipHeader = FindTargetUIObject(classObject.transform, "TooltipHeader");
+            if (tooltipHeader == null)
+            {
+                FailConfigureClassWindow(ref classObject, ref header, ref subHeader, ref entriesRoot, ref entryTemplate, layoutKey, "TooltipHeader not found");
+                return;
+            }
+
+            tooltipHeader.SetActive(true);
+
+            GameObject iconNameObject = FindTargetUIObject(tooltipHeader.transform, "Icon&Name");
+            if (iconNameObject == null)
+            {
+                FailConfigureClassWindow(ref classObject, ref header, ref subHeader, ref entriesRoot, ref entryTemplate, layoutKey, "Icon&Name not found");
+                return;
+            }
+
+            iconNameObject.SetActive(true);
+
+            GameObject levelFrame = FindTargetUIObject(iconNameObject.transform, "LevelFrame");
+            if (levelFrame != null) levelFrame.SetActive(false);
+
+            GameObject reforgeCost = FindTargetUIObject(classObject.transform, "Tooltip_ReforgeCost");
+            if (reforgeCost != null) reforgeCost.SetActive(false);
+
+            GameObject tooltipIcon = FindTargetUIObject(tooltipHeader.transform, "TooltipIcon");
+            if (tooltipIcon != null) tooltipIcon.SetActive(false);
+
+            GameObject subHeaderObject = FindTargetUIObject(iconNameObject.transform, "TooltipSubHeader");
+            GameObject headerObject = FindTargetUIObject(iconNameObject.transform, "TooltipHeader");
+            if (subHeaderObject == null || headerObject == null)
+            {
+                FailConfigureClassWindow(ref classObject, ref header, ref subHeader, ref entriesRoot, ref entryTemplate, layoutKey, "header text objects not found");
+                return;
+            }
+
+            header = headerObject.GetComponent<LocalizedText>();
+            subHeader = subHeaderObject.GetComponent<LocalizedText>();
+            if (header == null || subHeader == null)
+            {
+                FailConfigureClassWindow(ref classObject, ref header, ref subHeader, ref entriesRoot, ref entryTemplate, layoutKey, "LocalizedText components missing");
+                return;
+            }
+            if (header.Text == null || subHeader.Text == null)
+            {
+                FailConfigureClassWindow(ref classObject, ref header, ref subHeader, ref entriesRoot, ref entryTemplate, layoutKey, "text components missing");
+                return;
+            }
+
+            header.Text.color = headerColor;
+            header.ForceSet(title);
+
+            subHeader.Text.enableAutoSizing = false;
+            subHeader.Text.enableWordWrapping = false;
+            subHeader.ForceSet(string.Empty);
+
+            float widthScale = 0.65f;
+            float heightScale = 0.9f;
+            classTransform.sizeDelta = new Vector2(classTransform.sizeDelta.x * widthScale, classTransform.sizeDelta.y * heightScale);
+
+            classTransform.anchorMin = anchor;
+            classTransform.anchorMax = anchor;
+            classTransform.pivot = pivot;
+            classTransform.anchoredPosition = anchoredPosition;
+            classTransform.localScale = new Vector3(0.7f, 0.7f, 1f);
+
+            entriesRoot = entries.transform;
+
+            entryTemplate = UnityEngine.Object.Instantiate(subHeaderObject, entriesRoot, false);
+            if (entryTemplate == null)
+            {
+                FailConfigureClassWindow(ref classObject, ref header, ref subHeader, ref entriesRoot, ref entryTemplate, layoutKey, "failed to create entry template");
+                return;
+            }
+            entryTemplate.name = $"{layoutKey}.EntryTemplate";
+
+            LocalizedText templateText = entryTemplate.GetComponent<LocalizedText>();
+            if (!TryBindLocalizedText(templateText, $"{layoutKey} entry template"))
+            {
+                FailConfigureClassWindow(ref classObject, ref header, ref subHeader, ref entriesRoot, ref entryTemplate, layoutKey, "entry template text missing");
+                return;
+            }
+            templateText.Text.enableAutoSizing = false;
+            templateText.Text.enableWordWrapping = false;
+            templateText.Text.raycastTarget = true;
+
+            ApplyTransparentGraphic(entryTemplate, "Class entry template");
+
+            entryTemplate.SetActive(false);
+
+            ObjectStates.Add(classObject, true);
+            LayoutService.RegisterElement(layoutKey, classTransform);
+        }
+        /// <summary>
+        /// Cleans up a partially created class window and clears all related references when setup fails.
+        /// </summary>
+        /// <param name="classObject">The class window GameObject to destroy and clear.</param>
+        /// <param name="header">The header text reference to clear.</param>
+        /// <param name="subHeader">The sub-header text reference to clear.</param>
+        /// <param name="entriesRoot">The entries root transform reference to clear.</param>
+        /// <param name="entryTemplate">The entry template GameObject reference to clear.</param>
+        /// <param name="layoutKey">The layout key used for log context.</param>
+        /// <param name="reason">The failure reason to include in logs.</param>
+        static void FailConfigureClassWindow(ref GameObject classObject, ref LocalizedText header, ref LocalizedText subHeader,
+            ref Transform entriesRoot, ref GameObject entryTemplate, string layoutKey, string reason)
+        {
+            Core.Log.LogWarning($"Failed to configure {layoutKey}, {reason}.");
+            if (classObject != null)
+            {
+                classObject.SetActive(false);
+                UnityEngine.Object.Destroy(classObject);
+            }
+
+            classObject = null;
+            header = null;
+            subHeader = null;
+            entriesRoot = null;
+            entryTemplate = null;
+        }
+        /// <summary>
+        /// Ensures a LocalizedText has a bound text component, attempting to bind it if missing.
+        /// </summary>
+        /// <param name="localizedText">The LocalizedText instance to bind.</param>
+        /// <param name="context">Context string for logging.</param>
+        /// <returns>True when a compatible text component is available for the LocalizedText.</returns>
+        internal static bool TryBindLocalizedText(LocalizedText localizedText, string context)
+        {
+            if (localizedText == null)
+            {
+                Core.Log.LogWarning($"{context}: LocalizedText missing.");
+                return false;
+            }
+
+            if (localizedText.Text != null)
+            {
+                return true;
+            }
+
+            Type localizedType = typeof(LocalizedText);
+            PropertyInfo property = localizedType.GetProperty("Text", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            FieldInfo field = localizedType.GetField("Text", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                ?? localizedType.GetField("<Text>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            Type targetType = property?.PropertyType ?? field?.FieldType;
+            if (targetType == null)
+            {
+                Core.Log.LogWarning($"{context}: Unable to resolve text type.");
+                return false;
+            }
+
+            Component textComponent = ResolveTextComponent(localizedText, targetType);
+            if (textComponent == null)
+            {
+                Core.Log.LogWarning($"{context}: Missing text component for {targetType.Name}.");
+                return false;
+            }
+
+            try
+            {
+                if (property != null && property.CanWrite && targetType.IsInstanceOfType(textComponent))
+                {
+                    property.SetValue(localizedText, textComponent);
+                    return localizedText.Text != null;
+                }
+
+                if (field != null && targetType.IsInstanceOfType(textComponent))
+                {
+                    field.SetValue(localizedText, textComponent);
+                    return localizedText.Text != null;
+                }
+            }
+            catch (Exception ex)
+            {
+                Core.Log.LogWarning($"{context}: Failed to bind text component ({ex.GetType().Name}).");
+                return false;
+            }
+
+            Core.Log.LogWarning($"{context}: Unable to bind text component.");
+            return false;
+        }
+        static Component ResolveTextComponent(LocalizedText localizedText, Type targetType)
+        {
+            if (targetType == typeof(TextMeshProUGUI))
+            {
+                return localizedText.GetComponent<TextMeshProUGUI>() ?? localizedText.GetComponentInChildren<TextMeshProUGUI>(true);
+            }
+
+            if (targetType == typeof(TextMeshPro))
+            {
+                return localizedText.GetComponent<TextMeshPro>() ?? localizedText.GetComponentInChildren<TextMeshPro>(true);
+            }
+
+            if (targetType == typeof(TMP_Text))
+            {
+                return localizedText.GetComponent<TMP_Text>() ?? localizedText.GetComponentInChildren<TMP_Text>(true);
+            }
+
+            if (typeof(TMP_Text).IsAssignableFrom(targetType))
+            {
+                return localizedText.GetComponent<TMP_Text>() ?? localizedText.GetComponentInChildren<TMP_Text>(true);
+            }
+
+            return null;
+        }
+        internal static void ApplyTransparentGraphic(GameObject target, string context)
+        {
+            if (target == null)
+            {
+                Core.Log.LogWarning($"{context}: Target missing for graphic setup.");
+                return;
+            }
+
+            Graphic graphic = target.GetComponent<Graphic>();
+            if (graphic == null)
+            {
+                graphic = target.AddComponent<Image>();
+            }
+
+            if (graphic == null)
+            {
+                Core.Log.LogWarning($"{context}: Graphic component missing.");
+                return;
+            }
+
+            graphic.raycastTarget = true;
+
+            Image image = graphic as Image;
+            if (image != null)
+            {
+                image.color = new Color(0f, 0f, 0f, 0f);
+            }
         }
         public static void ConfigureHorizontalProgressBar(ref GameObject barGameObject, ref GameObject informationPanelObject, ref Image fill,
             ref LocalizedText level, ref LocalizedText header, UIElement element, Color fillColor,

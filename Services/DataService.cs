@@ -245,6 +245,36 @@ internal static class DataService
     public static float _classStatMultiplier;
     public static bool _extraRecipes;
     public static PrefabGUID _primalCost;
+
+    public static bool _classSystemEnabled;
+    public static bool _classShiftSlotEnabled;
+    public static int _defaultClassSpell;
+    public static PrefabGUID _changeClassItem;
+    public static int _changeClassQuantity;
+    public static List<int> _classSpellUnlockLevels = [];
+    public static Dictionary<PlayerClass, List<int>> _classSpells = [];
+    public static bool _classDataReady;
+    public static bool _prestigeDataReady;
+    public static bool _prestigeSystemEnabled;
+    public static bool _prestigeLeaderboardEnabled;
+    public static readonly Dictionary<string, List<PrestigeLeaderboardEntry>> _prestigeLeaderboards = [];
+    public static readonly List<string> _prestigeLeaderboardOrder = [];
+    public static int _prestigeLeaderboardIndex;
+
+    public static bool _exoFormDataReady;
+    public static bool _exoFormEnabled;
+    public static int _exoFormPrestiges;
+    public static float _exoFormCharge;
+    public static float _exoFormMaxDuration;
+    public static bool _exoFormTauntEnabled;
+    public static string _exoFormCurrentForm = string.Empty;
+    public static readonly List<ExoFormEntry> _exoFormEntries = [];
+
+    public static bool _familiarBattleDataReady;
+    public static bool _familiarSystemEnabled;
+    public static bool _familiarBattlesEnabled;
+    public static string _familiarActiveBattleGroup = string.Empty;
+    public static readonly List<FamiliarBattleGroupData> _familiarBattleGroups = [];
     public class ProfessionData(string enchantingProgress, string enchantingLevel, string alchemyProgress, string alchemyLevel,
         string harvestingProgress, string harvestingLevel, string blacksmithingProgress, string blacksmithingLevel,
         string tailoringProgress, string tailoringLevel, string woodcuttingProgress, string woodcuttingLevel, string miningProgress,
@@ -303,6 +333,34 @@ internal static class DataService
     public class ShiftSpellData(string index)
     {
         public int ShiftSpellIndex { get; set; } = int.Parse(index, CultureInfo.InvariantCulture);
+    }
+    public class PrestigeLeaderboardEntry(string name, int value)
+    {
+        public string Name { get; } = name;
+        public int Value { get; } = value;
+    }
+    public class ExoFormAbilityData(int abilityId, float cooldown)
+    {
+        public int AbilityId { get; } = abilityId;
+        public float Cooldown { get; } = cooldown;
+    }
+    public class ExoFormEntry(string formName, bool unlocked, List<ExoFormAbilityData> abilities)
+    {
+        public string FormName { get; } = formName;
+        public bool Unlocked { get; } = unlocked;
+        public List<ExoFormAbilityData> Abilities { get; } = abilities;
+    }
+    public class FamiliarBattleSlotData(int id, int level, int prestige, string name)
+    {
+        public int Id { get; } = id;
+        public int Level { get; } = level;
+        public int Prestige { get; } = prestige;
+        public string Name { get; } = name;
+    }
+    public class FamiliarBattleGroupData(string name, List<FamiliarBattleSlotData> slots)
+    {
+        public string Name { get; } = name;
+        public List<FamiliarBattleSlotData> Slots { get; } = slots;
     }
     public class ConfigDataV1_3
     {
@@ -425,6 +483,335 @@ internal static class DataService
         catch (Exception ex)
         {
             Core.Log.LogWarning($"Failed to parse config data: {ex}");
+        }
+    }
+    public static void ParseClassData(string classData)
+    {
+        if (string.IsNullOrEmpty(classData))
+        {
+            return;
+        }
+
+        try
+        {
+            string[] segments = classData.Split('|');
+            if (segments.Length == 0)
+            {
+                return;
+            }
+
+            string[] baseFields = segments[0].Split(',');
+            if (baseFields.Length < 6)
+            {
+                Core.Log.LogWarning("Class data payload is missing required base fields.");
+                return;
+            }
+
+            _classSystemEnabled = bool.TryParse(baseFields[0], out bool classSystem) && classSystem;
+            _classShiftSlotEnabled = bool.TryParse(baseFields[1], out bool shiftSlot) && shiftSlot;
+            _defaultClassSpell = int.Parse(baseFields[2], CultureInfo.InvariantCulture);
+            _changeClassItem = new PrefabGUID(int.Parse(baseFields[3], CultureInfo.InvariantCulture));
+            _changeClassQuantity = int.Parse(baseFields[4], CultureInfo.InvariantCulture);
+
+            string prestigeLevels = string.Join(",", baseFields.Skip(5));
+            _classSpellUnlockLevels = prestigeLevels
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(value => int.Parse(value, CultureInfo.InvariantCulture))
+                .ToList();
+
+            _classSpells = [];
+            for (int i = 1; i < segments.Length; i++)
+            {
+                string segment = segments[i];
+                if (string.IsNullOrWhiteSpace(segment))
+                {
+                    continue;
+                }
+
+                string[] fields = segment.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                if (fields.Length == 0)
+                {
+                    continue;
+                }
+
+                if (!int.TryParse(fields[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int classId))
+                {
+                    continue;
+                }
+
+                PlayerClass playerClass = (PlayerClass)classId;
+                List<int> spells = fields
+                    .Skip(1)
+                    .Select(value => int.Parse(value, CultureInfo.InvariantCulture))
+                    .ToList();
+
+                _classSpells[playerClass] = spells;
+            }
+
+            _classDataReady = true;
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogWarning($"Failed to parse class data: {ex}");
+        }
+    }
+    /// <summary>
+    /// Parses the prestige leaderboard payload and updates cached leaderboard data.
+    /// </summary>
+    /// <param name="leaderboardData">The leaderboard payload without the event prefix.</param>
+    public static void ParsePrestigeLeaderboardData(string leaderboardData)
+    {
+        if (string.IsNullOrEmpty(leaderboardData))
+        {
+            return;
+        }
+
+        try
+        {
+            string[] segments = leaderboardData.Split('|');
+            if (segments.Length == 0)
+            {
+                return;
+            }
+
+            string[] baseFields = segments[0].Split(new[] { ',' }, 2);
+            if (baseFields.Length < 2)
+            {
+                Core.Log.LogWarning("Prestige leaderboard payload is missing required base fields.");
+                return;
+            }
+
+            _prestigeSystemEnabled = bool.TryParse(baseFields[0], out bool prestigeEnabled) && prestigeEnabled;
+            _prestigeLeaderboardEnabled = bool.TryParse(baseFields[1], out bool leaderboardEnabled) && leaderboardEnabled;
+
+            _prestigeLeaderboards.Clear();
+            _prestigeLeaderboardOrder.Clear();
+
+            if (!_prestigeSystemEnabled || !_prestigeLeaderboardEnabled)
+            {
+                _prestigeDataReady = true;
+                return;
+            }
+
+            for (int i = 1; i < segments.Length; i++)
+            {
+                string segment = segments[i];
+                if (string.IsNullOrWhiteSpace(segment))
+                {
+                    continue;
+                }
+
+                string[] fields = segment.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                if (fields.Length == 0)
+                {
+                    continue;
+                }
+
+                string prestigeType = fields[0];
+                List<PrestigeLeaderboardEntry> entries = [];
+
+                for (int entryIndex = 1; entryIndex + 1 < fields.Length; entryIndex += 2)
+                {
+                    string name = fields[entryIndex];
+                    if (!int.TryParse(fields[entryIndex + 1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int value))
+                    {
+                        continue;
+                    }
+
+                    entries.Add(new PrestigeLeaderboardEntry(name, value));
+                }
+
+                _prestigeLeaderboards[prestigeType] = entries;
+                _prestigeLeaderboardOrder.Add(prestigeType);
+            }
+
+            _prestigeDataReady = true;
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogWarning($"Failed to parse prestige leaderboard data: {ex}");
+        }
+    }
+    /// <summary>
+    /// Parses the exoform and shapeshift payload and updates cached exoform data.
+    /// </summary>
+    /// <param name="exoFormData">The exoform payload without the event prefix.</param>
+    public static void ParseExoFormData(string exoFormData)
+    {
+        if (string.IsNullOrEmpty(exoFormData))
+        {
+            return;
+        }
+
+        try
+        {
+            string[] segments = exoFormData.Split('|');
+            if (segments.Length == 0)
+            {
+                return;
+            }
+
+            string[] baseFields = segments[0].Split(new[] { ',' }, 6);
+            if (baseFields.Length < 6)
+            {
+                Core.Log.LogWarning("Exoform payload is missing required base fields.");
+                return;
+            }
+
+            _exoFormEnabled = bool.TryParse(baseFields[0], out bool exoEnabled) && exoEnabled;
+            _exoFormPrestiges = int.TryParse(baseFields[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int prestiges) ? prestiges : 0;
+            _exoFormCharge = float.TryParse(baseFields[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float charge) ? charge : 0f;
+            _exoFormMaxDuration = float.TryParse(baseFields[3], NumberStyles.Float, CultureInfo.InvariantCulture, out float maxDuration) ? maxDuration : 0f;
+            _exoFormTauntEnabled = bool.TryParse(baseFields[4], out bool tauntEnabled) && tauntEnabled;
+            _exoFormCurrentForm = baseFields[5];
+
+            _exoFormEntries.Clear();
+
+            if (!_exoFormEnabled)
+            {
+                _exoFormDataReady = true;
+                return;
+            }
+
+            for (int i = 1; i < segments.Length; i++)
+            {
+                string segment = segments[i];
+                if (string.IsNullOrWhiteSpace(segment))
+                {
+                    continue;
+                }
+
+                string[] fields = segment.Split(',');
+                if (fields.Length < 2)
+                {
+                    continue;
+                }
+
+                string formName = fields[0];
+                bool unlocked = bool.TryParse(fields[1], out bool unlockedValue) && unlockedValue;
+                List<ExoFormAbilityData> abilities = [];
+
+                for (int abilityIndex = 2; abilityIndex < fields.Length; abilityIndex++)
+                {
+                    string abilityField = fields[abilityIndex];
+                    if (string.IsNullOrWhiteSpace(abilityField))
+                    {
+                        continue;
+                    }
+
+                    string[] parts = abilityField.Split(':', 2);
+                    if (parts.Length < 2)
+                    {
+                        continue;
+                    }
+
+                    if (!int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int abilityId))
+                    {
+                        continue;
+                    }
+
+                    float cooldown = float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float parsedCooldown)
+                        ? parsedCooldown
+                        : 0f;
+
+                    abilities.Add(new ExoFormAbilityData(abilityId, cooldown));
+                }
+
+                _exoFormEntries.Add(new ExoFormEntry(formName, unlocked, abilities));
+            }
+
+            _exoFormDataReady = true;
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogWarning($"Failed to parse exoform data: {ex}");
+        }
+    }
+    /// <summary>
+    /// Parses the familiar battle payload and updates cached familiar battle data.
+    /// </summary>
+    /// <param name="battleData">The familiar battle payload without the event prefix.</param>
+    public static void ParseFamiliarBattleData(string battleData)
+    {
+        if (string.IsNullOrEmpty(battleData))
+        {
+            return;
+        }
+
+        try
+        {
+            string[] segments = battleData.Split('|');
+            if (segments.Length == 0)
+            {
+                return;
+            }
+
+            string[] baseFields = segments[0].Split(new[] { ',' }, 3);
+            if (baseFields.Length < 3)
+            {
+                Core.Log.LogWarning("Familiar battle payload is missing required base fields.");
+                return;
+            }
+
+            _familiarSystemEnabled = bool.TryParse(baseFields[0], out bool familiarEnabled) && familiarEnabled;
+            _familiarBattlesEnabled = bool.TryParse(baseFields[1], out bool battlesEnabled) && battlesEnabled;
+            _familiarActiveBattleGroup = baseFields[2];
+
+            _familiarBattleGroups.Clear();
+
+            if (!_familiarSystemEnabled || !_familiarBattlesEnabled)
+            {
+                _familiarBattleDataReady = true;
+                return;
+            }
+
+            for (int i = 1; i < segments.Length; i++)
+            {
+                string segment = segments[i];
+                if (string.IsNullOrWhiteSpace(segment))
+                {
+                    continue;
+                }
+
+                string[] fields = segment.Split(',');
+                if (fields.Length == 0)
+                {
+                    continue;
+                }
+
+                string groupName = fields[0];
+                List<FamiliarBattleSlotData> slots = [];
+
+                for (int slotIndex = 1; slotIndex < fields.Length; slotIndex++)
+                {
+                    string slotField = fields[slotIndex];
+                    if (string.IsNullOrWhiteSpace(slotField))
+                    {
+                        continue;
+                    }
+
+                    string[] parts = slotField.Split(':', 4);
+                    if (parts.Length < 3)
+                    {
+                        continue;
+                    }
+
+                    int id = int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedId) ? parsedId : 0;
+                    int level = int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedLevel) ? parsedLevel : 0;
+                    int prestige = int.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedPrestige) ? parsedPrestige : 0;
+                    string name = parts.Length > 3 ? parts[3] : string.Empty;
+
+                    slots.Add(new FamiliarBattleSlotData(id, level, prestige, name));
+                }
+
+                _familiarBattleGroups.Add(new FamiliarBattleGroupData(groupName, slots));
+            }
+
+            _familiarBattleDataReady = true;
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogWarning($"Failed to parse familiar battle data: {ex}");
         }
     }
     public static void ParsePlayerData(List<string> playerData)

@@ -50,7 +50,11 @@ internal static class ClientChatSystemPatch
     {
         RegisterUser,
         ProgressToClient,
-        ConfigsToClient
+        ConfigsToClient,
+        ClassDataToClient,
+        PrestigeLeaderboardToClient,
+        ExoFormDataToClient,
+        FamiliarBattleDataToClient
     }
 
     public static BufferLookup<ModifyUnitStatBuff_DOTS> ModifyUnitStatBuffLookup => _modifyUnitStatBuffLookup;
@@ -176,6 +180,18 @@ internal static class ClientChatSystemPatch
                         DataService.ParseConfigData(configData);
                         _userRegistered = true;
 
+                        break;
+                    case (int)NetworkEventSubType.ClassDataToClient:
+                        DataService.ParseClassData(_regexExtract.Replace(message, ""));
+                        break;
+                    case (int)NetworkEventSubType.PrestigeLeaderboardToClient:
+                        DataService.ParsePrestigeLeaderboardData(_regexExtract.Replace(message, ""));
+                        break;
+                    case (int)NetworkEventSubType.ExoFormDataToClient:
+                        DataService.ParseExoFormData(_regexExtract.Replace(message, ""));
+                        break;
+                    case (int)NetworkEventSubType.FamiliarBattleDataToClient:
+                        DataService.ParseFamiliarBattleData(_regexExtract.Replace(message, ""));
                         break;
                 }
             }

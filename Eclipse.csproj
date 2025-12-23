@@ -33,6 +33,10 @@
 		<EmbeddedResource Include="Resources\secrets.json" />
 		<EmbeddedResource Include="Resources\Localization\English.json" />
 	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Remove="Docs\Bloodcraft\**\*.cs" />
+	</ItemGroup>
 	
 	<ItemGroup>
 		<PackageReference Include="BepInEx.PluginInfoProps" Version="2.1.0" />

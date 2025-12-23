@@ -15,6 +15,7 @@ Jairon O.; Odjit; Jera; Kokuren TCG and Gaming Shop; Rexxn; Eduardo G.; DirtyMik
 ## Features
 
 - Currently supports progress bars and info for leveling, legacies, expertise, familiars, professions, and quest progress. Also shows shift slot ability when being used with cooldown. Blood orb can be clicked to enable/disable UI.
+- Adds a tabbed panel for prestige leaderboards, exoform/shapeshifts, and familiar battles when enabled.
 - Can disable individual UI elements via config or by clicking on your abilities (1-7, each disables and enables one UI element when clicked (clicking on the shift slot disables itself until reactivated by blood orb since can't click it after it's not there to toggle back).
 - Attributes tab entries now show stats from Bloodcraft in green with tinted backgrounds (grey=expertise, red=legacy) and can be clicked on to perform respective commands (`.bl cst...` or `.wep cst...`).
  
@@ -38,6 +39,10 @@ Jairon O.; Odjit; Jera; Kokuren TCG and Gaming Shop; Rexxn; Eduardo G.; DirtyMik
   Enable or disable the profession bars.
 - **ShiftSlot**: `ShiftSlot` (bool, default: true)  
   Enable or disable the shift slot appearing when applicable.
+- **ClassUI**: `ClassUI` (bool, default: true)  
+  Enable or disable the class selection and spell list panels.
+- **TabsUI**: `TabsUI` (bool, default: true)  
+  Enable or disable the prestige leaderboard, exoform/shapeshift, and familiar battle tabs.
 - **Attribute Buffs**: `AttributeBuffs` (bool, default: true)  
   Enable or disable applying Bloodcraft stats to the Attributes tab.
 - **Eclipsed**: `Eclipsed` (bool, default: true)  
