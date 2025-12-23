@@ -242,6 +242,14 @@ internal class CanvasService
                     Core.Log.LogError($"Error updating tabs panel: {e}");
                 }
             }
+            try
+            {
+                CharacterMenuService.Update();
+            }
+            catch (Exception e)
+            {
+                Core.Log.LogError($"Error updating Bloodcraft tab: {e}");
+            }
             // if (_killSwitch) yield break;
 
             try

@@ -50,5 +50,10 @@ internal static class InputActionSystemPatch
         {
             DebugService.DumpCharacterUi();
         }
+
+        if (Input.GetKeyDown(KeyCode.F2))
+        {
+            DebugService.DumpCharacterTabComponents();
+        }
     }
 }

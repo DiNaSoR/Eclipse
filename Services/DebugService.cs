@@ -9,6 +9,7 @@ namespace Eclipse.Services;
 internal static class DebugService
 {
     const int MAX_CHILDREN = 20;
+    const int MAX_COMPONENTS = 20;
     const int MAX_HITS = 20;
 
     static readonly string[] TabLabels =
@@ -51,6 +52,52 @@ internal static class DebugService
         catch (Exception ex)
         {
             Core.Log.LogError($"[Debug UI] Failed to dump Character UI: {ex}");
+        }
+    }
+
+    /// <summary>
+    /// Dumps component lists for Character tab buttons to identify tab controllers.
+    /// </summary>
+    public static void DumpCharacterTabComponents()
+    {
+        try
+        {
+            Core.Log.LogInfo("[Debug UI] F2 pressed. Dumping Character tab components...");
+
+            Transform tabButtons = FindTransformByName("TabButtons", "CharacterInventorySubMenu(Clone)");
+            if (tabButtons == null)
+            {
+                Core.Log.LogWarning("[Debug UI] TabButtons not found. Open the Character window and press F2 again.");
+                return;
+            }
+
+            LogComponents(tabButtons, "TabButtons");
+            Transform motionRoot = tabButtons.parent;
+            if (motionRoot != null)
+            {
+                LogComponents(motionRoot, "MotionRoot");
+            }
+
+            Transform subMenu = FindTransformByName("CharacterInventorySubMenu(Clone)", "HUDCanvas(Clone)");
+            if (subMenu != null)
+            {
+                LogComponents(subMenu, "CharacterInventorySubMenu");
+            }
+
+            for (int i = 0; i < tabButtons.childCount; i++)
+            {
+                Transform child = tabButtons.GetChild(i);
+                if (!child.name.Contains("TabButton", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                LogComponents(child, $"TabButtons/{child.name}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"[Debug UI] Failed to dump Character tab components: {ex}");
         }
     }
 
@@ -143,6 +190,90 @@ internal static class DebugService
         {
             Core.Log.LogInfo($"[Debug UI]   ... {parent.childCount - MAX_CHILDREN} more child(ren) not shown.");
         }
+    }
+
+    /// <summary>
+    /// Logs components attached to a transform.
+    /// </summary>
+    /// <param name="target">The transform to inspect.</param>
+    /// <param name="label">A label for log context.</param>
+    static void LogComponents(Transform target, string label)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        Component[] components = target.GetComponents<Component>();
+        Core.Log.LogInfo($"[Debug UI] Components on {label} at {GetPath(target)}: {components.Length}");
+
+        int limit = Math.Min(components.Length, MAX_COMPONENTS);
+        for (int i = 0; i < limit; i++)
+        {
+            Component component = components[i];
+            string typeName = component?.GetType().FullName ?? "null";
+            Core.Log.LogInfo($"[Debug UI]   [{i}] {typeName}");
+        }
+
+        if (components.Length > MAX_COMPONENTS)
+        {
+            Core.Log.LogInfo($"[Debug UI]   ... {components.Length - MAX_COMPONENTS} more component(s) not shown.");
+        }
+    }
+
+    /// <summary>
+    /// Finds a transform by name with an optional ancestor constraint.
+    /// </summary>
+    /// <param name="name">The transform name to search for.</param>
+    /// <param name="ancestorName">Optional ancestor name to require.</param>
+    /// <returns>The matching transform if found.</returns>
+    static Transform FindTransformByName(string name, string ancestorName)
+    {
+        Transform fallback = null;
+
+        foreach (Transform transform in UnityEngine.Resources.FindObjectsOfTypeAll<Transform>())
+        {
+            if (transform == null || transform.name != name)
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrEmpty(ancestorName) && !HasAncestor(transform, ancestorName))
+            {
+                continue;
+            }
+
+            if (transform.gameObject.activeInHierarchy)
+            {
+                return transform;
+            }
+
+            fallback ??= transform;
+        }
+
+        return fallback;
+    }
+
+    /// <summary>
+    /// Checks whether a transform has a named ancestor.
+    /// </summary>
+    /// <param name="transform">The transform to walk up from.</param>
+    /// <param name="ancestorName">The ancestor name to look for.</param>
+    /// <returns>True if an ancestor is found.</returns>
+    static bool HasAncestor(Transform transform, string ancestorName)
+    {
+        Transform current = transform.parent;
+        while (current != null)
+        {
+            if (current.name == ancestorName)
+            {
+                return true;
+            }
+
+            current = current.parent;
+        }
+
+        return false;
     }
 
     /// <summary>

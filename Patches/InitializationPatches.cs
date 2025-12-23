@@ -56,6 +56,7 @@ internal static class InitializationPatches
     static void InitializeUIPostfix(InventorySubMenu menu)
     {
         _inventorySubMenu ??= menu;
+        CharacterMenuService.TryInitialize(menu);
     }
     public static void TryInitializeAttributeValues()
     {
@@ -94,6 +95,7 @@ internal static class InitializationPatches
         _attributesInitialized = false;
         _inventorySubMenu = null;
 
+        CharacterMenuService.Reset();
         CanvasService.ResetState();
         Core.Reset();
     }
