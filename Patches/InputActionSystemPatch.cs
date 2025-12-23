@@ -1,5 +1,7 @@
 ﻿using HarmonyLib;
 using ProjectM;
+using UnityEngine;
+using Eclipse.Services;
 
 namespace Eclipse.Patches;
 
@@ -43,5 +45,10 @@ internal static class InputActionSystemPatch
     static void OnUpdatePostfix(InputActionSystem __instance)
     {
        _isGamepad = __instance.UsingGamepad;
+
+        if (Input.GetKeyDown(KeyCode.F1))
+        {
+            DebugService.DumpCharacterUi();
+        }
     }
 }
