@@ -5,6 +5,7 @@ using Bloodcraft.Systems.Familiars;
 using Bloodcraft.Systems.Leveling;
 using ProjectM;
 using ProjectM.Network;
+using Stunlock.Core;
 using System.Globalization;
 using System.Text;
 using Unity.Entities;
@@ -13,6 +14,9 @@ using static Bloodcraft.Services.EclipseService;
 using static Bloodcraft.Systems.Expertise.WeaponManager.WeaponStats;
 using static Bloodcraft.Systems.Legacies.BloodManager.BloodStats;
 using static Bloodcraft.Utilities.Misc.PlayerBoolsManager;
+using FamiliarBattleGroupsManager = Bloodcraft.Services.DataService.FamiliarPersistence.FamiliarBattleGroupsManager;
+using FamiliarPrestigeManager = Bloodcraft.Services.DataService.FamiliarPersistence.FamiliarPrestigeManager;
+using LevelingPrestigeManager = Bloodcraft.Systems.Leveling.PrestigeManager;
 using Shapeshift = Bloodcraft.Interfaces.Shapeshift;
 
 namespace Bloodcraft.Interfaces;
@@ -301,7 +305,7 @@ internal class VersionHandler_1_3 : IVersionHandler<ProgressDataV1_3>
                 continue;
             }
 
-            var prestigeData = PrestigeManager.GetPrestigeForType(prestigeType)
+            var prestigeData = LevelingPrestigeManager.GetPrestigeForType(prestigeType)
                 .Where(entry => entry.Value > 0)
                 .OrderByDescending(entry => entry.Value)
                 .Take(10)
@@ -422,8 +426,8 @@ internal class VersionHandler_1_3 : IVersionHandler<ProgressDataV1_3>
             return sb.ToString();
         }
 
-        FamiliarBattleGroupsData data = FamiliarBattleGroupsManager.LoadFamiliarBattleGroupsData(steamId);
-        FamiliarPrestigeData prestigeData = FamiliarPrestigeManager.LoadFamiliarPrestigeData(steamId);
+        FamiliarBattleGroupsManager.FamiliarBattleGroupsData data = FamiliarBattleGroupsManager.LoadFamiliarBattleGroupsData(steamId);
+        FamiliarPrestigeManager.FamiliarPrestigeData prestigeData = FamiliarPrestigeManager.LoadFamiliarPrestigeData(steamId);
 
         foreach (var group in data.BattleGroups)
         {
