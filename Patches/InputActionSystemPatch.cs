@@ -55,5 +55,15 @@ internal static class InputActionSystemPatch
         {
             DebugService.DumpCharacterTabComponents();
         }
+
+        if (Input.GetKeyDown(KeyCode.F3))
+        {
+            DebugService.ToggleBloodcraftDebug();
+        }
+
+        if (Input.GetKeyDown(KeyCode.F4))
+        {
+            DebugService.DumpBloodcraftSubTabs("manual");
+        }
     }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using TMPro;
 using UnityEngine;
+using ProjectM.UI;
 
 namespace Eclipse.Services;
 internal static class DebugService
@@ -11,6 +12,9 @@ internal static class DebugService
     const int MAX_CHILDREN = 20;
     const int MAX_COMPONENTS = 20;
     const int MAX_HITS = 20;
+    const int MAX_SUBTAB_TEXT = 10;
+
+    static bool bloodcraftDebugEnabled;
 
     static readonly string[] TabLabels =
     [
@@ -19,6 +23,186 @@ internal static class DebugService
         "Blood Pool",
         "Attributes"
     ];
+
+    /// <summary>
+    /// Returns whether Bloodcraft-specific debug logging is enabled.
+    /// </summary>
+    public static bool BloodcraftDebugEnabled => bloodcraftDebugEnabled;
+
+    /// <summary>
+    /// Toggles verbose Bloodcraft UI debugging.
+    /// </summary>
+    public static void ToggleBloodcraftDebug()
+    {
+        bloodcraftDebugEnabled = !bloodcraftDebugEnabled;
+        Core.Log.LogInfo($"[Debug UI] Bloodcraft debug {(bloodcraftDebugEnabled ? "enabled" : "disabled")}.");
+
+        if (bloodcraftDebugEnabled)
+        {
+            DumpBloodcraftSubTabs("toggle");
+        }
+    }
+
+    /// <summary>
+    /// Logs the setup state for a Bloodcraft sub-tab button.
+    /// </summary>
+    /// <param name="buttonObject">The button GameObject.</param>
+    /// <param name="label">The label text assigned.</param>
+    /// <param name="primaryLabel">The primary TMP label used.</param>
+    /// <param name="labels">All TMP labels found under the button.</param>
+    /// <param name="localizedLabels">LocalizedText components found under the button.</param>
+    /// <param name="usedFallbackLabel">True if a fallback label was created.</param>
+    public static void LogBloodcraftSubTabSetup(GameObject buttonObject, string label, TMP_Text primaryLabel,
+        TMP_Text[] labels, LocalizedText[] localizedLabels, bool usedFallbackLabel)
+    {
+        if (buttonObject == null)
+        {
+            return;
+        }
+
+        int labelCount = labels?.Length ?? 0;
+        int localizedCount = localizedLabels?.Length ?? 0;
+        string primaryPath = primaryLabel != null ? GetPath(primaryLabel.transform) : "none";
+        Core.Log.LogInfo($"[Debug UI] Sub-tab '{buttonObject.name}' label='{label}' labels={labelCount} localized={localizedCount} fallback={usedFallbackLabel} primary={primaryPath}");
+
+        if (bloodcraftDebugEnabled || usedFallbackLabel || labelCount == 0)
+        {
+            DumpSubTabDetails(buttonObject.transform, "setup");
+        }
+    }
+
+    /// <summary>
+    /// Dumps Bloodcraft sub-tab button and label diagnostics.
+    /// </summary>
+    /// <param name="context">Context label for the dump.</param>
+    public static void DumpBloodcraftSubTabs(string context = "manual")
+    {
+        try
+        {
+            Core.Log.LogInfo($"[Debug UI] Bloodcraft sub-tab dump ({context}).");
+            List<Transform> subTabs = FindTransformsByPrefix("BloodcraftSubTab_", "CharacterInventorySubMenu(Clone)");
+            if (subTabs.Count == 0)
+            {
+                Core.Log.LogWarning("[Debug UI] No Bloodcraft sub-tab buttons found.");
+                return;
+            }
+
+            for (int i = 0; i < subTabs.Count; i++)
+            {
+                DumpSubTabDetails(subTabs[i], context);
+            }
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"[Debug UI] Failed to dump Bloodcraft sub-tabs: {ex}");
+        }
+    }
+
+    /// <summary>
+    /// Logs detailed diagnostics for a sub-tab button.
+    /// </summary>
+    /// <param name="button">The button transform.</param>
+    /// <param name="context">Context label for the dump.</param>
+    static void DumpSubTabDetails(Transform button, string context)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        RectTransform rect = button as RectTransform;
+        Core.Log.LogInfo($"[Debug UI] Sub-tab '{button.name}' ({context}) at {GetPath(button)} active={button.gameObject.activeInHierarchy} size={FormatRect(rect)}");
+
+        CanvasGroup[] groups = button.GetComponentsInParent<CanvasGroup>(true);
+        for (int i = 0; i < groups.Length; i++)
+        {
+            CanvasGroup group = groups[i];
+            if (group == null)
+            {
+                continue;
+            }
+
+            Core.Log.LogInfo($"[Debug UI]   CanvasGroup[{i}] alpha={group.alpha:0.##} interactable={group.interactable} blocksRaycasts={group.blocksRaycasts}");
+        }
+
+        TMP_Text[] texts = button.GetComponentsInChildren<TMP_Text>(true);
+        if (texts.Length == 0)
+        {
+            Core.Log.LogWarning("[Debug UI]   No TMP_Text components found under sub-tab.");
+        }
+
+        int textLimit = Math.Min(texts.Length, MAX_SUBTAB_TEXT);
+        for (int i = 0; i < textLimit; i++)
+        {
+            LogTmpText(texts[i], i);
+        }
+
+        if (texts.Length > MAX_SUBTAB_TEXT)
+        {
+            Core.Log.LogInfo($"[Debug UI]   ... {texts.Length - MAX_SUBTAB_TEXT} more TMP_Text component(s) not shown.");
+        }
+
+        LocalizedText[] localized = button.GetComponentsInChildren<LocalizedText>(true);
+        for (int i = 0; i < localized.Length; i++)
+        {
+            LocalizedText local = localized[i];
+            if (local == null)
+            {
+                continue;
+            }
+
+            Core.Log.LogInfo($"[Debug UI]   LocalizedText[{i}] name={local.name} enabled={local.enabled}");
+        }
+    }
+
+    /// <summary>
+    /// Logs a TMP text component with layout info.
+    /// </summary>
+    /// <param name="text">The TMP text component.</param>
+    /// <param name="index">The index within the list.</param>
+    static void LogTmpText(TMP_Text text, int index)
+    {
+        if (text == null)
+        {
+            Core.Log.LogWarning($"[Debug UI]   TMP_Text[{index}] is null.");
+            return;
+        }
+
+        RectTransform rect = text.rectTransform;
+        string value = text.text ?? string.Empty;
+        Core.Log.LogInfo($"[Debug UI]   TMP_Text[{index}] name={text.name} active={text.gameObject.activeInHierarchy} enabled={text.enabled} text='{value}' size={FormatRect(rect)} fontSize={text.fontSize:0.##} color={FormatColor(text.color)}");
+
+        if (string.IsNullOrWhiteSpace(value) || text.color.a < 0.1f || rect == null || rect.rect.width < 1f || rect.rect.height < 1f)
+        {
+            Core.Log.LogWarning($"[Debug UI]   TMP_Text[{index}] may be invisible (text empty, alpha low, or size too small).");
+        }
+    }
+
+    /// <summary>
+    /// Formats a color for logging.
+    /// </summary>
+    /// <param name="color">The color to format.</param>
+    /// <returns>A formatted color string.</returns>
+    static string FormatColor(Color color)
+    {
+        return $"({color.r:0.##},{color.g:0.##},{color.b:0.##},{color.a:0.##})";
+    }
+
+    /// <summary>
+    /// Formats a rect transform for logging.
+    /// </summary>
+    /// <param name="rect">The rect transform to format.</param>
+    /// <returns>A formatted rect string.</returns>
+    static string FormatRect(RectTransform rect)
+    {
+        if (rect == null)
+        {
+            return "none";
+        }
+
+        Rect r = rect.rect;
+        return $"({r.width:0.##}x{r.height:0.##}) pos=({rect.anchoredPosition.x:0.##},{rect.anchoredPosition.y:0.##})";
+    }
 
     /// <summary>
     /// Dumps Character UI hierarchy data to logs to locate tab containers.
@@ -252,6 +436,34 @@ internal static class DebugService
         }
 
         return fallback;
+    }
+
+    /// <summary>
+    /// Finds transforms by name prefix with an optional ancestor constraint.
+    /// </summary>
+    /// <param name="prefix">The name prefix to search for.</param>
+    /// <param name="ancestorName">Optional ancestor name to require.</param>
+    /// <returns>A list of matching transforms.</returns>
+    static List<Transform> FindTransformsByPrefix(string prefix, string ancestorName)
+    {
+        List<Transform> results = [];
+
+        foreach (Transform transform in UnityEngine.Resources.FindObjectsOfTypeAll<Transform>())
+        {
+            if (transform == null || !transform.name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrEmpty(ancestorName) && !HasAncestor(transform, ancestorName))
+            {
+                continue;
+            }
+
+            results.Add(transform);
+        }
+
+        return results;
     }
 
     /// <summary>
