@@ -1065,6 +1065,7 @@ internal class CanvasService
     {
         public static readonly PrefabGUID StatBuff = PrefabGUIDs.SetBonus_AllLeech_T09;
         public static readonly bool StatBuffActive = _legacyBar || _expertiseBar;
+        const int StatBuffSlotCount = 6;
 
         public static readonly HashSet<GameObject> AttributeObjects = [];
         public static GameObject _attributeObjectPrefab;
@@ -1074,6 +1075,30 @@ internal class CanvasService
 
         public static readonly Dictionary<UnitStatType, LocalizedText> BloodAttributeTexts = [];
         public static readonly Dictionary<UnitStatType, LocalizedText> WeaponAttributeTexts = [];
+
+        static readonly HashSet<UnitStatType> SupportedAttributeBuffStats =
+        [
+            UnitStatType.MaxHealth,
+            UnitStatType.PhysicalPower,
+            UnitStatType.SpellPower,
+            UnitStatType.MovementSpeed,
+            UnitStatType.PrimaryAttackSpeed,
+            UnitStatType.PhysicalCriticalStrikeChance,
+            UnitStatType.PhysicalCriticalStrikeDamage,
+            UnitStatType.SpellCriticalStrikeChance,
+            UnitStatType.SpellCriticalStrikeDamage,
+            UnitStatType.PrimaryLifeLeech,
+            UnitStatType.PhysicalLifeLeech,
+            UnitStatType.SpellLifeLeech,
+            UnitStatType.MinionDamage,
+            UnitStatType.DamageReduction,
+            UnitStatType.HealingReceived,
+            UnitStatType.ReducedBloodDrain,
+            UnitStatType.ResourceYield,
+            UnitStatType.WeaponCooldownRecoveryRate,
+            UnitStatType.SpellCooldownRecoveryRate,
+            UnitStatType.UltimateCooldownRecoveryRate
+        ];
 
         public static readonly List<ModifyUnitStatBuff_DOTS> BloodStatBuffs = [default, default, default];
         public static readonly List<ModifyUnitStatBuff_DOTS> WeaponStatBuffs = [default, default, default];
@@ -1108,6 +1133,25 @@ internal class CanvasService
 
             targetBuffer.CopyFrom(sourceBuffer);
         }
+        /// <summary>
+        /// Ensures the stat buffer has the expected slot count and zero-initialized entries.
+        /// </summary>
+        /// <param name="buffer">The buffer to validate and initialize.</param>
+        static void EnsureStatBufferSize(ref DynamicBuffer<ModifyUnitStatBuff_DOTS> buffer)
+        {
+            if (!buffer.IsCreated)
+                return;
+
+            if (buffer.Length != StatBuffSlotCount)
+            {
+                buffer.ResizeUninitialized(StatBuffSlotCount);
+
+                for (int i = 0; i < buffer.Length; i++)
+                {
+                    buffer[i] = default;
+                }
+            }
+        }
         public static void UpdateAttributes(ref DynamicBuffer<ModifyUnitStatBuff_DOTS> sourceBuffer)
         {
             if (!AttributesInitialized)
@@ -1118,8 +1162,12 @@ internal class CanvasService
                 {
                     buffer = EntityManager.AddBuffer<ModifyUnitStatBuff_DOTS>(LocalCharacter);
 
-                    buffer.EnsureCapacity(6);
-                    buffer.ResizeUninitialized(6);
+                    buffer.EnsureCapacity(StatBuffSlotCount);
+                    buffer.ResizeUninitialized(StatBuffSlotCount);
+                    for (int i = 0; i < buffer.Length; i++)
+                    {
+                        buffer[i] = default;
+                    }
                 }
 
                 return;
@@ -1208,9 +1256,20 @@ internal class CanvasService
             */
         }
 
+        /// <summary>
+        /// Determines whether the given stat type can be safely applied to the in-game attribute buffer.
+        /// </summary>
+        /// <param name="unitStatType">The unit stat type to validate.</param>
+        /// <returns>True when the stat type is supported for attribute buffs.</returns>
+        static bool IsSupportedAttributeBuffStat(UnitStatType unitStatType)
+        {
+            return SupportedAttributeBuffStats.Contains(unitStatType);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string GetWeaponStatInfo(int i, string statType)
         {
+            WeaponStatBuffs[i] = default;
             if (Enum.TryParse(statType, out WeaponStatType weaponStatType))
             {
                 if (_weaponStatValues.TryGetValue(weaponStatType, out float statValue))
@@ -1218,9 +1277,15 @@ internal class CanvasService
                     float classMultiplier = ClassSynergy(weaponStatType, _classType, _classStatSynergies);
                     statValue *= (1 + (_prestigeStatMultiplier * _expertisePrestige)) * classMultiplier * ((float)_expertiseLevel / _expertiseMaxLevel);
 
-                    int statModificationId = ModificationIds.GenerateId(0, (int)weaponStatType, statValue);
                     UnitStatType unitStatType = (UnitStatType)Enum.Parse(typeof(UnitStatType), weaponStatType.ToString());
 
+                    if (!IsSupportedAttributeBuffStat(unitStatType))
+                    {
+                        WeaponStatBuffs[i] = default;
+                        return FormatWeaponStatBar(weaponStatType, statValue);
+                    }
+
+                    int statModificationId = ModificationIds.GenerateId(0, (int)weaponStatType, statValue);
                     WeaponStatBuffs[i] = new()
                     {
                         StatType = unitStatType,
@@ -1243,6 +1308,7 @@ internal class CanvasService
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string GetBloodStatInfo(int i, string statType)
         {
+            BloodStatBuffs[i] = default;
             if (Enum.TryParse(statType, out BloodStatType bloodStat))
             {
                 if (_bloodStatValues.TryGetValue(bloodStat, out float statValue))
@@ -1251,9 +1317,15 @@ internal class CanvasService
                     statValue *= (1 + (_prestigeStatMultiplier * _legacyPrestige)) * classMultiplier * ((float)_legacyLevel / _legacyMaxLevel);
 
                     string displayString = $"<color=#00FFFF>{BloodStatTypeAbbreviations[bloodStat]}</color>: <color=#90EE90>{(statValue * 100).ToString("F0") + "%"}</color>";
-                    int statModificationId = ModificationIds.GenerateId(1, (int)bloodStat, statValue);
                     UnitStatType unitStatType = (UnitStatType)Enum.Parse(typeof(UnitStatType), bloodStat.ToString());
 
+                    if (!IsSupportedAttributeBuffStat(unitStatType))
+                    {
+                        BloodStatBuffs[i] = default;
+                        return displayString;
+                    }
+
+                    int statModificationId = ModificationIds.GenerateId(1, (int)bloodStat, statValue);
                     BloodStatBuffs[i] = new()
                     {
                         StatType = unitStatType,
@@ -2190,9 +2262,14 @@ internal class CanvasService
         public static void UpdateBloodStats(List<string> bonusStats, List<LocalizedText> statTexts,
             ref DynamicBuffer<ModifyUnitStatBuff_DOTS> buffer, Func<int, string, string> getStatInfo)
         {
+            EnsureStatBufferSize(ref buffer);
+
             for (int i = 0; i < 3; i++)
             {
-                if (bonusStats[i] != "None")
+                string statKey = bonusStats[i];
+                bool hasStat = !string.IsNullOrWhiteSpace(statKey)
+                    && !statKey.Equals("None", StringComparison.OrdinalIgnoreCase);
+                if (hasStat)
                 {
                     if (!statTexts[i].enabled)
                         statTexts[i].enabled = true;
@@ -2200,18 +2277,35 @@ internal class CanvasService
                     if (!statTexts[i].gameObject.active)
                         statTexts[i].gameObject.SetActive(true);
 
-                    statTexts[i].ForceSet(getStatInfo(i, bonusStats[i]));
-
-                    if (buffer.IsCreated
-                        && BloodStatBuffs[i].Id.Id != 0)
+                    string statInfo = getStatInfo(i, statKey);
+                    if (string.IsNullOrWhiteSpace(statInfo))
                     {
-                        buffer[i] = BloodStatBuffs[i];
+                        statTexts[i].ForceSet(string.Empty);
+                        statTexts[i].enabled = false;
+
+                        BloodStatBuffs[i] = default;
+                        if (buffer.IsCreated)
+                        {
+                            buffer[i] = default;
+                        }
+
+                        continue;
+                    }
+
+                    statTexts[i].ForceSet(statInfo);
+
+                    if (buffer.IsCreated)
+                    {
+                        buffer[i] = BloodStatBuffs[i].Id.Id != 0 ? BloodStatBuffs[i] : default;
                     }
                 }
-                else if (bonusStats[i] == "None" && statTexts[i].enabled)
+                else
                 {
-                    statTexts[i].ForceSet(string.Empty);
-                    statTexts[i].enabled = false;
+                    if (statTexts[i].enabled)
+                    {
+                        statTexts[i].ForceSet(string.Empty);
+                        statTexts[i].enabled = false;
+                    }
 
                     BloodStatBuffs[i] = default;
                     if (buffer.IsCreated)
@@ -2224,11 +2318,16 @@ internal class CanvasService
         public static void UpdateWeaponStats(List<string> bonusStats, List<LocalizedText> statTexts,
             ref DynamicBuffer<ModifyUnitStatBuff_DOTS> buffer, Func<int, string, string> getStatInfo)
         {
+            EnsureStatBufferSize(ref buffer);
+
             for (int i = 0; i < 3; i++)
             {
                 int j = i + 3; // Weapon stats -> second half of buffer
 
-                if (bonusStats[i] != "None")
+                string statKey = bonusStats[i];
+                bool hasStat = !string.IsNullOrWhiteSpace(statKey)
+                    && !statKey.Equals("None", StringComparison.OrdinalIgnoreCase);
+                if (hasStat)
                 {
                     if (!statTexts[i].enabled)
                         statTexts[i].enabled = true;
@@ -2236,23 +2335,40 @@ internal class CanvasService
                     if (!statTexts[i].gameObject.active)
                         statTexts[i].gameObject.SetActive(true);
 
-                    statTexts[i].ForceSet(getStatInfo(i, bonusStats[i]));
-
-                    if (buffer.IsCreated
-                        && WeaponStatBuffs[i].Id.Id != 0)
+                    string statInfo = getStatInfo(i, statKey);
+                    if (string.IsNullOrWhiteSpace(statInfo))
                     {
-                        buffer[j] = WeaponStatBuffs[i];
+                        statTexts[i].ForceSet(string.Empty);
+                        statTexts[i].enabled = false;
+
+                        WeaponStatBuffs[i] = default;
+                        if (buffer.IsCreated)
+                        {
+                            buffer[j] = default;
+                        }
+
+                        continue;
+                    }
+
+                    statTexts[i].ForceSet(statInfo);
+
+                    if (buffer.IsCreated)
+                    {
+                        buffer[j] = WeaponStatBuffs[i].Id.Id != 0 ? WeaponStatBuffs[i] : default;
                     }
                 }
-                else if (bonusStats[i] == "None" && statTexts[i].enabled)
+                else
                 {
-                    statTexts[i].ForceSet(string.Empty);
-                    statTexts[i].enabled = false;
+                    if (statTexts[i].enabled)
+                    {
+                        statTexts[i].ForceSet(string.Empty);
+                        statTexts[i].enabled = false;
+                    }
 
                     WeaponStatBuffs[i] = default;
                     if (buffer.IsCreated)
                     {
-                        buffer[i] = default;
+                        buffer[j] = default;
                     }
                 }
             }

@@ -5,6 +5,7 @@ using System.Text;
 using TMPro;
 using UnityEngine;
 using ProjectM.UI;
+using UnityEngine.UI;
 
 namespace Eclipse.Services;
 internal static class DebugService
@@ -110,8 +111,14 @@ internal static class DebugService
             return;
         }
 
-        RectTransform rect = button as RectTransform;
+        RectTransform rect = button.GetComponent<RectTransform>();
         Core.Log.LogInfo($"[Debug UI] Sub-tab '{button.name}' ({context}) at {GetPath(button)} active={button.gameObject.activeInHierarchy} size={FormatRect(rect)}");
+
+        RectTransform parentRect = button.parent != null ? button.parent.GetComponent<RectTransform>() : null;
+        if (parentRect != null)
+        {
+            Core.Log.LogInfo($"[Debug UI]   Parent rect {parentRect.name} size={FormatRect(parentRect)}");
+        }
 
         CanvasGroup[] groups = button.GetComponentsInParent<CanvasGroup>(true);
         for (int i = 0; i < groups.Length; i++)
@@ -123,6 +130,42 @@ internal static class DebugService
             }
 
             Core.Log.LogInfo($"[Debug UI]   CanvasGroup[{i}] alpha={group.alpha:0.##} interactable={group.interactable} blocksRaycasts={group.blocksRaycasts}");
+        }
+
+        Canvas[] canvases = button.GetComponentsInParent<Canvas>(true);
+        for (int i = 0; i < canvases.Length; i++)
+        {
+            Canvas canvas = canvases[i];
+            if (canvas == null)
+            {
+                continue;
+            }
+
+            Core.Log.LogInfo($"[Debug UI]   Canvas[{i}] name={canvas.name} overrideSorting={canvas.overrideSorting} order={canvas.sortingOrder} layer={canvas.sortingLayerName}");
+        }
+
+        RectMask2D[] masks = button.GetComponentsInParent<RectMask2D>(true);
+        for (int i = 0; i < masks.Length; i++)
+        {
+            RectMask2D mask = masks[i];
+            if (mask == null)
+            {
+                continue;
+            }
+
+            Core.Log.LogInfo($"[Debug UI]   RectMask2D[{i}] name={mask.name} enabled={mask.enabled}");
+        }
+
+        Mask[] uiMasks = button.GetComponentsInParent<Mask>(true);
+        for (int i = 0; i < uiMasks.Length; i++)
+        {
+            Mask mask = uiMasks[i];
+            if (mask == null)
+            {
+                continue;
+            }
+
+            Core.Log.LogInfo($"[Debug UI]   Mask[{i}] name={mask.name} enabled={mask.enabled} showGraphic={mask.showMaskGraphic}");
         }
 
         TMP_Text[] texts = button.GetComponentsInChildren<TMP_Text>(true);
@@ -170,7 +213,9 @@ internal static class DebugService
 
         RectTransform rect = text.rectTransform;
         string value = text.text ?? string.Empty;
-        Core.Log.LogInfo($"[Debug UI]   TMP_Text[{index}] name={text.name} active={text.gameObject.activeInHierarchy} enabled={text.enabled} text='{value}' size={FormatRect(rect)} fontSize={text.fontSize:0.##} color={FormatColor(text.color)}");
+        string fontName = text.font != null ? text.font.name : "null";
+        string materialName = text.fontMaterial != null ? text.fontMaterial.name : "null";
+        Core.Log.LogInfo($"[Debug UI]   TMP_Text[{index}] name={text.name} active={text.gameObject.activeInHierarchy} enabled={text.enabled} maskable={text.maskable} text='{value}' size={FormatRect(rect)} fontSize={text.fontSize:0.##} color={FormatColor(text.color)} font={fontName} material={materialName}");
 
         if (string.IsNullOrWhiteSpace(value) || text.color.a < 0.1f || rect == null || rect.rect.width < 1f || rect.rect.height < 1f)
         {

@@ -65,5 +65,10 @@ internal static class InputActionSystemPatch
         {
             DebugService.DumpBloodcraftSubTabs("manual");
         }
+
+        if (Input.GetKeyDown(KeyCode.F6))
+        {
+            AssetDumpService.DumpMenuAssets();
+        }
     }
 }
