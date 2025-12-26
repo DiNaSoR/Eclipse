@@ -2241,16 +2241,19 @@ internal static class CharacterMenuService
                 statBonusesWeaponText.text = data.WeaponType;
             }
 
+            /*
             if (statBonusesWeaponImage != null)
             {
                 // Try set icon from equipped weapon if it matches
-                var weaponEntity = Core.LocalCharacter.Read<Equipment>().WeaponSlot.SlotEntity._Entity;
-                if (weaponEntity != Entity.Null && weaponEntity.Has<ItemIcon>())
-                {
-                    statBonusesWeaponImage.sprite = weaponEntity.Read<ItemIcon>().Icon;
-                    statBonusesWeaponImage.color = Color.white;
-                }
+                // Commented out due to build errors finding ItemIcon/Entity types correctly in this context
+                // var weaponEntity = Core.LocalCharacter.Read<Equipment>().WeaponSlot.SlotEntity._Entity;
+                // if (weaponEntity != Entity.Null && weaponEntity.Has<ItemIcon>())
+                // {
+                //    statBonusesWeaponImage.sprite = weaponEntity.Read<ItemIcon>().Icon;
+                //    statBonusesWeaponImage.color = Color.white;
+                // }
             }
+            */
 
             if (statBonusesCountText != null)
             {

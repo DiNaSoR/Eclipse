@@ -366,8 +366,8 @@
           <button class="subtab" data-tab="prestige">Prestige</button>
           <button class="subtab" data-tab="exoform">Exoform</button>
           <button class="subtab" data-tab="battles">Battles</button>
-          <button class="subtab" data-tab="bonuses">Stat Bonuses</button>
-          <button class="subtab is-active" data-tab="professions">Professions</button>
+          <button class="subtab is-active" data-tab="bonuses">Stat Bonuses</button>
+          <button class="subtab" data-tab="professions">Professions</button>
         </div>
 
         <div class="content">
@@ -385,9 +385,10 @@
             <div style="text-align:center; opacity:.75;">Familiar battles disabled.</div>
           </div>
 
-          <div class="content-section" id="tab-bonuses">
+          <div class="content-section is-active" id="tab-bonuses">
             <!-- Weapon Header -->
             <div class="stat-weapon-header">
+              <!-- Icon logic currently disabled in C# -->
               <div class="stat-weapon-icon"></div>
               <div class="stat-weapon-info">
                 <div class="stat-weapon-name">Sword</div>
@@ -395,8 +396,7 @@
               </div>
             </div>
 
-            <!-- Selected Stats -->
-            <div class="stat-section-label">Active Bonuses</div>
+            <!-- Single Flat List (1:1 with C# Loop) -->
             <div class="stat-list">
               <div class="stat-row stat-row-selected">
                 <div class="stat-check">✓</div>
@@ -413,11 +413,6 @@
                 <div class="stat-name">Critical Chance</div>
                 <div class="stat-value">+5%</div>
               </div>
-            </div>
-
-            <!-- Available Stats -->
-            <div class="stat-section-label">Available Stats</div>
-            <div class="stat-list">
               <div class="stat-row">
                 <div class="stat-check"></div>
                 <div class="stat-name" style="opacity: 0.6;">Spell Power</div>
@@ -438,7 +433,7 @@
             <div class="stat-hint">Click a stat to toggle selection.</div>
           </div>
 
-          <div class="content-section is-active" id="tab-professions">
+          <div class="content-section" id="tab-professions">
             <div class="prof-table">
               <div class="prof-header">
                 <div></div>
@@ -526,7 +521,6 @@
   </div>
 
   <script>
-    const subtitle = document.getElementById("panel-subtitle");
     document.querySelectorAll(".subtab").forEach((btn) => {
       btn.addEventListener("click", () => {
         document.querySelectorAll(".subtab").forEach((tab) => tab.classList.remove("is-active"));
@@ -536,10 +530,6 @@
         document.querySelectorAll(".content-section").forEach((section) => {
           section.classList.toggle("is-active", section.id === "tab-" + tabId);
         });
-
-        if (subtitle) {
-          subtitle.textContent = btn.textContent.trim();
-        }
       });
     });
   </script>
