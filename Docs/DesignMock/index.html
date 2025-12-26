@@ -7,16 +7,32 @@
   <title>Bloodcraft UI Mock</title>
   <style>
     :root {
+      /* Dimensions from Unity manifest.txt (rectW/rectH) */
       --ui-scale: 1;
       --panel-width: 596px;
+      /* BloodcraftTab Scroll View Viewport width */
       --panel-height: 698px;
+      /* Viewport height: 698.01 */
       --panel-padding-x: 24px;
-      --panel-padding-top: 12px;
-      --header-height: 84px;
-      --main-tab-width: 119px;
-      --main-tab-height: 49px;
-      --subtab-height: 49px;
+      /* BloodcraftBodyRoot offset from edge */
+      --panel-padding-top: 24px;
+      /* BloodcraftContentRoot padding-top */
+      --header-height: 80px;
+      /* HUDPanelBackground height */
+      --main-tab-width: 137px;
+      /* BloodcraftSubTab width */
+      --main-tab-height: 36px;
+      /* BloodcraftSubTab height */
+      --subtab-width: 137px;
+      /* BloodcraftSubTab_* width */
+      --subtab-height: 36px;
+      /* BloodcraftSubTab_* height */
       --subtab-gap: 0px;
+      /* Tabs are adjacent (no gap) */
+      --content-width: 548px;
+      /* BloodcraftBodyRoot inner width */
+      --row-height: 30px;
+      /* ProfessionRow height */
       --title-font: "Cinzel", "Palatino Linotype", "Book Antiqua", serif;
       --body-font: "Cinzel", "Palatino Linotype", "Book Antiqua", serif;
       --title-size: 26px;
@@ -74,7 +90,7 @@
       width: var(--panel-width);
       display: grid;
       grid-template-columns: repeat(5, var(--main-tab-width));
-      gap: 6px;
+      gap: 0px;
       justify-content: center;
       margin-bottom: 8px;
     }
@@ -112,7 +128,7 @@
     }
 
     .subtab {
-      flex: 1 1 0;
+      width: var(--subtab-width);
       height: var(--subtab-height);
       background: url("./assets/sprites/Tab_Normal.png") center/100% 100% no-repeat;
       display: flex;
@@ -349,7 +365,7 @@
         <div class="subtabs">
           <button class="subtab" data-tab="prestige">Prestige</button>
           <button class="subtab" data-tab="exoform">Exoform</button>
-          <button class="subtab" data-tab="battles">Familiar Battles</button>
+          <button class="subtab" data-tab="battles">Battles</button>
           <button class="subtab" data-tab="bonuses">Stat Bonuses</button>
           <button class="subtab is-active" data-tab="professions">Professions</button>
         </div>
