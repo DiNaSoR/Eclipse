@@ -133,11 +133,13 @@ internal static class WeaponCommands
             finalWeaponStat = (WeaponStats.WeaponStatType)numericStat;
             finalWeaponType = GetCurrentWeaponType(playerCharacter);
 
-            if (ChooseStat(steamId, finalWeaponType, finalWeaponStat))
+            if (ChooseStat(steamId, finalWeaponType, finalWeaponStat, out bool added))
             {
                 Buffs.RefreshStats(playerCharacter);
+                string action = added ? "chosen for" : "removed from";
+                string color = added ? "#00FFFF" : "#FF0000";
                 LocalizationService.HandleReply(ctx,
-                    $"<color=#00FFFF>{finalWeaponStat}</color> has been chosen for <color=#c0c0c0>{finalWeaponType}</color>!");
+                    $"<color={color}>{finalWeaponStat}</color> has been {action} <color=#c0c0c0>{finalWeaponType}</color>!");
             }
         }
         else
@@ -167,11 +169,13 @@ internal static class WeaponCommands
 
             finalWeaponStat = (WeaponStats.WeaponStatType)typedStat;
 
-            if (ChooseStat(steamId, finalWeaponType, finalWeaponStat))
+            if (ChooseStat(steamId, finalWeaponType, finalWeaponStat, out bool added))
             {
                 Buffs.RefreshStats(playerCharacter);
+                string action = added ? "chosen for" : "removed from";
+                string color = added ? "#00FFFF" : "#FF0000";
                 LocalizationService.HandleReply(ctx,
-                    $"<color=#00FFFF>{finalWeaponStat}</color> has been chosen for <color=#c0c0c0>{finalWeaponType}</color>!");
+                    $"<color={color}>{finalWeaponStat}</color> has been {action} <color=#c0c0c0>{finalWeaponType}</color>!");
             }
         }
     }

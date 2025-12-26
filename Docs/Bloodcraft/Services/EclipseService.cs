@@ -52,9 +52,11 @@ internal class EclipseService
     static readonly ConcurrentDictionary<ulong, DateTime> _lastLeaderboardSync = [];
     static readonly ConcurrentDictionary<ulong, DateTime> _lastExoFormSync = [];
     static readonly ConcurrentDictionary<ulong, DateTime> _lastBattleSync = [];
+    static readonly ConcurrentDictionary<ulong, DateTime> _lastWeaponStatSync = [];
     static readonly TimeSpan _leaderboardSyncInterval = TimeSpan.FromSeconds(30);
     static readonly TimeSpan _exoFormSyncInterval = TimeSpan.FromSeconds(5);
     static readonly TimeSpan _battleSyncInterval = TimeSpan.FromSeconds(5);
+    static readonly TimeSpan _weaponStatSyncInterval = TimeSpan.FromSeconds(1);
     public EclipseService()
     {
         EclipseServiceRoutine().Start();
@@ -67,7 +69,8 @@ internal class EclipseService
         ClassDataToClient,
         PrestigeLeaderboardToClient,
         ExoFormDataToClient,
-        FamiliarBattleDataToClient
+        FamiliarBattleDataToClient,
+        WeaponStatBonusDataToClient
     }
     public static void HandleClientMessage(string message)
     {
@@ -226,6 +229,11 @@ internal class EclipseService
                                     {
                                         versionHandler13X?.SendClientFamiliarBattleData(playerInfo.User, steamId);
                                     }
+
+                                    if (ShouldSync(_lastWeaponStatSync, steamId, _weaponStatSyncInterval))
+                                    {
+                                        versionHandler13X?.SendClientWeaponStatBonusData(playerInfo.CharEntity, playerInfo.User, steamId);
+                                    }
                                     break;
                                 }
                                 else
@@ -310,6 +318,7 @@ internal class EclipseService
         _lastLeaderboardSync.TryRemove(steamId, out var _);
         _lastExoFormSync.TryRemove(steamId, out var _);
         _lastBattleSync.TryRemove(steamId, out var _);
+        _lastWeaponStatSync.TryRemove(steamId, out var _);
     }
     public static (int Percent, int Level, int Prestige, int Class) GetExperienceData(ulong steamId)
     {

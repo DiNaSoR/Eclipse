@@ -87,17 +87,26 @@ internal static class WeaponManager
             {WeaponStatType.SpellCritDamage, ConfigService.SpellCritDamage}
         };
     }
-    public static bool ChooseStat(ulong steamId, WeaponType weaponType, WeaponStatType weaponStatType)
+    public static bool ChooseStat(ulong steamId, WeaponType weaponType, WeaponStatType weaponStatType, out bool added)
     {
+        added = false;
         if (steamId.TryGetPlayerWeaponStats(out var weaponTypeStats) && weaponTypeStats.TryGetValue(weaponType, out var weaponStats))
         {
-            if (weaponStats.Count >= _expertiseStatChoices || weaponStats.Contains(weaponStatType))
+            if (weaponStats.Contains(weaponStatType))
+            {
+                weaponStats.Remove(weaponStatType);
+                steamId.SetPlayerWeaponStats(weaponTypeStats);
+                return true;
+            }
+
+            if (weaponStats.Count >= _expertiseStatChoices)
             {
                 return false;
             }
 
             weaponStats.Add(weaponStatType);
             steamId.SetPlayerWeaponStats(weaponTypeStats);
+            added = true;
 
             return true;
         }

@@ -11,6 +11,8 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
+using ProjectM;
+using Unity.Entities;
 using static Eclipse.Services.CanvasService.ConfigureHUD;
 using static Eclipse.Services.CanvasService.DataHUD;
 using static Eclipse.Services.CanvasService.UtilitiesHUD;
@@ -34,7 +36,7 @@ internal static class CharacterMenuService
     const float HeaderFontScale = 1.3f;
     const float SubHeaderFontScale = 0.87f;
     const float EntryFontScale = 0.87f;
-    const float SubTabFontScale = 0.87f;
+    const float SubTabFontScale = 0.5f;
     const float SubTabHeightScale = 1.0f;
     const int ContentPaddingLeft = 24;
     const int ContentPaddingRight = 24;
@@ -75,6 +77,12 @@ internal static class CharacterMenuService
     static TextMeshProUGUI professionsStatusText;
     static TextMeshProUGUI professionsSummaryText;
     static readonly List<ProfessionRow> professionRows = [];
+    static Transform statBonusesRoot;
+    static TextMeshProUGUI statBonusesWeaponText;
+    static TextMeshProUGUI statBonusesCountText;
+    static Image statBonusesWeaponImage;
+    static Transform statBonusesListRoot;
+    static readonly List<StatBonusRow> statBonusRows = [];
     static BloodcraftTab activeTab = BloodcraftTab.Prestige;
     static int bloodcraftTabIndex = -1;
     static int lastKnownTabIndex = -1;
@@ -91,6 +99,7 @@ internal static class CharacterMenuService
         Prestige,
         Exoform,
         Battles,
+        StatBonuses,
         Professions
     }
 
@@ -99,6 +108,7 @@ internal static class CharacterMenuService
         BloodcraftTab.Prestige,
         BloodcraftTab.Exoform,
         BloodcraftTab.Battles,
+        BloodcraftTab.StatBonuses,
         BloodcraftTab.Professions
     ];
 
@@ -107,6 +117,7 @@ internal static class CharacterMenuService
         { BloodcraftTab.Prestige, "Prestige" },
         { BloodcraftTab.Exoform, "Exoform" },
         { BloodcraftTab.Battles, "Familiar Battles" },
+        { BloodcraftTab.StatBonuses, "Stat Bonuses" },
         { BloodcraftTab.Professions, "Professions" }
     };
 
@@ -115,6 +126,7 @@ internal static class CharacterMenuService
         { BloodcraftTab.Prestige, "Prestige Leaderboard" },
         { BloodcraftTab.Exoform, "Exoforms" },
         { BloodcraftTab.Battles, "Familiar Battles" },
+        { BloodcraftTab.StatBonuses, "Stat Bonuses" },
         { BloodcraftTab.Professions, "Professions" }
     };
 
@@ -236,6 +248,11 @@ internal static class CharacterMenuService
         professionsStatusText = null;
         professionsSummaryText = null;
         professionRows.Clear();
+        statBonusesRoot = null;
+        statBonusesWeaponText = null;
+        statBonusesCountText = null;
+        statBonusesListRoot = null;
+        statBonusRows.Clear();
         activeTab = BloodcraftTab.Prestige;
         bloodcraftTabIndex = -1;
         lastKnownTabIndex = -1;
@@ -539,6 +556,7 @@ internal static class CharacterMenuService
         }
 
         professionsRoot = CreateProfessionPanel(bodyRoot, referenceText);
+        statBonusesRoot = CreateStatBonusesPanel(bodyRoot, referenceText);
         return tabRoot;
     }
 
@@ -1310,6 +1328,155 @@ internal static class CharacterMenuService
     }
 
     /// <summary>
+    /// Creates the stat bonuses panel for weapon expertise stat selection.
+    /// </summary>
+    /// <param name="parent">The parent transform to attach the panel.</param>
+    /// <param name="reference">Reference text used to style labels.</param>
+    /// <returns>The panel's root transform.</returns>
+    static Transform CreateStatBonusesPanel(Transform parent, TextMeshProUGUI reference)
+    {
+        RectTransform rectTransform = CreateRectTransformObject("BloodcraftStatBonuses", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+        EnsureVerticalLayout(rectTransform);
+
+        // Weapon header section
+        CreateStatBonusesWeaponHeader(rectTransform, reference);
+        _ = CreateDividerLine(rectTransform);
+
+        // Stats list container
+        statBonusesListRoot = CreateStatBonusesListRoot(rectTransform);
+
+        // Hint text
+        TextMeshProUGUI hintText = CreateSectionSubHeader(rectTransform, reference, "Click a stat to toggle selection.");
+        if (hintText != null)
+        {
+            hintText.alpha = 0.5f;
+            hintText.alignment = TextAlignmentOptions.Center;
+        }
+
+        rectTransform.gameObject.SetActive(false);
+        return rectTransform;
+    }
+
+    /// <summary>
+    /// Creates the weapon header section for stat bonuses.
+    /// </summary>
+    /// <param name="parent">The parent transform.</param>
+    /// <param name="reference">Reference text for styling.</param>
+    static void CreateStatBonusesWeaponHeader(Transform parent, TextMeshProUGUI reference)
+    {
+        RectTransform rectTransform = CreateRectTransformObject("WeaponHeader", parent);
+        if (rectTransform == null)
+        {
+            return;
+        }
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        HorizontalLayoutGroup layout = rectTransform.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.spacing = 12f;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+        layout.childControlHeight = true;
+        layout.childControlWidth = true;
+        layout.padding = CreatePadding(12, 12, 8, 8);
+
+        LayoutElement rowLayout = rectTransform.gameObject.AddComponent<LayoutElement>();
+        rowLayout.preferredHeight = 48f;
+        rowLayout.minHeight = 48f;
+
+        // Weapon icon placeholder
+        RectTransform iconRect = CreateRectTransformObject("WeaponIcon", rectTransform);
+        if (iconRect != null)
+        {
+            iconRect.sizeDelta = new Vector2(40f, 40f);
+            Image iconImage = iconRect.gameObject.AddComponent<Image>();
+            iconImage.color = new Color(1f, 1f, 1f, 0.2f);
+            statBonusesWeaponImage = iconImage;
+            iconImage.raycastTarget = false;
+            LayoutElement iconLayout = iconRect.gameObject.AddComponent<LayoutElement>();
+            iconLayout.preferredWidth = 40f;
+            iconLayout.preferredHeight = 40f;
+        }
+
+        // Weapon info container
+        RectTransform infoRect = CreateRectTransformObject("WeaponInfo", rectTransform);
+        if (infoRect != null)
+        {
+            VerticalLayoutGroup infoLayout = infoRect.gameObject.AddComponent<VerticalLayoutGroup>();
+            infoLayout.childAlignment = TextAnchor.MiddleLeft;
+            infoLayout.spacing = 2f;
+            infoLayout.childForceExpandWidth = true;
+            infoLayout.childForceExpandHeight = false;
+            infoLayout.childControlHeight = true;
+            infoLayout.childControlWidth = true;
+
+            LayoutElement infoElement = infoRect.gameObject.AddComponent<LayoutElement>();
+            infoElement.flexibleWidth = 1f;
+
+            // Weapon name text
+            statBonusesWeaponText = CreateText(infoRect, reference, "No Weapon Equipped", reference.fontSize * 1.1f, TextAlignmentOptions.Left);
+            if (statBonusesWeaponText != null)
+            {
+                statBonusesWeaponText.color = new Color(0.95f, 0.84f, 0.7f, 1f); // Gold-ish color
+            }
+
+            // Selection count text
+            statBonusesCountText = CreateText(infoRect, reference, "0 / 0 Bonuses Selected", reference.fontSize * 0.85f, TextAlignmentOptions.Left);
+            if (statBonusesCountText != null)
+            {
+                statBonusesCountText.alpha = 0.7f;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Creates the stat bonuses list container.
+    /// </summary>
+    /// <param name="parent">The parent transform.</param>
+    /// <returns>The list root transform.</returns>
+    static Transform CreateStatBonusesListRoot(Transform parent)
+    {
+        RectTransform rectTransform = CreateRectTransformObject("StatBonusList", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        VerticalLayoutGroup layout = rectTransform.gameObject.AddComponent<VerticalLayoutGroup>();
+        layout.childAlignment = TextAnchor.UpperLeft;
+        layout.spacing = 4f;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+        layout.childControlHeight = true;
+        layout.childControlWidth = true;
+        layout.padding = CreatePadding(0, 0, 6, 6);
+
+        ContentSizeFitter fitter = rectTransform.gameObject.AddComponent<ContentSizeFitter>();
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+
+        return rectTransform;
+    }
+
+    /// <summary>
     /// Creates a divider line for section separation.
     /// </summary>
     /// <param name="parent">The parent transform to attach the divider.</param>
@@ -1671,12 +1838,17 @@ internal static class CharacterMenuService
         UpdateSubTabSelection();
         UpdateSectionHeader();
 
-        bool showTextEntries = activeTab != BloodcraftTab.Professions;
+        bool showTextEntries = activeTab != BloodcraftTab.Professions && activeTab != BloodcraftTab.StatBonuses;
         entriesRoot.gameObject.SetActive(showTextEntries);
 
         if (professionsRoot != null)
         {
             professionsRoot.gameObject.SetActive(activeTab == BloodcraftTab.Professions);
+        }
+
+        if (statBonusesRoot != null)
+        {
+            statBonusesRoot.gameObject.SetActive(activeTab == BloodcraftTab.StatBonuses);
         }
 
         if (showTextEntries)
@@ -1704,10 +1876,15 @@ internal static class CharacterMenuService
                 }
             }
         }
-        else
+        else if (activeTab == BloodcraftTab.Professions)
         {
             EnsureEntries(0);
             UpdateProfessionPanel();
+        }
+        else if (activeTab == BloodcraftTab.StatBonuses)
+        {
+            EnsureEntries(0);
+            UpdateStatBonusesPanel();
         }
     }
 
@@ -1977,6 +2154,10 @@ internal static class CharacterMenuService
         }
 
         string title = ResolveSectionTitle(activeTab);
+        
+        // User requested removal of sub-tab headers for all Bloodcraft tabs
+        title = string.Empty;
+
         headerText.text = title;
         headerText.gameObject.SetActive(!string.IsNullOrWhiteSpace(title));
 
@@ -2039,6 +2220,340 @@ internal static class CharacterMenuService
         {
             professionsSummaryText.text = BuildProfessionSummaryText(entries);
         }
+    }
+
+    /// <summary>
+    /// Updates the stat bonuses panel UI.
+    /// </summary>
+    static void UpdateStatBonusesPanel()
+    {
+        if (statBonusesRoot == null || statBonusesListRoot == null)
+        {
+            return;
+        }
+
+        if (DataService._statBonusDataReady && DataService._weaponStatBonusData != null)
+        {
+            var data = DataService._weaponStatBonusData;
+
+            if (statBonusesWeaponText != null)
+            {
+                statBonusesWeaponText.text = data.WeaponType;
+            }
+
+            if (statBonusesWeaponImage != null)
+            {
+                // Try set icon from equipped weapon if it matches
+                var weaponEntity = Core.LocalCharacter.Read<Equipment>().WeaponSlot.SlotEntity._Entity;
+                if (weaponEntity != Entity.Null && weaponEntity.Has<ItemIcon>())
+                {
+                    statBonusesWeaponImage.sprite = weaponEntity.Read<ItemIcon>().Icon;
+                    statBonusesWeaponImage.color = Color.white;
+                }
+            }
+
+            if (statBonusesCountText != null)
+            {
+                statBonusesCountText.text = $"{data.SelectedStats.Count} / {data.MaxStatChoices} Bonuses Selected";
+            }
+
+            List<StatBonusEntry> entries = [];
+            foreach (var stat in data.AvailableStats)
+            {
+                entries.Add(new StatBonusEntry(
+                    stat.StatIndex,
+                    stat.StatName,
+                    stat.Value,
+                    stat.IsSelected
+                ));
+            }
+
+            EnsureStatBonusRows(entries.Count);
+
+            int rowCount = Math.Min(entries.Count, statBonusRows.Count);
+            Action<int> onClicked = (index) =>
+            {
+                Quips.SendCommand($".wep cst {data.WeaponType} {index}");
+            };
+
+            for (int i = 0; i < rowCount; i++)
+            {
+                UpdateStatBonusRow(statBonusRows[i], entries[i], onClicked);
+            }
+        }
+        else
+        {
+            // Fallback to mock data for development/layout testing
+            if (statBonusesWeaponText != null)
+            {
+                statBonusesWeaponText.text = "Mock Sword";
+            }
+
+            if (statBonusesCountText != null)
+            {
+                statBonusesCountText.text = "0 / 3 Bonuses Selected";
+            }
+
+            List<StatBonusEntry> mockEntries =
+            [
+                new StatBonusEntry(0, "Max Health", 250f, false),
+                new StatBonusEntry(1, "Movement Speed", 0.15f, false),
+                new StatBonusEntry(2, "Primary Attack Speed", 0.12f, false),
+                new StatBonusEntry(3, "Physical Life Leech", 0.05f, false),
+                new StatBonusEntry(4, "Spell Life Leech", 0.05f, false),
+                new StatBonusEntry(5, "Primary Life Leech", 0.05f, false),
+                new StatBonusEntry(6, "Physical Power", 15f, false),
+                new StatBonusEntry(7, "Spell Power", 15f, false),
+                new StatBonusEntry(8, "Physical Crit Chance", 0.08f, false),
+                new StatBonusEntry(9, "Physical Crit Damage", 0.25f, false),
+                new StatBonusEntry(10, "Spell Crit Chance", 0.08f, false),
+                new StatBonusEntry(11, "Spell Crit Damage", 0.25f, false)
+            ];
+
+            EnsureStatBonusRows(mockEntries.Count);
+
+            Action<int> onMockClicked = (statIndex) =>
+            {
+                Core.Log.LogInfo($"[Mock] Clicked stat index: {statIndex}");
+            };
+
+            int rowCount = Math.Min(mockEntries.Count, statBonusRows.Count);
+            for (int i = 0; i < rowCount; i++)
+            {
+                UpdateStatBonusRow(statBonusRows[i], mockEntries[i], onMockClicked);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Ensures the stat bonus row list has the requested count.
+    /// </summary>
+    /// <param name="count">The number of rows required.</param>
+    static void EnsureStatBonusRows(int count)
+    {
+        if (statBonusesListRoot == null)
+        {
+            return;
+        }
+
+        while (statBonusRows.Count < count)
+        {
+            StatBonusRow row = CreateStatBonusRow(statBonusesListRoot);
+            if (row?.Root == null)
+            {
+                break;
+            }
+            statBonusRows.Add(row);
+        }
+
+        for (int i = 0; i < statBonusRows.Count; i++)
+        {
+            bool isActive = i < count;
+            statBonusRows[i].Root.SetActive(isActive);
+        }
+    }
+
+    /// <summary>
+    /// Creates a stat bonus row UI element.
+    /// </summary>
+    /// <param name="parent">The parent transform.</param>
+    /// <returns>The created row.</returns>
+    static StatBonusRow CreateStatBonusRow(Transform parent)
+    {
+        if (parent == null)
+        {
+            return null;
+        }
+
+        RectTransform rectTransform = CreateRectTransformObject($"StatBonusRow_{statBonusRows.Count + 1}", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        // Add background image
+        Image bgImage = rectTransform.gameObject.AddComponent<Image>();
+        bgImage.color = new Color(0f, 0f, 0f, 0.25f);
+        bgImage.raycastTarget = true;
+
+        HorizontalLayoutGroup layout = rectTransform.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.spacing = 10f;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+        layout.childControlHeight = true;
+        layout.childControlWidth = true;
+        layout.padding = CreatePadding(12, 12, 6, 6);
+
+        LayoutElement rowLayout = rectTransform.gameObject.AddComponent<LayoutElement>();
+        rowLayout.preferredHeight = 32f;
+        rowLayout.minHeight = 32f;
+
+        // Checkbox
+        RectTransform checkRect = CreateRectTransformObject("CheckBox", rectTransform);
+        Image checkImage = null;
+        if (checkRect != null)
+        {
+            checkRect.sizeDelta = new Vector2(20f, 20f);
+            checkImage = checkRect.gameObject.AddComponent<Image>();
+            checkImage.color = new Color(0f, 0f, 0f, 0.4f);
+            LayoutElement checkLayout = checkRect.gameObject.AddComponent<LayoutElement>();
+            checkLayout.preferredWidth = 20f;
+            checkLayout.preferredHeight = 20f;
+        }
+
+        // Stat name text
+        TextMeshProUGUI nameText = CreateSimpleText(rectTransform, "Stat Name", 14f);
+        if (nameText != null)
+        {
+            nameText.alignment = TextAlignmentOptions.Left;
+            LayoutElement nameLayout = nameText.gameObject.AddComponent<LayoutElement>();
+            nameLayout.flexibleWidth = 1f;
+        }
+
+        // Stat value text
+        TextMeshProUGUI valueText = CreateSimpleText(rectTransform, "+0%", 14f);
+        if (valueText != null)
+        {
+            valueText.alignment = TextAlignmentOptions.Right;
+            valueText.color = new Color(0.31f, 0.82f, 0.33f, 1f); // Green
+            LayoutElement valueLayout = valueText.gameObject.AddComponent<LayoutElement>();
+            valueLayout.preferredWidth = 60f;
+        }
+
+        // Add button component for interaction
+        SimpleStunButton button = rectTransform.gameObject.AddComponent<SimpleStunButton>();
+
+        return new StatBonusRow(rectTransform.gameObject, checkImage, nameText, valueText, button);
+    }
+
+    /// <summary>
+    /// Updates a single stat bonus row with data.
+    /// </summary>
+    /// <param name="row">The row to update.</param>
+    /// <param name="entry">The stat data.</param>
+    /// <param name="onClicked">Action to invoke on click.</param>
+    static void UpdateStatBonusRow(StatBonusRow row, StatBonusEntry entry, Action<int> onClicked = null)
+    {
+        if (row == null)
+        {
+            return;
+        }
+
+        row.StatIndex = entry.StatIndex;
+        row.IsSelected = entry.IsSelected;
+
+        if (row.NameText != null)
+        {
+            row.NameText.text = entry.StatName;
+            row.NameText.alpha = entry.IsSelected ? 1f : 0.6f;
+        }
+
+        if (row.ValueText != null)
+        {
+            row.ValueText.text = FormatStatValue(entry.StatIndex, entry.Value);
+            row.ValueText.alpha = entry.IsSelected ? 1f : 0.6f;
+        }
+
+        if (row.CheckBox != null)
+        {
+            // Show checkmark when selected
+            row.CheckBox.color = entry.IsSelected 
+                ? new Color(0.31f, 0.82f, 0.33f, 1f)  // Green when selected
+                : new Color(0f, 0f, 0f, 0.4f);        // Dark when not selected
+        }
+
+        // Update background color
+        Image bgImage = row.Root.GetComponent<Image>();
+        if (bgImage != null)
+        {
+            bgImage.color = entry.IsSelected 
+                ? new Color(0.5f, 0.05f, 0.06f, 0.3f)  // Red tint when selected
+                : new Color(0f, 0f, 0f, 0.25f);        // Default dark
+        }
+
+        if (row.Button != null)
+        {
+            row.Button.onClick.RemoveAllListeners();
+            if (onClicked != null)
+            {
+                 row.Button.onClick.AddListener((UnityAction)(() => onClicked(entry.StatIndex)));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Formats a stat value for display.
+    /// </summary>
+    /// <param name="statIndex">The stat type index.</param>
+    /// <param name="value">The stat value.</param>
+    /// <returns>The formatted value string.</returns>
+    static string FormatStatValue(int statIndex, float value)
+    {
+        // Stats that use percentage format (indices 2-5, 8-11)
+        bool isPercentage = statIndex >= 2 && statIndex <= 5 || statIndex >= 8 && statIndex <= 11;
+        // Stats that use decimal format (index 1 = movement speed)
+        bool isDecimal = statIndex == 1;
+
+        if (isPercentage)
+        {
+            return $"+{value * 100:0.#}%";
+        }
+        else if (isDecimal)
+        {
+            return $"+{value:0.##}";
+        }
+        else
+        {
+            return $"+{value:0}";
+        }
+    }
+
+    /// <summary>
+    /// Creates a styled text element from a reference.
+    /// </summary>
+    static TextMeshProUGUI CreateText(Transform parent, TextMeshProUGUI reference, string content, float fontSize, TextAlignmentOptions alignment)
+    {
+        RectTransform rectTransform = CreateRectTransformObject("Text", parent);
+        if (rectTransform == null) return null;
+
+        TextMeshProUGUI text = rectTransform.gameObject.AddComponent<TextMeshProUGUI>();
+        CopyTextStyle(reference, text);
+        text.text = content;
+        text.fontSize = fontSize;
+        text.alignment = alignment;
+        
+        return text;
+    }
+
+    /// <summary>
+    /// Creates a simple text element using the global entry style.
+    /// </summary>
+    static TextMeshProUGUI CreateSimpleText(Transform parent, string text, float fontSize)
+    {
+        RectTransform rectTransform = CreateRectTransformObject("Text", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+
+        TextMeshProUGUI tmpText = rectTransform.gameObject.AddComponent<TextMeshProUGUI>();
+        if (entryStyle != null)
+        {
+            CopyTextStyle(entryStyle, tmpText);
+        }
+        
+        tmpText.text = text;
+        tmpText.fontSize = fontSize;
+        tmpText.color = Color.white;
+        tmpText.raycastTarget = false;
+
+        return tmpText;
     }
 
     /// <summary>
@@ -2598,6 +3113,51 @@ internal static class CharacterMenuService
             Profession = profession;
             Level = level;
             Progress = progress;
+        }
+    }
+
+    /// <summary>
+    /// Holds UI references for a stat bonus row entry.
+    /// </summary>
+    sealed class StatBonusRow
+    {
+        public GameObject Root { get; }
+        public Image CheckBox { get; }
+        public TextMeshProUGUI NameText { get; }
+        public TextMeshProUGUI ValueText { get; }
+        public SimpleStunButton Button { get; }
+        public int StatIndex { get; set; }
+        public bool IsSelected { get; set; }
+
+        public StatBonusRow(GameObject root, Image checkBox, TextMeshProUGUI nameText,
+            TextMeshProUGUI valueText, SimpleStunButton button)
+        {
+            Root = root;
+            CheckBox = checkBox;
+            NameText = nameText;
+            ValueText = valueText;
+            Button = button;
+            StatIndex = -1;
+            IsSelected = false;
+        }
+    }
+
+    /// <summary>
+    /// Holds stat bonus data for the Bloodcraft tab.
+    /// </summary>
+    readonly struct StatBonusEntry
+    {
+        public int StatIndex { get; }
+        public string StatName { get; }
+        public float Value { get; }
+        public bool IsSelected { get; }
+
+        public StatBonusEntry(int statIndex, string statName, float value, bool isSelected)
+        {
+            StatIndex = statIndex;
+            StatName = statName;
+            Value = value;
+            IsSelected = isSelected;
         }
     }
 }

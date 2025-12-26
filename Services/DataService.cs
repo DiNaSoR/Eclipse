@@ -274,6 +274,8 @@ internal static class DataService
     public static bool _familiarSystemEnabled;
     public static bool _familiarBattlesEnabled;
     public static string _familiarActiveBattleGroup = string.Empty;
+    public static bool _statBonusDataReady;
+    public static WeaponStatBonusData _weaponStatBonusData;
     public static readonly List<FamiliarBattleGroupData> _familiarBattleGroups = [];
     public class ProfessionData(string enchantingProgress, string enchantingLevel, string alchemyProgress, string alchemyLevel,
         string harvestingProgress, string harvestingLevel, string blacksmithingProgress, string blacksmithingLevel,
@@ -361,6 +363,24 @@ internal static class DataService
     {
         public string Name { get; } = name;
         public List<FamiliarBattleSlotData> Slots { get; } = slots;
+    }
+    public class WeaponStatBonusData
+    {
+        public string WeaponType { get; set; }
+        public int ExpertiseLevel { get; set; }
+        public float ExpertiseProgress { get; set; }
+        public int MaxStatChoices { get; set; }
+        public List<StatBonusDataEntry> SelectedStats { get; set; } = new();
+        public List<StatBonusDataEntry> AvailableStats { get; set; } = new();
+    }
+
+    public class StatBonusDataEntry
+    {
+        public int StatIndex { get; set; }
+        public string StatName { get; set; }
+        public float Value { get; set; }
+        public float MaxValue { get; set; }
+        public bool IsSelected { get; set; }
     }
     public class ConfigDataV1_3
     {
@@ -813,6 +833,79 @@ internal static class DataService
         {
             Core.Log.LogWarning($"Failed to parse familiar battle data: {ex}");
         }
+    }
+    /// <summary>
+    /// Parses the weapon stat bonus payload and updates cached data.
+    /// </summary>
+    /// <param name="data">The stat bonus payload without the event prefix.</param>
+    public static void ParseWeaponStatBonusData(string data)
+    {
+        if (string.IsNullOrEmpty(data)) return;
+
+        try
+        {
+            string[] segments = data.Split('|');
+            if (segments.Length == 0) return;
+
+            string[] baseInfo = segments[0].Split(',');
+            if (baseInfo.Length < 4) return;
+
+            var bonusData = new WeaponStatBonusData
+            {
+                WeaponType = baseInfo[0],
+                ExpertiseLevel = int.Parse(baseInfo[1], CultureInfo.InvariantCulture),
+                ExpertiseProgress = float.Parse(baseInfo[2], CultureInfo.InvariantCulture),
+                MaxStatChoices = int.Parse(baseInfo[3], CultureInfo.InvariantCulture)
+            };
+
+            for (int i = 1; i < segments.Length; i++)
+            {
+                if (string.IsNullOrWhiteSpace(segments[i])) continue;
+                string[] statParts = segments[i].Split(',');
+                if (statParts.Length < 4) continue;
+
+                int serverIndex = int.Parse(statParts[0], CultureInfo.InvariantCulture);
+                // Map server index (0-based) to client enum (1-based, 0 is None)
+                var clientStatType = (WeaponStatType)(serverIndex + 1);
+                
+                var entry = new StatBonusDataEntry
+                {
+                    StatIndex = (int)clientStatType,
+                    IsSelected = statParts[1] == "1",
+                    Value = float.Parse(statParts[2], CultureInfo.InvariantCulture),
+                    MaxValue = float.Parse(statParts[3], CultureInfo.InvariantCulture),
+                    StatName = "Unknown Stat"
+                };
+                
+                if (Enum.IsDefined(typeof(WeaponStatType), clientStatType))
+                {
+                    // Use full name with spaces
+                    entry.StatName = System.Text.RegularExpressions.Regex.Replace(clientStatType.ToString(), "([a-z])([A-Z])", "$1 $2");
+                }
+
+                bonusData.AvailableStats.Add(entry);
+                if (entry.IsSelected)
+                {
+                    bonusData.SelectedStats.Add(entry);
+                }
+            }
+
+            _weaponStatBonusData = bonusData;
+            _statBonusDataReady = true;
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogWarning($"Failed to parse stat bonus data: {ex}");
+        }
+    }
+
+    private static bool WeaponStatStrAbbreviation(WeaponStatType type, out string abbr)
+    {
+        // Try get abbreviation from dictionary
+        // Note: Generic string keys in dictionary might be easier to use if enum keys fail
+        // But we have `WeaponStatStringAbbreviations` (string->string) and `WeaponStatTypeAbbreviations` (Enum->string)
+        // Let's use `WeaponStatTypeAbbreviations`
+        return WeaponStatTypeAbbreviations.TryGetValue(type, out abbr);
     }
     public static void ParsePlayerData(List<string> playerData)
     {

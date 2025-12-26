@@ -3,6 +3,7 @@ using Bloodcraft.Services;
 using Bloodcraft.Utilities;
 using Bloodcraft.Systems.Familiars;
 using Bloodcraft.Systems.Leveling;
+using Bloodcraft.Systems.Expertise;
 using ProjectM;
 using ProjectM.Network;
 using Stunlock.Core;
@@ -70,6 +71,13 @@ internal interface IVersionHandler<TProgressData>
     /// <param name="steamId">The user's Steam ID.</param>
     void SendClientFamiliarBattleData(User user, ulong steamId);
     /// <summary>
+    /// Sends weapon stat bonus data to the client.
+    /// </summary>
+    /// <param name="character">The player character entity.</param>
+    /// <param name="user">The target user.</param>
+    /// <param name="steamId">The user's Steam ID.</param>
+    void SendClientWeaponStatBonusData(Entity character, User user, ulong steamId);
+    /// <summary>
     /// Builds the configuration payload.
     /// </summary>
     /// <returns>A formatted config message string.</returns>
@@ -103,6 +111,13 @@ internal interface IVersionHandler<TProgressData>
     /// <param name="steamId">The user's Steam ID.</param>
     /// <returns>A formatted familiar battle message string.</returns>
     string BuildFamiliarBattleDataMessage(ulong steamId);
+    /// <summary>
+    /// Builds the weapon stat bonus payload.
+    /// </summary>
+    /// <param name="character">The player character entity.</param>
+    /// <param name="steamId">The user's Steam ID.</param>
+    /// <returns>A formatted weapon stat bonus message string.</returns>
+    string BuildWeaponStatBonusDataMessage(Entity character, ulong steamId);
 }
 internal static class VersionHandler
 {
@@ -183,6 +198,13 @@ internal class VersionHandler_1_3 : IVersionHandler<ProgressDataV1_3>
     public void SendClientFamiliarBattleData(User user, ulong steamId)
     {
         string message = BuildFamiliarBattleDataMessage(steamId);
+        string messageWithMAC = $"{message};mac{ChatMessageSystemPatch.GenerateMAC(message)}";
+
+        LocalizationService.HandleServerReply(Core.EntityManager, user, messageWithMAC);
+    }
+    public void SendClientWeaponStatBonusData(Entity character, User user, ulong steamId)
+    {
+        string message = BuildWeaponStatBonusDataMessage(character, steamId);
         string messageWithMAC = $"{message};mac{ChatMessageSystemPatch.GenerateMAC(message)}";
 
         LocalizationService.HandleServerReply(Core.EntityManager, user, messageWithMAC);
@@ -453,6 +475,72 @@ internal class VersionHandler_1_3 : IVersionHandler<ProgressDataV1_3>
 
                 sb.AppendFormat(CultureInfo.InvariantCulture, ",{0}:{1}:{2}:{3}", famId, level, prestiges, famName);
             }
+        }
+
+        return sb.ToString();
+    }
+
+    public string BuildWeaponStatBonusDataMessage(Entity character, ulong steamId)
+    {
+        bool expertiseEnabled = ConfigService.ExpertiseSystem;
+        if (!expertiseEnabled) return string.Empty;
+
+        WeaponType weaponType = WeaponSystem.GetWeaponTypeFromWeaponEntity(character.Read<Equipment>().WeaponSlot.SlotEntity._Entity);
+        
+        IWeaponExpertise expertiseHandler = WeaponExpertiseFactory.GetExpertise(weaponType);
+        if (expertiseHandler == null) return string.Empty;
+
+        float expertiseProgress = 0f;
+        int expertiseLevel = 0;
+        int maxStatChoices = ConfigService.ExpertiseStatChoices;
+
+        expertiseProgress = WeaponSystem.GetLevelProgress(steamId, expertiseHandler) / 100f; // Client expects 0.0-1.0
+        expertiseLevel = WeaponSystem.GetLevel(steamId, expertiseHandler);
+
+        // Build base info
+        // Format: [EventID]:[WeaponType],[ExpertiseLevel],[ExpertiseProgress],[MaxStatChoices]
+        var sb = new StringBuilder();
+        sb.AppendFormat(CultureInfo.InvariantCulture, "[{0}]:{1},{2},{3:F2},{4}",
+            (int)NetworkEventSubType.WeaponStatBonusDataToClient,
+            weaponType.ToString(),
+            expertiseLevel,
+            expertiseProgress,
+            maxStatChoices);
+
+        // Get selected stats
+        HashSet<WeaponStatType> selectedStats = new();
+        if (steamId.TryGetPlayerWeaponStats(out var weaponStats) && weaponStats.TryGetValue(weaponType, out var stats))
+        {
+            selectedStats = new HashSet<WeaponStatType>(stats);
+        }
+
+        // Iterate all stats
+        // Format: |[StatIndex],[IsSelected],[Value],[MaxValue]
+        foreach (WeaponStatType stat in Enum.GetValues(typeof(WeaponStatType)))
+        {
+            
+            bool isSelected = selectedStats.Contains(stat);
+            float maxValue = WeaponStatBaseCaps[stat];
+            
+            // Calculate current value (for now assumption: if selected -> max value, else 0? 
+            // Or server logic: usually it's static bonus if selected.
+            // Based on WeaponCommands.cs FormatWeaponStatValue usage: it format the *value* passed to it.
+            // TryGetScaledModifyUnitExpertiseStat calculates the value.
+            // Let's rely on base cap for UI display "potential" and handle applied value logic.
+            // For the UI "Value" field, let's send the potential value (Base Cap) so user knows what they get.
+            // If we want "Current Value", it would be 0 if not selected. 
+            // But the UI mock showed "+250" even if not selected (just greyed out).
+            // So we send the Potential Value.
+            
+            // Calculate current value based on expertise level scaling
+            float scaleFactor = MaxExpertiseLevel > 0 ? (float)expertiseLevel / MaxExpertiseLevel : 0f;
+            float value = maxValue * scaleFactor; 
+            
+            sb.AppendFormat(CultureInfo.InvariantCulture, "|{0},{1},{2:F2},{3:F2}",
+                (int)stat,
+                isSelected ? 1 : 0,
+                value,
+                maxValue);
         }
 
         return sb.ToString();
