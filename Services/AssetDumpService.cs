@@ -178,6 +178,9 @@ internal static class AssetDumpService
             DumpSprites(root, spritesPath, manifest);
             DumpFonts(root, fontsPath, manifest);
             DumpLayout(root, manifest);
+            DumpLayoutElements(root, manifest);
+            DumpLayoutGroups(root, manifest);
+            DumpContentSizeFitters(root, manifest);
 
             File.WriteAllText(manifestPath, manifest.ToString());
             Core.Log.LogInfo($"[Asset Dump] {displayName} assets written to {basePath}");
@@ -324,12 +327,91 @@ internal static class AssetDumpService
                 continue;
             }
 
+            Rect r = rect.rect;
             manifest.AppendLine(
-                $"path={GetPath(rect)}|active={rect.gameObject.activeInHierarchy}|anchorMin={FormatVector2(rect.anchorMin)}|anchorMax={FormatVector2(rect.anchorMax)}|pivot={FormatVector2(rect.pivot)}|pos={FormatVector2(rect.anchoredPosition)}|size={FormatVector2(rect.sizeDelta)}|scale={FormatVector3(rect.localScale)}");
+                $"path={GetPath(rect)}|active={rect.gameObject.activeInHierarchy}|anchorMin={FormatVector2(rect.anchorMin)}|anchorMax={FormatVector2(rect.anchorMax)}|pivot={FormatVector2(rect.pivot)}|pos={FormatVector2(rect.anchoredPosition)}|size={FormatVector2(rect.sizeDelta)}|rectW={r.width:0.##}|rectH={r.height:0.##}|scale={FormatVector3(rect.localScale)}");
         }
 
         manifest.AppendLine(string.Empty);
     }
+
+    /// <summary>
+    /// Dumps LayoutElement components for precise sizing data.
+    /// </summary>
+    /// <param name="root">The root transform.</param>
+    /// <param name="manifest">The manifest builder.</param>
+    static void DumpLayoutElements(Transform root, StringBuilder manifest)
+    {
+        LayoutElement[] elements = root.GetComponentsInChildren<LayoutElement>(true);
+        manifest.AppendLine("[LayoutElements]");
+
+        for (int i = 0; i < elements.Length; i++)
+        {
+            LayoutElement elem = elements[i];
+            if (elem == null)
+            {
+                continue;
+            }
+
+            manifest.AppendLine(
+                $"path={GetPath(elem.transform)}|minW={elem.minWidth:0.##}|minH={elem.minHeight:0.##}|prefW={elem.preferredWidth:0.##}|prefH={elem.preferredHeight:0.##}|flexW={elem.flexibleWidth:0.##}|flexH={elem.flexibleHeight:0.##}|ignoreLayout={elem.ignoreLayout}");
+        }
+
+        manifest.AppendLine(string.Empty);
+    }
+
+    /// <summary>
+    /// Dumps HorizontalLayoutGroup and VerticalLayoutGroup components.
+    /// </summary>
+    /// <param name="root">The root transform.</param>
+    /// <param name="manifest">The manifest builder.</param>
+    static void DumpLayoutGroups(Transform root, StringBuilder manifest)
+    {
+        HorizontalOrVerticalLayoutGroup[] groups = root.GetComponentsInChildren<HorizontalOrVerticalLayoutGroup>(true);
+        manifest.AppendLine("[LayoutGroups]");
+
+        for (int i = 0; i < groups.Length; i++)
+        {
+            HorizontalOrVerticalLayoutGroup group = groups[i];
+            if (group == null)
+            {
+                continue;
+            }
+
+            string groupType = group is HorizontalLayoutGroup ? "Horizontal" : "Vertical";
+            RectOffset pad = group.padding;
+            manifest.AppendLine(
+                $"path={GetPath(group.transform)}|type={groupType}|padding=({pad.left},{pad.right},{pad.top},{pad.bottom})|spacing={group.spacing:0.##}|align={group.childAlignment}|ctrlW={group.childControlWidth}|ctrlH={group.childControlHeight}|expandW={group.childForceExpandWidth}|expandH={group.childForceExpandHeight}");
+        }
+
+        manifest.AppendLine(string.Empty);
+    }
+
+    /// <summary>
+    /// Dumps ContentSizeFitter components.
+    /// </summary>
+    /// <param name="root">The root transform.</param>
+    /// <param name="manifest">The manifest builder.</param>
+    static void DumpContentSizeFitters(Transform root, StringBuilder manifest)
+    {
+        ContentSizeFitter[] fitters = root.GetComponentsInChildren<ContentSizeFitter>(true);
+        manifest.AppendLine("[ContentSizeFitters]");
+
+        for (int i = 0; i < fitters.Length; i++)
+        {
+            ContentSizeFitter fitter = fitters[i];
+            if (fitter == null)
+            {
+                continue;
+            }
+
+            manifest.AppendLine(
+                $"path={GetPath(fitter.transform)}|hFit={fitter.horizontalFit}|vFit={fitter.verticalFit}");
+        }
+
+        manifest.AppendLine(string.Empty);
+    }
+
 
     /// <summary>
     /// Saves a sprite as a PNG file.
