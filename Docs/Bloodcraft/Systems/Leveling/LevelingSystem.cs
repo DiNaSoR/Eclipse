@@ -400,6 +400,15 @@ internal static class LevelingSystem
             PlayerProgressionCacheManager.UpdatePlayerProgressionLevel(steamId, playerLevel);
             HandleExtraLevel(playerCharacter, ref playerLevel);
 
+            Bloodcraft.Interfaces.WeaponType weaponType = WeaponManager.GetCurrentWeaponType(playerCharacter);
+            IWeaponExpertise handler = WeaponExpertiseFactory.GetExpertise(weaponType);
+
+            if (handler != null)
+            {
+                var expertiseData = handler.GetExpertiseData(steamId);
+                playerLevel += expertiseData.Key;
+            }
+
             playerCharacter.With((ref Equipment equipment) =>
             {
                 equipment.ArmorLevel._Value = 0f;
