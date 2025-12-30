@@ -42,6 +42,8 @@ internal static class LevelingSystem
 
     static readonly float _levelingPrestigeReducer = ConfigService.LevelingPrestigeReducer;
 
+    static readonly WaitForSeconds _gearLevelDelay = new(0.05f);
+
     static readonly ConcurrentStack<Action<Entity, ulong, float, bool, int, float, int>> NotifyPlayerOverrides = new();
     static readonly ConcurrentStack<IExperienceDataOverride> ExperienceDataOverrides = new();
     static readonly ConcurrentStack<bool> RestedXpOverrides = new();
@@ -224,6 +226,9 @@ internal static class LevelingSystem
 
         if (leveledUp) HandlePlayerLevelUpEffects(playerCharacter, steamId);
         NotifyPlayer(playerCharacter, steamId, (int)gainedXP, leveledUp, newLevel, delay, rested);
+
+        // Always ensure gear level is correct after combat (native systems may overwrite)
+        DelayedSetLevelRoutine(playerCharacter).Start();
     }
     static float AddRestedXP(ulong steamId, float gainedXP, ref int rested)
     {
@@ -311,6 +316,9 @@ internal static class LevelingSystem
         {
             SetLevel(playerCharacter);
 
+            // Delayed call to ensure native systems have finished updating equipment values
+            DelayedSetLevelRoutine(playerCharacter).Start();
+
             if (newLevel <= _maxPlayerLevel)
             {
                 LocalizationService.HandleServerReply(EntityManager, user,
@@ -346,6 +354,15 @@ internal static class LevelingSystem
         float3 position = playerCharacter.GetPosition();
         ScrollingCombatTextMessage.Create(EntityManager, EndSimulationEntityCommandBufferSystem.CreateCommandBuffer(), ExperienceAssetGuid, position, color, playerCharacter, gainedXP, ScrollingTextGeneric, userEntity);
         // delay += DELAY_ADD;
+    }
+    static IEnumerator DelayedSetLevelRoutine(Entity player)
+    {
+        yield return _gearLevelDelay;
+
+        if (player.Exists())
+        {
+            SetLevel(player);
+        }
     }
     static float GetXp(ulong steamId)
     {

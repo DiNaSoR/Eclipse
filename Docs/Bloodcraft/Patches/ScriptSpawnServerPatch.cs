@@ -12,6 +12,7 @@ using ProjectM.Network;
 using ProjectM.Scripting;
 using ProjectM.Shared.Systems;
 using Stunlock.Core;
+using System.Collections;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
@@ -31,6 +32,7 @@ internal static class ScriptSpawnServerPatch
 
     const float DELAY = 1f;
     static readonly WaitForSeconds _delay = new(DELAY);
+    static readonly WaitForSeconds _gearLevelDelay = new(0.05f);
 
     static readonly bool _leveling = ConfigService.LevelingSystem;
     static readonly bool _classes = ConfigService.ClassSystem;
@@ -334,12 +336,24 @@ internal static class ScriptSpawnServerPatch
                 if (handleLevel && buffEntity.HasSpellLevel() && buffTarget.IsPlayer())
                 {
                     LevelingSystem.SetLevel(buffTarget);
+
+                    // Delayed call to ensure native systems have finished updating equipment values
+                    DelayedSetLevelRoutine(buffTarget).Start();
                 }
             }
         }
         catch (Exception e)
         {
             Core.Log.LogWarning($"[ScriptSpawnServer.OnUpdatePostfix] - {e}");
+        }
+    }
+    static IEnumerator DelayedSetLevelRoutine(Entity player)
+    {
+        yield return _gearLevelDelay;
+
+        if (player.Exists())
+        {
+            LevelingSystem.SetLevel(player);
         }
     }
     static void ApplyEliteDraculaModifiers(Entity entity)

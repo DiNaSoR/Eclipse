@@ -565,6 +565,12 @@ internal static class Classes
 
         steamId.SetPlayerClass(parsedClassType);
         Buffs.RefreshStats(character);
+
+        // Update gear level when class changes
+        if (ConfigService.LevelingSystem)
+        {
+            SetLevel(character);
+        }
         // ApplyClassBuffs(character, steamId);
     }
     public static void RemoveShift(Entity character)

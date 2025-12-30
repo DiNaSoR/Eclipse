@@ -70,6 +70,19 @@ internal static class DataService
         Claws
     }
 
+    /// <summary>
+    /// Tabs available in the Bloodcraft character menu.
+    /// </summary>
+    public enum BloodcraftTab
+    {
+        Prestige,
+        Exoform,
+        Battles,
+        StatBonuses,
+        Professions,
+        Familiars
+    }
+
     public static Dictionary<WeaponStatType, float> _weaponStatValues = [];
     public enum WeaponStatType
     {

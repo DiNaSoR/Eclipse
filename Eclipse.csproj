@@ -35,7 +35,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Compile Remove="Docs\Bloodcraft\**\*.cs" />
+		<Compile Remove="Docs\**\*.cs" />
 	</ItemGroup>
 	
 	<ItemGroup>

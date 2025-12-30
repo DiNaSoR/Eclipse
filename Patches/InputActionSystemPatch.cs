@@ -66,6 +66,11 @@ internal static class InputActionSystemPatch
             DebugService.DumpBloodcraftSubTabs("manual");
         }
 
+        if (Input.GetKeyDown(KeyCode.F5))
+        {
+            DebugService.DumpEquipmentTabHierarchy();
+        }
+
         if (Input.GetKeyDown(KeyCode.F6))
         {
             AssetDumpService.DumpMenuAssets();

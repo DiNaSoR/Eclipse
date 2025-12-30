@@ -18,9 +18,6 @@ using static Eclipse.Services.CanvasService.DataHUD;
 using static Eclipse.Services.CanvasService.UtilitiesHUD;
 using static Eclipse.Services.DataService;
 using Eclipse.Services.CharacterMenu;
-using Eclipse.Services.CharacterMenu.Interfaces;
-using Eclipse.Services.CharacterMenu.Tabs;
-using Eclipse.Services.CharacterMenu.Shared;
 
 namespace Eclipse.Services;
 
@@ -60,30 +57,6 @@ internal static class CharacterMenuService
     const float ProfessionProgressWidth = 160f;
     const float ProfessionProgressHeight = 6f;
     const float ProfessionPercentWidth = 52f;
-    const float FamiliarSectionSpacing = 12f;
-    const float FamiliarColumnSpacing = 16f;
-    const float FamiliarCardMinHeight = 150f;
-    const float FamiliarCardInnerSpacing = 6f;
-    const int FamiliarCardPaddingHorizontal = 12;
-    const int FamiliarCardPaddingVertical = 10;
-    const float FamiliarActionRowHeight = 34f;
-    const float FamiliarActionSpacing = 6f;
-    const int FamiliarActionPaddingHorizontal = 12;
-    const int FamiliarActionPaddingVertical = 6;
-    const float FamiliarCommandWidth = 72f;
-    const float FamiliarProgressHeight = 6f;
-    const float FamiliarBindCellWidth = 52f;
-    const float FamiliarBindCellHeight = 30f;
-    const float FamiliarBindCellSpacing = 6f;
-    const int FamiliarBindColumns = 5;
-    const float FamiliarTextHeightMultiplier = 1.25f;
-    const float FamiliarNameFontScale = 0.95f;
-    const float FamiliarStatsFontScale = 0.85f;
-    const float FamiliarMetaFontScale = 0.75f;
-    const float FamiliarSectionFontScale = 0.72f;
-    const float FamiliarActionFontScale = 0.85f;
-    const float FamiliarCommandFontScale = 0.7f;
-    const float FamiliarBindFontScale = 0.85f;
 
     static InventorySubMenu inventorySubMenu;
     static RectTransform bloodcraftTab;
@@ -111,13 +84,6 @@ internal static class CharacterMenuService
     static Image statBonusesWeaponImage;
     static Transform statBonusesListRoot;
     static readonly List<StatBonusRow> statBonusRows = [];
-    static Transform familiarsRoot;
-    static Transform familiarsContentRoot;
-    static TextMeshProUGUI familiarsStatusText;
-    static TextMeshProUGUI familiarActiveNameText;
-    static TextMeshProUGUI familiarActiveStatsText;
-    static TextMeshProUGUI familiarActiveMetaText;
-    static Image familiarBondFill;
     static BloodcraftTab activeTab = BloodcraftTab.Prestige;
     static int bloodcraftTabIndex = -1;
     static int lastKnownTabIndex = -1;
@@ -128,21 +94,6 @@ internal static class CharacterMenuService
     static float lastSubTabHeight;
     static int lastSubTabCount;
     static float subTabReferenceFontSize;
-    static readonly Color FamiliarCardBackgroundColor = new(0f, 0f, 0f, 0.25f);
-    static readonly Color FamiliarActionBackgroundColor = new(0f, 0f, 0f, 0.2f);
-    static readonly Color FamiliarPrimaryActionBackgroundColor = new(0.45f, 0.16f, 0.08f, 0.35f);
-    static readonly Color FamiliarNameColor = new(0.95f, 0.84f, 0.7f, 1f);
-    static readonly Color FamiliarStatsColor = new(1f, 1f, 1f, 0.7f);
-    static readonly Color FamiliarMetaColor = new(1f, 1f, 1f, 0.55f);
-    static readonly Color FamiliarSectionLabelColor = new(0.9f, 0.87f, 0.83f, 1f);
-    static readonly Color FamiliarCommandTextColor = new(1f, 1f, 1f, 0.6f);
-    static readonly Color FamiliarStatusTextColor = new(1f, 1f, 1f, 0.8f);
-    static readonly Color FamiliarBondFillColor = new(0.88f, 0.75f, 0.45f, 0.9f);
-    static readonly Color FamiliarBondBackgroundColor = new(0.1f, 0.1f, 0.1f, 0.8f);
-
-    // Bloodcraft stats summary in Equipment tab
-    static TextMeshProUGUI bloodcraftStatsSummary;
-    const string BloodcraftStatsSummaryName = "BloodcraftStatsSummary";
 
     // BloodcraftTab enum moved to DataService for shared access
 
@@ -152,8 +103,7 @@ internal static class CharacterMenuService
         BloodcraftTab.Exoform,
         BloodcraftTab.Battles,
         BloodcraftTab.StatBonuses,
-        BloodcraftTab.Professions,
-        BloodcraftTab.Familiars
+        BloodcraftTab.Professions
     ];
 
     static readonly Dictionary<BloodcraftTab, string> BloodcraftTabLabels = new()
@@ -162,8 +112,7 @@ internal static class CharacterMenuService
         { BloodcraftTab.Exoform, "Exoform" },
         { BloodcraftTab.Battles, "Familiar Battles" },
         { BloodcraftTab.StatBonuses, "Stat Bonuses" },
-        { BloodcraftTab.Professions, "Professions" },
-        { BloodcraftTab.Familiars, "Familiars" }
+        { BloodcraftTab.Professions, "Professions" }
     };
 
     static readonly Dictionary<BloodcraftTab, string> BloodcraftSectionTitles = new()
@@ -172,8 +121,7 @@ internal static class CharacterMenuService
         { BloodcraftTab.Exoform, "Exoforms" },
         { BloodcraftTab.Battles, "Familiar Battles" },
         { BloodcraftTab.StatBonuses, "Stat Bonuses" },
-        { BloodcraftTab.Professions, "Professions" },
-        { BloodcraftTab.Familiars, "Familiar Management" }
+        { BloodcraftTab.Professions, "Professions" }
     };
 
     /// <summary>
@@ -234,9 +182,6 @@ internal static class CharacterMenuService
         // Initialize the modular CharacterMenu system
         CharacterMenuIntegration.GetOrCreateOrchestrator();
 
-        // Initialize the Bloodcraft stats summary in the Equipment tab (first tab)
-        TryInitializeStatsSummary(tabs);
-
         initialized = true;
         Core.Log.LogInfo("[Bloodcraft Tab] Initialized Bloodcraft tab in Character menu.");
     }
@@ -250,9 +195,6 @@ internal static class CharacterMenuService
         {
             return;
         }
-
-        // Always update the stats summary in the Equipment tab
-        UpdateStatsSummary();
 
         int currentTabIndex = inventorySubMenu.CurrentTab;
         bool isActive = manualActive || currentTabIndex == bloodcraftTabIndex;
@@ -311,14 +253,6 @@ internal static class CharacterMenuService
         statBonusesCountText = null;
         statBonusesListRoot = null;
         statBonusRows.Clear();
-        familiarsRoot = null;
-        familiarsContentRoot = null;
-        familiarsStatusText = null;
-        familiarActiveNameText = null;
-        familiarActiveStatsText = null;
-        familiarActiveMetaText = null;
-        familiarBondFill = null;
-        bloodcraftStatsSummary = null;
         activeTab = BloodcraftTab.Prestige;
         bloodcraftTabIndex = -1;
         lastKnownTabIndex = -1;
@@ -329,112 +263,6 @@ internal static class CharacterMenuService
         initialized = false;
         manualActive = false;
         subTabDiagnosticsLogged = false;
-    }
-
-    /// <summary>
-    /// Initializes the Bloodcraft stats summary text in the Equipment tab.
-    /// </summary>
-    /// <param name="tabs">The array of tabs from the menu.</param>
-    static void TryInitializeStatsSummary(Il2CppReferenceArray<RectTransform> tabs)
-    {
-        if (tabs == null || tabs.Length == 0)
-        {
-            return;
-        }
-
-        // First tab is the Equipment/Attributes tab (native V Rising tab)
-        RectTransform equipmentTab = tabs[0];
-        if (equipmentTab == null)
-        {
-            return;
-        }
-
-        // Log the Equipment tab structure for debugging
-        Core.Log.LogInfo($"[Bloodcraft Stats] Equipment tab name: {equipmentTab.name}");
-        for (int i = 0; i < equipmentTab.childCount; i++)
-        {
-            Transform child = equipmentTab.GetChild(i);
-            Core.Log.LogInfo($"[Bloodcraft Stats]   Child[{i}]: {child.name}");
-        }
-
-        // Find a reference text element for styling from the Equipment tab
-        TextMeshProUGUI referenceText = equipmentTab.GetComponentInChildren<TextMeshProUGUI>();
-        if (referenceText == null)
-        {
-            Core.Log.LogWarning("[Bloodcraft Stats] Could not find reference text in Equipment tab.");
-            return;
-        }
-
-        Core.Log.LogInfo($"[Bloodcraft Stats] Reference text: '{referenceText.text}' font={referenceText.font?.name}");
-
-        // Find GearLevelParent first to check for existing summary
-        Transform gearLevelParentCheck = equipmentTab.Find("GearLevelParent");
-        if (gearLevelParentCheck == null)
-        {
-            Core.Log.LogWarning("[Bloodcraft Stats] Could not find GearLevelParent for existing check.");
-            return;
-        }
-
-        // Check if the stats summary already exists in GearLevelParent
-        Transform existingSummary = gearLevelParentCheck.Find(BloodcraftStatsSummaryName);
-        if (existingSummary != null)
-        {
-            bloodcraftStatsSummary = existingSummary.GetComponent<TextMeshProUGUI>();
-            Core.Log.LogInfo("[Bloodcraft Stats] Found existing stats summary.");
-            return;
-        }
-
-        // Create the stats summary text element as a child of GearLevelParent
-        // Position at bottom of GearLevelParent, below the "Gear Level" text
-        GameObject summaryObject = new(BloodcraftStatsSummaryName);
-        summaryObject.transform.SetParent(gearLevelParentCheck, false);
-
-        bloodcraftStatsSummary = summaryObject.AddComponent<TextMeshProUGUI>();
-        bloodcraftStatsSummary.font = referenceText.font;
-        bloodcraftStatsSummary.fontSize = referenceText.fontSize * 0.65f;
-        bloodcraftStatsSummary.fontStyle = FontStyles.Normal;
-        bloodcraftStatsSummary.color = new Color(0.85f, 0.7f, 0.45f, 1f); // Warm gold color
-        bloodcraftStatsSummary.alignment = TextAlignmentOptions.Center;
-        bloodcraftStatsSummary.text = BuildStatsSummaryText();
-
-        // GearLevelParent is 160x112, anchored top-center of EquipmentTab
-        // "GearLevelText" is at anchoredPosition (0, -35) from center pivot
-        // Position stats summary anchored to bottom-center of GearLevelParent
-        // Y=5 means 5px above the bottom edge of GearLevelParent (which is at Y=-112 in EquipmentTab space)
-        RectTransform rectTransform = summaryObject.GetComponent<RectTransform>();
-        rectTransform.anchorMin = new Vector2(0.5f, 0f); // Anchor to bottom-center of GearLevelParent
-        rectTransform.anchorMax = new Vector2(0.5f, 0f);
-        rectTransform.pivot = new Vector2(0.5f, 0f); // Pivot at bottom-center
-        rectTransform.anchoredPosition = new Vector2(0f, -5f); // 5px below bottom edge of GearLevelParent
-        rectTransform.sizeDelta = new Vector2(300f, 20f);
-
-        Core.Log.LogInfo("[Bloodcraft Stats] Initialized stats summary in EquipmentTab.");
-    }
-
-    /// <summary>
-    /// Updates the Bloodcraft stats summary text with current values.
-    /// </summary>
-    static void UpdateStatsSummary()
-    {
-        if (bloodcraftStatsSummary == null)
-        {
-            return;
-        }
-
-        bloodcraftStatsSummary.text = BuildStatsSummaryText();
-    }
-
-    /// <summary>
-    /// Builds the stats summary text string.
-    /// </summary>
-    /// <returns>Formatted string with WP, Cl, and Exp values.</returns>
-    static string BuildStatsSummaryText()
-    {
-        int weaponLevel = _expertiseLevel;
-        int classLevel = (int)_classType;
-        int expLevel = _experienceLevel;
-
-        return $"WP:{weaponLevel} | Cl:{classLevel} | Exp:{expLevel}";
     }
 
     /// <summary>
@@ -729,7 +557,6 @@ internal static class CharacterMenuService
 
         professionsRoot = CreateProfessionPanel(bodyRoot, referenceText);
         statBonusesRoot = CreateStatBonusesPanel(bodyRoot, referenceText);
-        familiarsRoot = CreateFamiliarsPanel(bodyRoot, referenceText);
         return tabRoot;
     }
 
@@ -737,23 +564,46 @@ internal static class CharacterMenuService
     /// Removes all child objects under a parent transform.
     /// </summary>
     /// <param name="root">The parent transform to clear.</param>
-    // Delegates to UIFactory
-    static void ClearChildren(Transform root) => UIFactory.ClearChildren(root);
+    static void ClearChildren(Transform root)
+    {
+        for (int i = root.childCount - 1; i >= 0; i--)
+        {
+            UnityEngine.Object.Destroy(root.GetChild(i).gameObject);
+        }
+    }
 
-    // Delegates to UIFactory with additional spacing and ContentSizeFitter
+    /// <summary>
+    /// Ensures the target transform has a vertical layout with size fitting for entries.
+    /// </summary>
+    /// <param name="root">The transform to configure.</param>
+    /// <param name="paddingLeft">The left padding applied to the layout.</param>
+    /// <param name="paddingRight">The right padding applied to the layout.</param>
+    /// <param name="paddingTop">The top padding applied to the layout.</param>
+    /// <param name="paddingBottom">The bottom padding applied to the layout.</param>
+    /// <param name="spacing">The spacing between child elements.</param>
     static void EnsureVerticalLayout(Transform root, int paddingLeft = 0, int paddingRight = 0,
         int paddingTop = 0, int paddingBottom = 0, float spacing = 6f)
     {
-        if (root == null || root.Equals(null)) return;
+        if (root == null)
+        {
+            return;
+        }
+
+        if (root.Equals(null))
+        {
+            return;
+        }
 
         try
         {
-            var layout = UIFactory.EnsureVerticalLayout(root, paddingLeft, paddingRight, paddingTop, paddingBottom);
-            if (layout != null)
-            {
-                layout.spacing = spacing;
-                layout.childControlHeight = true;
-            }
+            VerticalLayoutGroup layout = root.gameObject.AddComponent<VerticalLayoutGroup>();
+            layout.childAlignment = TextAnchor.UpperLeft;
+            layout.childControlHeight = true;
+            layout.childControlWidth = true;
+            layout.childForceExpandHeight = false;
+            layout.childForceExpandWidth = true;
+            layout.spacing = spacing;
+            layout.padding = CreatePadding(paddingLeft, paddingRight, paddingTop, paddingBottom);
 
             ContentSizeFitter fitter = root.gameObject.AddComponent<ContentSizeFitter>();
             fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
@@ -765,9 +615,23 @@ internal static class CharacterMenuService
         }
     }
 
-    // Delegates to UIFactory
+    /// <summary>
+    /// Creates a RectOffset using the provided padding values.
+    /// </summary>
+    /// <param name="left">The left padding.</param>
+    /// <param name="right">The right padding.</param>
+    /// <param name="top">The top padding.</param>
+    /// <param name="bottom">The bottom padding.</param>
+    /// <returns>The configured padding instance.</returns>
     static RectOffset CreatePadding(int left, int right, int top, int bottom)
-        => UIFactory.CreatePadding(left, right, top, bottom);
+    {
+        RectOffset padding = new();
+        padding.left = left;
+        padding.right = right;
+        padding.top = top;
+        padding.bottom = bottom;
+        return padding;
+    }
 
     /// <summary>
     /// Creates the root container for Bloodcraft content.
@@ -796,21 +660,97 @@ internal static class CharacterMenuService
         return rectTransform;
     }
 
+    /// <summary>
+    /// Creates a padded section root for grouped content.
+    /// </summary>
+    /// <param name="parent">The parent transform to attach the section.</param>
+    /// <param name="name">The section name.</param>
+    /// <returns>The section transform.</returns>
     static Transform CreatePaddedSectionRoot(Transform parent, string name)
-        => UIFactory.CreatePaddedSectionRoot(parent, name);
+    {
+        if (parent == null || parent.Equals(null))
+        {
+            return null;
+        }
+
+        RectTransform rectTransform = CreateRectTransformObject(name, parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        EnsureVerticalLayout(rectTransform, ContentPaddingLeft, ContentPaddingRight, ContentPaddingTop, ContentPaddingBottom);
+        return rectTransform;
+    }
 
     /// <summary>
     /// Creates a RectTransform-backed GameObject under a parent.
-    /// Delegates to UIFactory.
     /// </summary>
+    /// <param name="name">The name of the GameObject.</param>
+    /// <param name="parent">The parent transform.</param>
+    /// <returns>The created RectTransform.</returns>
     static RectTransform CreateRectTransformObject(string name, Transform parent)
-        => UIFactory.CreateRectTransformObject(name, parent);
+    {
+        if (parent == null || parent.Equals(null))
+        {
+            return null;
+        }
 
+        var components = new Il2CppReferenceArray<Il2CppSystem.Type>(1);
+        components[0] = Il2CppType.Of<RectTransform>();
+        GameObject obj = new(name, components);
+        obj.transform.SetParent(parent, false);
+        return obj.GetComponent<RectTransform>();
+    }
+
+    /// <summary>
+    /// Creates a reusable entry template for Bloodcraft tab rows.
+    /// </summary>
+    /// <param name="parent">The parent transform to attach the template.</param>
+    /// <param name="reference">A reference text used to copy styling.</param>
+    /// <returns>The entry template GameObject.</returns>
     static GameObject CreateEntryTemplate(Transform parent, TextMeshProUGUI reference)
     {
-        var (template, text) = UIFactory.CreateEntryTemplate(parent, reference);
+        RectTransform rectTransform = CreateRectTransformObject("BloodcraftEntryTemplate", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        TextMeshProUGUI text = rectTransform.gameObject.AddComponent<TextMeshProUGUI>();
+        CopyTextStyle(reference, text);
+        text.fontSize = reference.fontSize * EntryFontScale;
+        text.alignment = TextAlignmentOptions.Center;
+        text.text = string.Empty;
+        text.raycastTarget = true;
+        text.enableAutoSizing = false;
+        text.enableWordWrapping = false;
+        text.richText = true;
         entryStyle = text;
-        return template;
+
+        LayoutElement referenceLayout = reference.GetComponent<LayoutElement>();
+        if (referenceLayout != null)
+        {
+            LayoutElement layout = rectTransform.gameObject.AddComponent<LayoutElement>();
+            layout.minHeight = referenceLayout.minHeight;
+            layout.preferredHeight = referenceLayout.preferredHeight;
+            layout.preferredWidth = referenceLayout.preferredWidth;
+            layout.flexibleHeight = referenceLayout.flexibleHeight;
+        }
+
+        rectTransform.gameObject.SetActive(false);
+        return rectTransform.gameObject;
     }
 
     /// <summary>
@@ -819,7 +759,26 @@ internal static class CharacterMenuService
     /// <param name="parent">The parent transform to attach the container.</param>
     /// <returns>The entries root transform.</returns>
     static Transform CreateEntriesRoot(Transform parent)
-        => UIFactory.CreateEntriesRoot(parent);
+    {
+        if (parent == null || parent.Equals(null))
+        {
+            return null;
+        }
+
+        RectTransform rectTransform = CreateRectTransformObject("BloodcraftEntries", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        EnsureVerticalLayout(rectTransform);
+        return rectTransform;
+    }
 
     /// <summary>
     /// Creates the main header text for the Bloodcraft tab.
@@ -829,10 +788,37 @@ internal static class CharacterMenuService
     /// <param name="text">The header text.</param>
     /// <returns>The created header text component.</returns>
     static TextMeshProUGUI CreateSectionHeader(Transform parent, TextMeshProUGUI reference, string text)
-        => UIFactory.CreateSectionHeader(parent, reference, text);
+    {
+        TextMeshProUGUI header = CreateTextElement(parent, "BloodcraftHeader", reference, HeaderFontScale, FontStyles.Bold);
+        if (header == null)
+        {
+            return null;
+        }
+        header.text = text;
+        header.alignment = TextAlignmentOptions.Center;
+        return header;
+    }
 
+    /// <summary>
+    /// Creates the sub-header text for the Bloodcraft tab.
+    /// </summary>
+    /// <param name="parent">The parent transform to attach the sub-header.</param>
+    /// <param name="reference">A reference text used to copy styling.</param>
+    /// <param name="text">The sub-header text.</param>
+    /// <returns>The created sub-header text component.</returns>
     static TextMeshProUGUI CreateSectionSubHeader(Transform parent, TextMeshProUGUI reference, string text)
-        => UIFactory.CreateSectionSubHeader(parent, reference, text);
+    {
+        TextMeshProUGUI subHeader = CreateTextElement(parent, "BloodcraftSubHeader", reference, SubHeaderFontScale, FontStyles.Normal);
+        if (subHeader == null)
+        {
+            return null;
+        }
+        subHeader.text = text;
+        subHeader.alignment = TextAlignmentOptions.Center;
+        Color color = reference.color;
+        subHeader.color = new Color(color.r, color.g, color.b, 0.8f);
+        return subHeader;
+    }
 
     /// <summary>
     /// Creates a styled text element based on an existing TMP reference.
@@ -844,7 +830,25 @@ internal static class CharacterMenuService
     /// <param name="style">Font style to apply.</param>
     /// <returns>The created text component.</returns>
     static TextMeshProUGUI CreateTextElement(Transform parent, string name, TextMeshProUGUI reference, float scale, FontStyles style)
-        => UIFactory.CreateTextElement(parent, name, reference, scale, style);
+    {
+        RectTransform rectTransform = CreateRectTransformObject(name, parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+
+        TextMeshProUGUI text = rectTransform.gameObject.AddComponent<TextMeshProUGUI>();
+        CopyTextStyle(reference, text);
+        text.fontSize = reference.fontSize * scale;
+        text.fontStyle = style;
+        text.enableAutoSizing = false;
+        text.enableWordWrapping = false;
+        text.raycastTarget = false;
+        return text;
+    }
 
     /// <summary>
     /// Updates the sub-tab widths to evenly fill the available bar width.
@@ -1096,30 +1100,202 @@ internal static class CharacterMenuService
         subTabLabels.Add(primaryLabel);
     }
 
+    /// <summary>
+    /// Creates a fallback label for a sub-tab button when the template label is missing.
+    /// </summary>
+    /// <param name="parent">The parent transform for the label.</param>
+    /// <param name="reference">Reference text used for styling.</param>
+    /// <param name="label">The label text to display.</param>
+    /// <returns>The created TMP text component.</returns>
     static TMP_Text CreateSubTabLabel(Transform parent, TextMeshProUGUI reference, string label)
-        => UIFactory.CreateSubTabLabel(parent, reference, label, SubTabFontScale);
+    {
+        if (parent == null || parent.Equals(null) || reference == null)
+        {
+            return null;
+        }
+
+        RectTransform rectTransform = CreateRectTransformObject("BloodcraftSubTabLabel", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+
+        rectTransform.anchorMin = Vector2.zero;
+        rectTransform.anchorMax = Vector2.one;
+        rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        rectTransform.anchoredPosition = Vector2.zero;
+        rectTransform.sizeDelta = Vector2.zero;
+        rectTransform.localScale = Vector3.one;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+        rectTransform.SetAsLastSibling();
+
+        LayoutElement layout = rectTransform.gameObject.AddComponent<LayoutElement>();
+        layout.ignoreLayout = true;
+
+        TextMeshProUGUI text = rectTransform.gameObject.AddComponent<TextMeshProUGUI>();
+        CopyTextStyle(reference, text);
+        text.fontSize = reference.fontSize * SubTabFontScale;
+        text.fontStyle = FontStyles.Normal;
+        text.alignment = TextAlignmentOptions.Center;
+        text.enableAutoSizing = false;
+        text.enableWordWrapping = false;
+        text.overflowMode = TextOverflowModes.Ellipsis;
+        text.maskable = false;
+        text.raycastTarget = false;
+        text.text = label;
+        text.enabled = true;
+        text.margin = Vector4.zero;
+        ConfigureSubTabLabelRect(text);
+
+        Color color = reference.color;
+        if (color.a < 0.1f)
+        {
+            color.a = 1f;
+        }
+
+        text.color = color;
+        return text;
+    }
 
     /// <summary>
     /// Stretches sub-tab background graphics so adjacent tabs touch without visual gaps.
     /// </summary>
     /// <param name="buttonObject">The sub-tab button root.</param>
     static void StretchSubTabGraphics(GameObject buttonObject)
-        => UIFactory.StretchSubTabGraphics(buttonObject);
+    {
+        if (buttonObject == null)
+        {
+            return;
+        }
+
+        Image[] images = buttonObject.GetComponentsInChildren<Image>(true);
+        for (int i = 0; i < images.Length; i++)
+        {
+            Image image = images[i];
+            if (image == null)
+            {
+                continue;
+            }
+
+            RectTransform rectTransform = image.GetComponent<RectTransform>();
+            if (rectTransform == null)
+            {
+                continue;
+            }
+
+            bool shouldStretch = rectTransform.transform == buttonObject.transform;
+            if (!shouldStretch)
+            {
+                string name = rectTransform.gameObject.name;
+                shouldStretch = !string.IsNullOrWhiteSpace(name)
+                    && name.IndexOf("background", StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+
+            if (!shouldStretch)
+            {
+                continue;
+            }
+
+            rectTransform.anchorMin = Vector2.zero;
+            rectTransform.anchorMax = Vector2.one;
+            rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            rectTransform.anchoredPosition = Vector2.zero;
+            rectTransform.sizeDelta = Vector2.zero;
+            rectTransform.offsetMin = Vector2.zero;
+            rectTransform.offsetMax = Vector2.zero;
+            rectTransform.localScale = Vector3.one;
+
+            if (rectTransform.transform != buttonObject.transform)
+            {
+                rectTransform.SetAsFirstSibling();
+            }
+        }
+    }
 
     static void ApplySubTabTextSizing(TMP_Text[] templateLabels, TMP_Text fallbackLabel, float targetHeight, float desiredFontSize)
-        => UIFactory.ApplySubTabTextSizing(templateLabels, fallbackLabel, targetHeight, desiredFontSize);
+    {
+        float finalFontSize = ResolveSubTabFontSize(targetHeight, desiredFontSize);
+
+        for (int i = 0; i < templateLabels.Length; i++)
+        {
+            TMP_Text label = templateLabels[i];
+            if (label == null)
+            {
+                continue;
+            }
+
+            ApplySubTabLabelStyle(label, finalFontSize);
+        }
+
+        if (fallbackLabel != null)
+        {
+            ApplySubTabLabelStyle(fallbackLabel, finalFontSize);
+        }
+    }
 
     static void ApplySubTabTextSizing(IReadOnlyList<TMP_Text> labels, float targetHeight, float desiredFontSize)
-        => UIFactory.ApplySubTabTextSizing(labels, targetHeight, desiredFontSize);
+    {
+        if (labels == null || labels.Count == 0)
+        {
+            return;
+        }
+
+        float finalFontSize = ResolveSubTabFontSize(targetHeight, desiredFontSize);
+        for (int i = 0; i < labels.Count; i++)
+        {
+            TMP_Text label = labels[i];
+            if (label == null)
+            {
+                continue;
+            }
+
+            ApplySubTabLabelStyle(label, finalFontSize);
+        }
+    }
 
     static float ResolveSubTabFontSize(float targetHeight, float desiredFontSize)
-        => UIFactory.ResolveSubTabFontSize(targetHeight, desiredFontSize);
+    {
+        float maxFontSize = Mathf.Max(10f, targetHeight * 0.65f);
+        if (desiredFontSize <= 0f)
+        {
+            return maxFontSize;
+        }
+
+        return Mathf.Min(desiredFontSize, maxFontSize);
+    }
 
     static void ApplySubTabLabelStyle(TMP_Text label, float fontSize)
-        => UIFactory.ApplySubTabLabelStyle(label, fontSize);
+    {
+        if (label == null)
+        {
+            return;
+        }
+
+        label.fontSize = fontSize;
+        label.enableAutoSizing = false;
+        label.enableWordWrapping = false;
+        label.overflowMode = TextOverflowModes.Ellipsis;
+        label.margin = Vector4.zero;
+        ConfigureSubTabLabelRect(label);
+    }
 
     static void ConfigureSubTabLabelRect(TMP_Text label)
-        => UIFactory.ConfigureSubTabLabelRect(label);
+    {
+        RectTransform rectTransform = label?.rectTransform;
+        if (rectTransform == null)
+        {
+            return;
+        }
+
+        rectTransform.anchorMin = Vector2.zero;
+        rectTransform.anchorMax = Vector2.one;
+        rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        rectTransform.anchoredPosition = Vector2.zero;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+        rectTransform.localScale = Vector3.one;
+    }
 
     /// <summary>
     /// Creates the professions panel container.
@@ -1188,500 +1364,6 @@ internal static class CharacterMenuService
 
         rectTransform.gameObject.SetActive(false);
         return rectTransform;
-    }
-
-    /// <summary>
-    /// Creates the familiars panel UI.
-    /// </summary>
-    /// <param name="parent">The parent transform to attach the panel.</param>
-    /// <param name="reference">Reference text used to style labels.</param>
-    /// <returns>The familiars panel root transform.</returns>
-    static Transform CreateFamiliarsPanel(Transform parent, TextMeshProUGUI reference)
-    {
-        RectTransform rectTransform = CreateRectTransformObject("BloodcraftFamiliars", parent);
-        if (rectTransform == null)
-        {
-            return null;
-        }
-        rectTransform.anchorMin = new Vector2(0f, 1f);
-        rectTransform.anchorMax = new Vector2(1f, 1f);
-        rectTransform.pivot = new Vector2(0f, 1f);
-        rectTransform.offsetMin = Vector2.zero;
-        rectTransform.offsetMax = Vector2.zero;
-        EnsureVerticalLayout(rectTransform, spacing: FamiliarSectionSpacing);
-
-        familiarsStatusText = CreateSectionSubHeader(rectTransform, reference, string.Empty);
-        if (familiarsStatusText != null)
-        {
-            familiarsStatusText.alignment = TextAlignmentOptions.Left;
-            familiarsStatusText.color = FamiliarStatusTextColor;
-        }
-
-        familiarsContentRoot = CreateFamiliarsContentRoot(rectTransform, reference);
-        rectTransform.gameObject.SetActive(false);
-        return rectTransform;
-    }
-
-    /// <summary>
-    /// Creates the familiar content container with columns, cards, and actions.
-    /// </summary>
-    static Transform CreateFamiliarsContentRoot(Transform parent, TextMeshProUGUI reference)
-    {
-        RectTransform rectTransform = CreateRectTransformObject("FamiliarContentRoot", parent);
-        if (rectTransform == null)
-        {
-            return null;
-        }
-        rectTransform.anchorMin = new Vector2(0f, 1f);
-        rectTransform.anchorMax = new Vector2(1f, 1f);
-        rectTransform.pivot = new Vector2(0f, 1f);
-        rectTransform.offsetMin = Vector2.zero;
-        rectTransform.offsetMax = Vector2.zero;
-        EnsureVerticalLayout(rectTransform, spacing: FamiliarSectionSpacing);
-
-        RectTransform topRow = CreateRectTransformObject("FamiliarTopRow", rectTransform);
-        if (topRow == null)
-        {
-            return rectTransform;
-        }
-        topRow.anchorMin = new Vector2(0f, 1f);
-        topRow.anchorMax = new Vector2(1f, 1f);
-        topRow.pivot = new Vector2(0f, 1f);
-        topRow.offsetMin = Vector2.zero;
-        topRow.offsetMax = Vector2.zero;
-
-        HorizontalLayoutGroup topLayout = topRow.gameObject.AddComponent<HorizontalLayoutGroup>();
-        topLayout.childAlignment = TextAnchor.UpperLeft;
-        topLayout.spacing = FamiliarColumnSpacing;
-        topLayout.childForceExpandWidth = true;
-        topLayout.childForceExpandHeight = false;
-        topLayout.childControlWidth = true;
-        topLayout.childControlHeight = true;
-
-        Transform leftColumn = CreateFamiliarColumn(topRow, "FamiliarLeftColumn");
-        Transform rightColumn = CreateFamiliarColumn(topRow, "FamiliarRightColumn");
-
-        CreateFamiliarActiveCard(leftColumn, reference);
-        CreateFamiliarQuickActions(leftColumn, reference);
-        CreateFamiliarBoxCard(rightColumn, reference);
-        CreateFamiliarBindCard(rightColumn, reference);
-
-        _ = CreateDividerLine(rectTransform);
-        CreateFamiliarAdvancedActions(rectTransform, reference);
-        return rectTransform;
-    }
-
-    /// <summary>
-    /// Creates a vertical column for familiar content.
-    /// </summary>
-    static Transform CreateFamiliarColumn(Transform parent, string name)
-    {
-        RectTransform rectTransform = CreateRectTransformObject(name, parent);
-        if (rectTransform == null)
-        {
-            return null;
-        }
-        rectTransform.anchorMin = new Vector2(0f, 1f);
-        rectTransform.anchorMax = new Vector2(1f, 1f);
-        rectTransform.pivot = new Vector2(0f, 1f);
-        rectTransform.offsetMin = Vector2.zero;
-        rectTransform.offsetMax = Vector2.zero;
-
-        VerticalLayoutGroup layout = rectTransform.gameObject.AddComponent<VerticalLayoutGroup>();
-        layout.childAlignment = TextAnchor.UpperLeft;
-        layout.spacing = FamiliarSectionSpacing;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = false;
-        layout.childControlHeight = true;
-        layout.childControlWidth = true;
-
-        LayoutElement layoutElement = rectTransform.gameObject.AddComponent<LayoutElement>();
-        layoutElement.flexibleWidth = 1f;
-        return rectTransform;
-    }
-
-    /// <summary>
-    /// Creates the active familiar summary card.
-    /// </summary>
-    static void CreateFamiliarActiveCard(Transform parent, TextMeshProUGUI reference)
-    {
-        RectTransform card = CreateFamiliarCard(parent, "FamiliarActiveCard");
-        if (card == null)
-        {
-            return;
-        }
-
-        _ = CreateFamiliarSectionLabel(card, reference, "Active Familiar");
-        familiarActiveNameText = CreateFamiliarText(card, reference, "No familiar bound", FamiliarNameFontScale,
-            FontStyles.Bold, TextAlignmentOptions.Left, FamiliarNameColor);
-        familiarActiveStatsText = CreateFamiliarText(card, reference, string.Empty, FamiliarStatsFontScale,
-            FontStyles.Normal, TextAlignmentOptions.Left, FamiliarStatsColor);
-        familiarActiveMetaText = CreateFamiliarText(card, reference, string.Empty, FamiliarMetaFontScale,
-            FontStyles.Normal, TextAlignmentOptions.Left, FamiliarMetaColor);
-
-        _ = CreateFamiliarProgressBar(card, out familiarBondFill);
-        _ = CreateFamiliarText(card, reference, "Bond Strength", FamiliarMetaFontScale,
-            FontStyles.Normal, TextAlignmentOptions.Left, FamiliarMetaColor);
-    }
-
-    /// <summary>
-    /// Creates the quick actions section.
-    /// </summary>
-    static void CreateFamiliarQuickActions(Transform parent, TextMeshProUGUI reference)
-    {
-        _ = CreateFamiliarSectionLabel(parent, reference, "Quick Actions");
-        Transform listRoot = CreateFamiliarActionList(parent);
-        if (listRoot == null)
-        {
-            return;
-        }
-
-        CreateFamiliarActionRow(listRoot, reference, "Call / Dismiss Familiar", ".fam t", true);
-        CreateFamiliarActionRow(listRoot, reference, "Toggle Combat Mode", ".fam c", false);
-        CreateFamiliarActionRow(listRoot, reference, "Unbind Familiar", ".fam ub", false);
-    }
-
-    /// <summary>
-    /// Creates the box management card.
-    /// </summary>
-    static void CreateFamiliarBoxCard(Transform parent, TextMeshProUGUI reference)
-    {
-        RectTransform card = CreateFamiliarCard(parent, "FamiliarBoxCard");
-        if (card == null)
-        {
-            return;
-        }
-
-        _ = CreateFamiliarSectionLabel(card, reference, "Box Management");
-        Transform listRoot = CreateFamiliarActionList(card);
-        if (listRoot == null)
-        {
-            return;
-        }
-
-        CreateFamiliarActionRow(listRoot, reference, "List Boxes", ".fam boxes", false);
-        CreateFamiliarActionRow(listRoot, reference, "List Current Box", ".fam l", false);
-    }
-
-    /// <summary>
-    /// Creates the bind familiar card with grid buttons.
-    /// </summary>
-    static void CreateFamiliarBindCard(Transform parent, TextMeshProUGUI reference)
-    {
-        RectTransform card = CreateFamiliarCard(parent, "FamiliarBindCard");
-        if (card == null)
-        {
-            return;
-        }
-
-        _ = CreateFamiliarSectionLabel(card, reference, "Bind Familiar (1-10)");
-        _ = CreateFamiliarBindGrid(card, reference);
-        _ = CreateFamiliarText(card, reference, "Select a slot to bind.", FamiliarMetaFontScale,
-            FontStyles.Normal, TextAlignmentOptions.Center, FamiliarMetaColor);
-    }
-
-    /// <summary>
-    /// Creates the advanced actions section.
-    /// </summary>
-    static void CreateFamiliarAdvancedActions(Transform parent, TextMeshProUGUI reference)
-    {
-        _ = CreateFamiliarSectionLabel(parent, reference, "Advanced");
-        Transform listRoot = CreateFamiliarActionList(parent);
-        if (listRoot == null)
-        {
-            return;
-        }
-
-        CreateFamiliarActionRow(listRoot, reference, "Search Familiars", ".fam s", false);
-        CreateFamiliarActionRow(listRoot, reference, "View Overflow", ".fam of", false);
-        CreateFamiliarActionRow(listRoot, reference, "Toggle Emote Actions", ".fam e", false);
-        CreateFamiliarActionRow(listRoot, reference, "Show Emote Actions", ".fam actions", false);
-        CreateFamiliarActionRow(listRoot, reference, "Get Familiar Level", ".fam gl", false);
-        CreateFamiliarActionRow(listRoot, reference, "Prestige Familiar", ".fam pr", false);
-    }
-
-    /// <summary>
-    /// Creates a card container for familiar sections.
-    /// </summary>
-    static RectTransform CreateFamiliarCard(Transform parent, string name)
-    {
-        RectTransform rectTransform = CreateRectTransformObject(name, parent);
-        if (rectTransform == null)
-        {
-            return null;
-        }
-        rectTransform.anchorMin = new Vector2(0f, 1f);
-        rectTransform.anchorMax = new Vector2(1f, 1f);
-        rectTransform.pivot = new Vector2(0f, 1f);
-        rectTransform.offsetMin = Vector2.zero;
-        rectTransform.offsetMax = Vector2.zero;
-
-        Image background = rectTransform.gameObject.AddComponent<Image>();
-        background.color = FamiliarCardBackgroundColor;
-        background.raycastTarget = false;
-
-        VerticalLayoutGroup layout = rectTransform.gameObject.AddComponent<VerticalLayoutGroup>();
-        layout.childAlignment = TextAnchor.UpperLeft;
-        layout.spacing = FamiliarCardInnerSpacing;
-        layout.padding = CreatePadding(FamiliarCardPaddingHorizontal, FamiliarCardPaddingHorizontal,
-            FamiliarCardPaddingVertical, FamiliarCardPaddingVertical);
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = false;
-        layout.childControlHeight = true;
-        layout.childControlWidth = true;
-
-        LayoutElement layoutElement = rectTransform.gameObject.AddComponent<LayoutElement>();
-        layoutElement.minHeight = FamiliarCardMinHeight;
-        layoutElement.preferredHeight = FamiliarCardMinHeight;
-        return rectTransform;
-    }
-
-    /// <summary>
-    /// Creates a familiar section label.
-    /// </summary>
-    static TextMeshProUGUI CreateFamiliarSectionLabel(Transform parent, TextMeshProUGUI reference, string text)
-    {
-        return CreateFamiliarText(parent, reference, text.ToUpperInvariant(), FamiliarSectionFontScale,
-            FontStyles.Bold, TextAlignmentOptions.Left, FamiliarSectionLabelColor);
-    }
-
-    /// <summary>
-    /// Creates a vertical list root for action rows.
-    /// </summary>
-    static Transform CreateFamiliarActionList(Transform parent)
-    {
-        RectTransform rectTransform = CreateRectTransformObject("FamiliarActionList", parent);
-        if (rectTransform == null)
-        {
-            return null;
-        }
-        rectTransform.anchorMin = new Vector2(0f, 1f);
-        rectTransform.anchorMax = new Vector2(1f, 1f);
-        rectTransform.pivot = new Vector2(0f, 1f);
-        rectTransform.offsetMin = Vector2.zero;
-        rectTransform.offsetMax = Vector2.zero;
-
-        VerticalLayoutGroup layout = rectTransform.gameObject.AddComponent<VerticalLayoutGroup>();
-        layout.childAlignment = TextAnchor.UpperLeft;
-        layout.spacing = FamiliarActionSpacing;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = false;
-        layout.childControlHeight = true;
-        layout.childControlWidth = true;
-        return rectTransform;
-    }
-
-    /// <summary>
-    /// Creates a single familiar action row.
-    /// </summary>
-    static void CreateFamiliarActionRow(Transform parent, TextMeshProUGUI reference, string label, string command, bool isPrimary)
-    {
-        RectTransform rectTransform = CreateRectTransformObject("FamiliarActionRow", parent);
-        if (rectTransform == null)
-        {
-            return;
-        }
-        rectTransform.anchorMin = new Vector2(0f, 1f);
-        rectTransform.anchorMax = new Vector2(1f, 1f);
-        rectTransform.pivot = new Vector2(0f, 1f);
-        rectTransform.offsetMin = Vector2.zero;
-        rectTransform.offsetMax = Vector2.zero;
-
-        Image background = rectTransform.gameObject.AddComponent<Image>();
-        background.color = isPrimary ? FamiliarPrimaryActionBackgroundColor : FamiliarActionBackgroundColor;
-        background.raycastTarget = true;
-
-        HorizontalLayoutGroup layout = rectTransform.gameObject.AddComponent<HorizontalLayoutGroup>();
-        layout.childAlignment = TextAnchor.MiddleLeft;
-        layout.spacing = FamiliarActionSpacing;
-        layout.padding = CreatePadding(FamiliarActionPaddingHorizontal, FamiliarActionPaddingHorizontal,
-            FamiliarActionPaddingVertical, FamiliarActionPaddingVertical);
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = false;
-        layout.childControlWidth = true;
-        layout.childControlHeight = true;
-
-        LayoutElement rowLayout = rectTransform.gameObject.AddComponent<LayoutElement>();
-        rowLayout.minHeight = FamiliarActionRowHeight;
-        rowLayout.preferredHeight = FamiliarActionRowHeight;
-
-        TextMeshProUGUI labelText = CreateFamiliarText(rectTransform, reference, label,
-            FamiliarActionFontScale, FontStyles.Normal, TextAlignmentOptions.Left, Color.white);
-        if (labelText != null)
-        {
-            LayoutElement labelLayout = labelText.GetComponent<LayoutElement>() ?? labelText.gameObject.AddComponent<LayoutElement>();
-            labelLayout.flexibleWidth = 1f;
-        }
-
-        TextMeshProUGUI commandText = CreateFamiliarText(rectTransform, reference, command,
-            FamiliarCommandFontScale, FontStyles.Normal, TextAlignmentOptions.Right, FamiliarCommandTextColor);
-        if (commandText != null)
-        {
-            LayoutElement commandLayout = commandText.GetComponent<LayoutElement>() ?? commandText.gameObject.AddComponent<LayoutElement>();
-            commandLayout.preferredWidth = FamiliarCommandWidth;
-            commandLayout.minWidth = FamiliarCommandWidth;
-        }
-
-        SimpleStunButton button = rectTransform.gameObject.AddComponent<SimpleStunButton>();
-        ConfigureCommandButton(button, command, true);
-    }
-
-    /// <summary>
-    /// Creates the bind grid of slots.
-    /// </summary>
-    static Transform CreateFamiliarBindGrid(Transform parent, TextMeshProUGUI reference)
-    {
-        RectTransform rectTransform = CreateRectTransformObject("FamiliarBindGrid", parent);
-        if (rectTransform == null)
-        {
-            return null;
-        }
-        rectTransform.anchorMin = new Vector2(0f, 1f);
-        rectTransform.anchorMax = new Vector2(1f, 1f);
-        rectTransform.pivot = new Vector2(0f, 1f);
-        rectTransform.offsetMin = Vector2.zero;
-        rectTransform.offsetMax = Vector2.zero;
-
-        GridLayoutGroup layout = rectTransform.gameObject.AddComponent<GridLayoutGroup>();
-        layout.cellSize = new Vector2(FamiliarBindCellWidth, FamiliarBindCellHeight);
-        layout.spacing = new Vector2(FamiliarBindCellSpacing, FamiliarBindCellSpacing);
-        layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        layout.constraintCount = FamiliarBindColumns;
-        layout.childAlignment = TextAnchor.UpperLeft;
-
-        LayoutElement gridLayout = rectTransform.gameObject.AddComponent<LayoutElement>();
-        gridLayout.preferredHeight = (FamiliarBindCellHeight * 2f) + FamiliarBindCellSpacing;
-        gridLayout.minHeight = gridLayout.preferredHeight;
-
-        for (int i = 1; i <= 10; i++)
-        {
-            CreateFamiliarBindSlot(rectTransform, reference, i);
-        }
-
-        return rectTransform;
-    }
-
-    /// <summary>
-    /// Creates a bind slot button for a familiar slot.
-    /// </summary>
-    static void CreateFamiliarBindSlot(Transform parent, TextMeshProUGUI reference, int slotIndex)
-    {
-        RectTransform rectTransform = CreateRectTransformObject($"FamiliarSlot_{slotIndex}", parent);
-        if (rectTransform == null)
-        {
-            return;
-        }
-
-        Image background = rectTransform.gameObject.AddComponent<Image>();
-        background.color = FamiliarActionBackgroundColor;
-        background.raycastTarget = true;
-
-        TextMeshProUGUI label = CreateFamiliarText(rectTransform, reference, slotIndex.ToString(CultureInfo.InvariantCulture),
-            FamiliarBindFontScale, FontStyles.Normal, TextAlignmentOptions.Center, Color.white);
-        if (label != null)
-        {
-            label.raycastTarget = false;
-        }
-
-        SimpleStunButton button = rectTransform.gameObject.AddComponent<SimpleStunButton>();
-        ConfigureCommandButton(button, $".fam b {slotIndex}", true);
-    }
-
-    /// <summary>
-    /// Creates a compact progress bar for the familiar card.
-    /// </summary>
-    static RectTransform CreateFamiliarProgressBar(Transform parent, out Image fill)
-    {
-        RectTransform rectTransform = CreateRectTransformObject("FamiliarBondBar", parent);
-        if (rectTransform == null)
-        {
-            fill = null;
-            return null;
-        }
-        rectTransform.anchorMin = new Vector2(0f, 1f);
-        rectTransform.anchorMax = new Vector2(1f, 1f);
-        rectTransform.pivot = new Vector2(0f, 1f);
-        rectTransform.offsetMin = Vector2.zero;
-        rectTransform.offsetMax = Vector2.zero;
-
-        Image background = rectTransform.gameObject.AddComponent<Image>();
-        background.sprite = ResolveProgressBackgroundSprite();
-        background.color = FamiliarBondBackgroundColor;
-        background.type = Image.Type.Sliced;
-        background.raycastTarget = false;
-
-        LayoutElement layout = rectTransform.gameObject.AddComponent<LayoutElement>();
-        layout.preferredHeight = FamiliarProgressHeight;
-        layout.minHeight = FamiliarProgressHeight;
-        layout.flexibleWidth = 1f;
-
-        RectTransform fillRect = CreateRectTransformObject("Fill", rectTransform);
-        if (fillRect == null)
-        {
-            fill = null;
-            return rectTransform;
-        }
-        fillRect.anchorMin = new Vector2(0f, 0f);
-        fillRect.anchorMax = new Vector2(1f, 1f);
-        fillRect.offsetMin = new Vector2(1f, 1f);
-        fillRect.offsetMax = new Vector2(-1f, -1f);
-
-        fill = fillRect.gameObject.AddComponent<Image>();
-        fill.sprite = ResolveProgressFillSprite();
-        fill.type = Image.Type.Filled;
-        fill.fillMethod = Image.FillMethod.Horizontal;
-        fill.fillOrigin = 0;
-        fill.fillAmount = 0f;
-        fill.color = FamiliarBondFillColor;
-        fill.raycastTarget = false;
-
-        return rectTransform;
-    }
-
-    /// <summary>
-    /// Creates a familiar text element with consistent sizing.
-    /// </summary>
-    static TextMeshProUGUI CreateFamiliarText(
-        Transform parent,
-        TextMeshProUGUI reference,
-        string text,
-        float fontScale,
-        FontStyles style,
-        TextAlignmentOptions alignment,
-        Color color)
-    {
-        if (reference == null)
-        {
-            return null;
-        }
-
-        TextMeshProUGUI label = CreateTextElement(parent, "FamiliarText", reference, fontScale, style);
-        if (label == null)
-        {
-            return null;
-        }
-
-        label.text = text;
-        label.alignment = alignment;
-        label.color = color;
-        ApplyFamiliarTextLayout(label);
-        return label;
-    }
-
-    /// <summary>
-    /// Ensures familiar text elements have a consistent layout height.
-    /// </summary>
-    static void ApplyFamiliarTextLayout(TextMeshProUGUI label)
-    {
-        if (label == null)
-        {
-            return;
-        }
-
-        LayoutElement layout = label.GetComponent<LayoutElement>() ?? label.gameObject.AddComponent<LayoutElement>();
-        float height = label.fontSize * FamiliarTextHeightMultiplier;
-        layout.preferredHeight = height;
-        layout.minHeight = height;
     }
 
     /// <summary>
@@ -1864,7 +1546,21 @@ internal static class CharacterMenuService
     /// <param name="parent">The parent transform to attach the list.</param>
     /// <returns>The list root transform.</returns>
     static Transform CreateProfessionListRoot(Transform parent)
-        => UIFactory.CreateListRoot(parent, "ProfessionList");
+    {
+        RectTransform rectTransform = CreateRectTransformObject("ProfessionList", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        EnsureVerticalLayout(rectTransform);
+        return rectTransform;
+    }
 
     /// <summary>
     /// Adds a fixed-width spacer to a layout.
@@ -1872,7 +1568,18 @@ internal static class CharacterMenuService
     /// <param name="parent">The parent transform to attach the spacer.</param>
     /// <param name="width">The width for the spacer.</param>
     static void AddSpacer(Transform parent, float width)
-        => UIFactory.AddHorizontalSpacer(parent, width, ProfessionRowHeight);
+    {
+        RectTransform rectTransform = CreateRectTransformObject("Spacer", parent);
+        if (rectTransform == null)
+        {
+            return;
+        }
+
+        LayoutElement layout = rectTransform.gameObject.AddComponent<LayoutElement>();
+        layout.preferredWidth = width;
+        layout.minWidth = width;
+        layout.preferredHeight = ProfessionRowHeight;
+    }
 
     /// <summary>
     /// Creates a header label with fixed width.
@@ -1964,18 +1671,20 @@ internal static class CharacterMenuService
         return null;
     }
 
-    // Copies text styling - delegates to UIFactory with additional properties
+    /// <summary>
+    /// Copies text styling settings from a source to a target TMP text component.
+    /// </summary>
+    /// <param name="source">The reference text component.</param>
+    /// <param name="target">The text component to update.</param>
     static void CopyTextStyle(TextMeshProUGUI source, TextMeshProUGUI target)
     {
-        UIFactory.CopyTextStyle(source, target);
-        if (source != null && target != null)
-        {
-            target.fontSize = source.fontSize;
-            target.fontStyle = source.fontStyle;
-            target.alignment = source.alignment;
-            target.margin = source.margin;
-            target.overflowMode = source.overflowMode;
-        }
+        target.font = source.font;
+        target.fontSize = source.fontSize;
+        target.fontStyle = source.fontStyle;
+        target.color = source.color;
+        target.alignment = source.alignment;
+        target.margin = source.margin;
+        target.overflowMode = source.overflowMode;
     }
 
     /// <summary>
@@ -2129,9 +1838,7 @@ internal static class CharacterMenuService
         UpdateSubTabSelection();
         UpdateSectionHeader();
 
-        bool showTextEntries = activeTab == BloodcraftTab.Prestige
-            || activeTab == BloodcraftTab.Exoform
-            || activeTab == BloodcraftTab.Battles;
+        bool showTextEntries = activeTab != BloodcraftTab.Professions && activeTab != BloodcraftTab.StatBonuses;
         entriesRoot.gameObject.SetActive(showTextEntries);
 
         if (professionsRoot != null)
@@ -2142,11 +1849,6 @@ internal static class CharacterMenuService
         if (statBonusesRoot != null)
         {
             statBonusesRoot.gameObject.SetActive(activeTab == BloodcraftTab.StatBonuses);
-        }
-
-        if (familiarsRoot != null)
-        {
-            familiarsRoot.gameObject.SetActive(activeTab == BloodcraftTab.Familiars);
         }
 
         if (showTextEntries)
@@ -2184,11 +1886,6 @@ internal static class CharacterMenuService
             EnsureEntries(0);
             UpdateStatBonusesPanel();
         }
-        else if (activeTab == BloodcraftTab.Familiars)
-        {
-            EnsureEntries(0);
-            UpdateFamiliarsPanel();
-        }
     }
 
     /// <summary>
@@ -2197,23 +1894,203 @@ internal static class CharacterMenuService
     /// <returns>A list of entries for the current view.</returns>
     static List<BloodcraftEntry> BuildEntries()
     {
-        // Delegate to tab components
-        return activeTab switch
+        List<BloodcraftEntry> list = [];
+
+        switch (activeTab)
         {
-            BloodcraftTab.Exoform => _exoformTab.BuildEntries(),
-            BloodcraftTab.Battles => _battlesTab.BuildEntries(),
-            BloodcraftTab.Prestige => _prestigeTab.BuildEntries(),
-            _ => []
-        };
+            case BloodcraftTab.Exoform:
+                AppendExoFormEntries(list);
+                break;
+            case BloodcraftTab.Battles:
+                AppendFamiliarBattleEntries(list);
+                break;
+            case BloodcraftTab.Professions:
+                break;
+            default:
+                AppendPrestigeEntries(list);
+                break;
+        }
+
+        return list;
     }
 
-    // Tab component instances
-    static readonly PrestigeTab _prestigeTab = new();
-    static readonly ExoformTab _exoformTab = new();
-    static readonly BattlesTab _battlesTab = new();
+    /// <summary>
+    /// Appends prestige leaderboard entries to the list.
+    /// </summary>
+    /// <param name="list">The list to populate.</param>
+    static void AppendPrestigeEntries(List<BloodcraftEntry> list)
+    {
+        if (!_prestigeDataReady)
+        {
+            list.Add(new BloodcraftEntry("Awaiting prestige data...", FontStyles.Normal));
+            return;
+        }
 
-    // Note: AppendPrestigeEntries, AppendExoFormEntries, and AppendFamiliarBattleEntries
-    // have been moved to their respective tab components in Services/CharacterMenu/Tabs/
+        if (!_prestigeSystemEnabled)
+        {
+            list.Add(new BloodcraftEntry("Prestige system disabled.", FontStyles.Normal));
+            return;
+        }
+
+        if (!_prestigeLeaderboardEnabled)
+        {
+            list.Add(new BloodcraftEntry("Prestige leaderboard disabled.", FontStyles.Normal));
+            return;
+        }
+
+        if (_prestigeLeaderboardOrder.Count == 0)
+        {
+            list.Add(new BloodcraftEntry("No prestige data available.", FontStyles.Normal));
+            return;
+        }
+
+        if (_prestigeLeaderboardIndex >= _prestigeLeaderboardOrder.Count)
+        {
+            _prestigeLeaderboardIndex = 0;
+        }
+
+        string typeKey = _prestigeLeaderboardOrder[_prestigeLeaderboardIndex];
+        string displayType = SplitPascalCase(typeKey);
+        _prestigeLeaderboards.TryGetValue(typeKey, out List<PrestigeLeaderboardEntry> leaderboard);
+        leaderboard ??= [];
+
+        list.Add(new BloodcraftEntry("Click type to cycle.", FontStyles.Normal));
+        list.Add(new BloodcraftEntry($"Type: {displayType}", FontStyles.Normal, action: CyclePrestigeType, enabled: _prestigeLeaderboardOrder.Count > 1));
+
+        if (leaderboard.Count == 0)
+        {
+            list.Add(new BloodcraftEntry("No prestige entries yet.", FontStyles.Normal));
+            return;
+        }
+
+        for (int i = 0; i < leaderboard.Count; i++)
+        {
+            PrestigeLeaderboardEntry entry = leaderboard[i];
+            FontStyles style = i == 0 ? FontStyles.Bold : FontStyles.Normal;
+            list.Add(new BloodcraftEntry($"{i + 1} | {entry.Name}: {entry.Value}", style));
+        }
+    }
+
+    /// <summary>
+    /// Appends exoform and shapeshift entries to the list.
+    /// </summary>
+    /// <param name="list">The list to populate.</param>
+    static void AppendExoFormEntries(List<BloodcraftEntry> list)
+    {
+        if (!_exoFormDataReady)
+        {
+            list.Add(new BloodcraftEntry("Awaiting exoform data...", FontStyles.Normal));
+            return;
+        }
+
+        if (!_exoFormEnabled)
+        {
+            list.Add(new BloodcraftEntry("Exo prestiging disabled.", FontStyles.Normal));
+            return;
+        }
+
+        string currentForm = string.IsNullOrWhiteSpace(_exoFormCurrentForm)
+            ? "None"
+            : SplitPascalCase(_exoFormCurrentForm);
+
+        list.Add(new BloodcraftEntry($"Current: {currentForm}", FontStyles.Normal));
+
+        bool canToggleTaunt = _exoFormPrestiges > 0;
+        string chargeLine = _exoFormMaxDuration > 0f
+            ? $"Charge: {_exoFormCharge:0.0}/{_exoFormMaxDuration:0.0}s"
+            : "Charge: --";
+
+        string tauntStatus = _exoFormTauntEnabled ? "<color=green>On</color>" : "<color=red>Off</color>";
+
+        list.Add(new BloodcraftEntry($"Exo Prestiges: {_exoFormPrestiges}", FontStyles.Normal));
+        list.Add(new BloodcraftEntry(chargeLine, FontStyles.Normal));
+        list.Add(new BloodcraftEntry($"Taunt to Exoform: {tauntStatus}", FontStyles.Normal, command: ".prestige exoform", enabled: canToggleTaunt));
+        list.Add(new BloodcraftEntry("Forms", FontStyles.Bold));
+
+        for (int i = 0; i < _exoFormEntries.Count; i++)
+        {
+            ExoFormEntry form = _exoFormEntries[i];
+            string formName = SplitPascalCase(form.FormName);
+            string status = form.Unlocked ? "Unlocked" : "Locked";
+            FontStyles style = form.FormName.Equals(_exoFormCurrentForm, StringComparison.OrdinalIgnoreCase)
+                ? FontStyles.Bold
+                : FontStyles.Normal;
+
+            list.Add(new BloodcraftEntry($"{i + 1} | {formName} ({status})", style,
+                command: $".prestige sf {form.FormName}", enabled: form.Unlocked));
+        }
+
+        ExoFormEntry activeForm = ResolveActiveExoForm();
+        if (activeForm != null && activeForm.Abilities.Count > 0)
+        {
+            list.Add(new BloodcraftEntry("Abilities", FontStyles.Bold));
+
+            foreach (ExoFormAbilityData ability in activeForm.Abilities)
+            {
+                string abilityName = ResolveAbilityName(ability.AbilityId);
+                list.Add(new BloodcraftEntry($" - {abilityName} ({ability.Cooldown:0.0}s)", FontStyles.Normal));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Appends familiar battle group entries to the list.
+    /// </summary>
+    /// <param name="list">The list to populate.</param>
+    static void AppendFamiliarBattleEntries(List<BloodcraftEntry> list)
+    {
+        if (!_familiarBattleDataReady)
+        {
+            list.Add(new BloodcraftEntry("Awaiting familiar battle data...", FontStyles.Normal));
+            return;
+        }
+
+        if (!_familiarSystemEnabled)
+        {
+            list.Add(new BloodcraftEntry("Familiars are disabled.", FontStyles.Normal));
+            return;
+        }
+
+        if (!_familiarBattlesEnabled)
+        {
+            list.Add(new BloodcraftEntry("Familiar battles disabled.", FontStyles.Normal));
+            return;
+        }
+
+        string activeGroupName = string.IsNullOrWhiteSpace(_familiarActiveBattleGroup)
+            ? "None"
+            : _familiarActiveBattleGroup;
+
+        list.Add(new BloodcraftEntry($"Active group: {activeGroupName}", FontStyles.Normal));
+
+        if (_familiarBattleGroups.Count == 0)
+        {
+            list.Add(new BloodcraftEntry("No battle groups available.", FontStyles.Normal));
+            return;
+        }
+
+        list.Add(new BloodcraftEntry("Groups", FontStyles.Bold));
+
+        for (int i = 0; i < _familiarBattleGroups.Count; i++)
+        {
+            FamiliarBattleGroupData group = _familiarBattleGroups[i];
+            bool isActive = group.Name.Equals(_familiarActiveBattleGroup, StringComparison.OrdinalIgnoreCase);
+            FontStyles style = isActive ? FontStyles.Bold : FontStyles.Normal;
+            string suffix = isActive ? " (Active)" : string.Empty;
+            list.Add(new BloodcraftEntry($"{i + 1} | {group.Name}{suffix}", style,
+                command: $".fam cbg {group.Name}", enabled: true));
+        }
+
+        FamiliarBattleGroupData activeGroup = FindBattleGroup(_familiarActiveBattleGroup) ?? _familiarBattleGroups[0];
+        list.Add(new BloodcraftEntry("Slots", FontStyles.Bold));
+
+        for (int i = 0; i < activeGroup.Slots.Count; i++)
+        {
+            FamiliarBattleSlotData slot = activeGroup.Slots[i];
+            string slotText = FormatFamiliarSlot(slot, i + 1);
+            list.Add(new BloodcraftEntry(slotText, FontStyles.Normal, command: $".fam sbg {i + 1}", enabled: true));
+        }
+    }
 
     /// <summary>
     /// Updates the selection state for Bloodcraft sub-tabs.
@@ -2452,125 +2329,6 @@ internal static class CharacterMenuService
     }
 
     /// <summary>
-    /// Updates the familiars panel UI.
-    /// </summary>
-    static void UpdateFamiliarsPanel()
-    {
-        if (familiarsRoot == null || familiarsContentRoot == null)
-        {
-            return;
-        }
-
-        if (!_familiarSystemEnabled)
-        {
-            if (familiarsStatusText != null)
-            {
-                familiarsStatusText.text = "Familiars are disabled on this server.";
-                familiarsStatusText.gameObject.SetActive(true);
-            }
-
-            familiarsContentRoot.gameObject.SetActive(false);
-            return;
-        }
-
-        if (familiarsStatusText != null)
-        {
-            familiarsStatusText.text = string.Empty;
-            familiarsStatusText.gameObject.SetActive(false);
-        }
-
-        familiarsContentRoot.gameObject.SetActive(true);
-
-        string displayName = ResolveFamiliarDisplayName();
-        bool hasFamiliar = !displayName.Equals("None", StringComparison.OrdinalIgnoreCase);
-        string prestigeText = _familiarPrestige > 0 ? $" [P{_familiarPrestige}]" : string.Empty;
-
-        if (familiarActiveNameText != null)
-        {
-            familiarActiveNameText.text = hasFamiliar
-                ? $"{displayName} Lv.{_familiarLevel}{prestigeText}"
-                : "No familiar bound";
-            familiarActiveNameText.fontStyle = hasFamiliar ? FontStyles.Bold : FontStyles.Italic;
-        }
-
-        string statsLine = BuildFamiliarStatsLine();
-        if (familiarActiveStatsText != null)
-        {
-            familiarActiveStatsText.text = statsLine;
-            familiarActiveStatsText.gameObject.SetActive(!string.IsNullOrWhiteSpace(statsLine));
-        }
-
-        if (familiarActiveMetaText != null)
-        {
-            string progressLabel = hasFamiliar ? BuildFamiliarProgressLabel() : "Progress: --";
-            string maxLabel = hasFamiliar && _familiarMaxLevel > 0 ? $"Max: {_familiarMaxLevel}" : "Max: --";
-            familiarActiveMetaText.text = $"{progressLabel} | {maxLabel}";
-        }
-
-        if (familiarBondFill != null)
-        {
-            float progress = hasFamiliar ? Mathf.Clamp01(_familiarProgress) : 0f;
-            bool isMaxLevel = _familiarMaxLevel > 0 && _familiarLevel >= _familiarMaxLevel;
-            familiarBondFill.fillAmount = isMaxLevel ? 1f : progress;
-        }
-    }
-
-    /// <summary>
-    /// Resolves the display name for the active familiar.
-    /// </summary>
-    static string ResolveFamiliarDisplayName()
-    {
-        if (string.IsNullOrWhiteSpace(_familiarName))
-        {
-            return "None";
-        }
-
-        if (_familiarName.Equals("Familiar", StringComparison.OrdinalIgnoreCase)
-            || _familiarName.Equals("Frailed", StringComparison.OrdinalIgnoreCase))
-        {
-            return "None";
-        }
-
-        return _familiarName;
-    }
-
-    /// <summary>
-    /// Builds the familiar stats line for display.
-    /// </summary>
-    static string BuildFamiliarStatsLine()
-    {
-        if (_familiarStats == null || _familiarStats.Count < 3)
-        {
-            return string.Empty;
-        }
-
-        string health = string.IsNullOrWhiteSpace(_familiarStats[0]) ? string.Empty : $"HP:{_familiarStats[0]}";
-        string physPower = string.IsNullOrWhiteSpace(_familiarStats[1]) ? string.Empty : $"PP:{_familiarStats[1]}";
-        string spellPower = string.IsNullOrWhiteSpace(_familiarStats[2]) ? string.Empty : $"SP:{_familiarStats[2]}";
-
-        List<string> parts = [];
-        if (!string.IsNullOrEmpty(health)) parts.Add(health);
-        if (!string.IsNullOrEmpty(physPower)) parts.Add(physPower);
-        if (!string.IsNullOrEmpty(spellPower)) parts.Add(spellPower);
-
-        return parts.Count > 0 ? string.Join(" | ", parts) : string.Empty;
-    }
-
-    /// <summary>
-    /// Builds the familiar progress label for the active familiar.
-    /// </summary>
-    static string BuildFamiliarProgressLabel()
-    {
-        if (_familiarMaxLevel > 0 && _familiarLevel >= _familiarMaxLevel)
-        {
-            return "Progress: Max";
-        }
-
-        float progress = Mathf.Clamp01(_familiarProgress);
-        return $"Progress: {progress * 100f:0}%";
-    }
-
-    /// <summary>
     /// Ensures the stat bonus row list has the requested count.
     /// </summary>
     /// <param name="count">The number of rows required.</param>
@@ -2763,7 +2521,18 @@ internal static class CharacterMenuService
     /// Creates a styled text element from a reference.
     /// </summary>
     static TextMeshProUGUI CreateText(Transform parent, TextMeshProUGUI reference, string content, float fontSize, TextAlignmentOptions alignment)
-        => UIFactory.CreateText(parent, reference, content, fontSize, alignment);
+    {
+        RectTransform rectTransform = CreateRectTransformObject("Text", parent);
+        if (rectTransform == null) return null;
+
+        TextMeshProUGUI text = rectTransform.gameObject.AddComponent<TextMeshProUGUI>();
+        CopyTextStyle(reference, text);
+        text.text = content;
+        text.fontSize = fontSize;
+        text.alignment = alignment;
+        
+        return text;
+    }
 
     /// <summary>
     /// Creates a simple text element using the global entry style.
@@ -3076,8 +2845,104 @@ internal static class CharacterMenuService
     }
 
     /// <summary>
-    // Note: CyclePrestigeType, ResolveActiveExoForm, ResolveAbilityName, FindBattleGroup, FormatFamiliarSlot
-    // have been moved to their respective tab components in Services/CharacterMenu/Tabs/
+    /// Cycles the selected prestige leaderboard type.
+    /// </summary>
+    static void CyclePrestigeType()
+    {
+        if (_prestigeLeaderboardOrder.Count == 0)
+        {
+            return;
+        }
+
+        _prestigeLeaderboardIndex = (_prestigeLeaderboardIndex + 1) % _prestigeLeaderboardOrder.Count;
+    }
+
+    /// <summary>
+    /// Resolves the active exoform entry.
+    /// </summary>
+    /// <returns>The active exoform entry or null if none is available.</returns>
+    static ExoFormEntry ResolveActiveExoForm()
+    {
+        if (_exoFormEntries.Count == 0)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_exoFormCurrentForm))
+        {
+            ExoFormEntry match = _exoFormEntries.Find(entry =>
+                entry.FormName.Equals(_exoFormCurrentForm, StringComparison.OrdinalIgnoreCase));
+
+            if (match != null)
+            {
+                return match;
+            }
+        }
+
+        return _exoFormEntries[0];
+    }
+
+    /// <summary>
+    /// Resolves a display name for an ability identifier.
+    /// </summary>
+    /// <param name="abilityId">The ability prefab GUID hash.</param>
+    /// <returns>The display-friendly ability name.</returns>
+    static string ResolveAbilityName(int abilityId)
+    {
+        PrefabGUID abilityGuid = new(abilityId);
+        string abilityName = abilityGuid.GetLocalizedName();
+        if (string.IsNullOrEmpty(abilityName) || abilityName.Equals("LocalizationKey.Empty"))
+        {
+            abilityName = abilityGuid.GetPrefabName();
+        }
+
+        if (string.IsNullOrEmpty(abilityName))
+        {
+            return $"Ability {abilityId}";
+        }
+
+        Match match = AbilitySpellRegex.Match(abilityName);
+        if (match.Success)
+        {
+            return match.Value.Replace('_', ' ');
+        }
+
+        return abilityName;
+    }
+
+    /// <summary>
+    /// Finds a familiar battle group by name.
+    /// </summary>
+    /// <param name="groupName">The group name to match.</param>
+    /// <returns>The battle group or null if not found.</returns>
+    static FamiliarBattleGroupData FindBattleGroup(string groupName)
+    {
+        if (string.IsNullOrWhiteSpace(groupName))
+        {
+            return null;
+        }
+
+        return _familiarBattleGroups.Find(group =>
+            group.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Formats a familiar battle slot display string.
+    /// </summary>
+    /// <param name="slot">The slot data.</param>
+    /// <param name="slotIndex">The 1-based slot index.</param>
+    /// <returns>A formatted slot string.</returns>
+    static string FormatFamiliarSlot(FamiliarBattleSlotData slot, int slotIndex)
+    {
+        if (slot.Id == 0)
+        {
+            return $"Slot {slotIndex}: <color=grey>Empty</color>";
+        }
+
+        string name = string.IsNullOrWhiteSpace(slot.Name) ? $"Familiar {slot.Id}" : slot.Name;
+        string prestige = slot.Prestige > 0 ? $" P{slot.Prestige}" : string.Empty;
+        return $"Slot {slotIndex}: {name} (Lv {slot.Level}{prestige})";
+    }
 
     /// <summary>
     /// Returns the profession entries for display.
@@ -3182,7 +3047,34 @@ internal static class CharacterMenuService
         button.onClick.AddListener((UnityAction)(() => action()));
     }
 
-    // BloodcraftEntry is defined in Eclipse.Services.CharacterMenu.Interfaces.ICharacterMenuTab
+    /// <summary>
+    /// Represents a single line entry in the Bloodcraft tab.
+    /// </summary>
+    readonly struct BloodcraftEntry
+    {
+        public string Text { get; }
+        public string Command { get; }
+        public Action Action { get; }
+        public bool Enabled { get; }
+        public FontStyles Style { get; }
+
+        /// <summary>
+        /// Initializes a new Bloodcraft entry.
+        /// </summary>
+        /// <param name="text">The display text for the entry.</param>
+        /// <param name="style">The font style to apply.</param>
+        /// <param name="command">An optional chat command to send when clicked.</param>
+        /// <param name="action">An optional local action to invoke when clicked.</param>
+        /// <param name="enabled">Whether the entry is clickable.</param>
+        public BloodcraftEntry(string text, FontStyles style, string command = "", Action action = null, bool enabled = false)
+        {
+            Text = text;
+            Command = command;
+            Action = action;
+            Enabled = enabled;
+            Style = style;
+        }
+    }
 
     /// <summary>
     /// Holds UI references for a profession row entry.

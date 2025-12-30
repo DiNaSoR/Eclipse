@@ -1,5 +1,6 @@
 ﻿using Bloodcraft.Interfaces;
 using Bloodcraft.Services;
+using Bloodcraft.Systems.Leveling;
 using Bloodcraft.Utilities;
 using ProjectM;
 using ProjectM.Network;
@@ -322,6 +323,12 @@ internal static class WeaponSystem
         {
             HandleWeaponLevelUp(user, weaponType, newLevel, steamId);
             Buffs.RefreshStats(playerCharacter);
+
+            // Update gear level when weapon expertise increases
+            if (ConfigService.LevelingSystem)
+            {
+                LevelingSystem.SetLevel(playerCharacter);
+            }
         }
 
         if (GetPlayerBool(steamId, WEAPON_LOG_KEY))

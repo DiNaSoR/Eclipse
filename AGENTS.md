@@ -1,63 +1,155 @@
-# AGENTS.md: Universal Principles for CSharp and General Programming
+# AGENTS.md — Universal + Project-Aware Coding Principles
 
-This guide provides universal, intelligent principles and patterns to master C# coding effectively, applicable across any project or repository.
+This document defines **mandatory operational rules** for AI agents contributing to this repository.
+It combines **general software engineering best practices** with a **project-specific memory and learning system**
+designed to prevent regressions and repeated mistakes.
 
-## 🧠 Structured Reasoning
+---
 
-* **Single Responsibility Principle (SRP)**: Every class and method should have one clearly defined responsibility.
-* **Explicit Intent**: Write self-descriptive methods and classes, avoiding ambiguous or overly general names.
-* **Readability First**: Prioritize readability over cleverness. The intent of your code should be immediately clear to others.
+## 🧠 Authority & Memory Model (CRITICAL)
+
+This project uses a **multi-layer memory system**.
+All agents MUST respect the following authority order:
+
+1. `.cursor/memory/lessons.md` — hard rules learned from past mistakes (never violate)
+2. `.cursor/memory/memo.md` — current truth and system state
+3. `.cursor/memory/journal.md` — historical context (append-only)
+4. Existing codebase
+5. New code or refactors
+
+If any conflict exists, **higher authority always wins**.
+
+---
+
+## 📚 Mandatory Memory Usage
+
+### Memory locations
+
+- `.cursor/memory/memo.md`  
+  **Purpose:** Current system behavior and invariants  
+  **Rule:** MUST be read before writing or modifying code.
+
+- `.cursor/memory/journal.md`  
+  **Purpose:** Append-only change history  
+  **Rule:** MUST be updated after any feature or fix.
+
+- `.cursor/memory/lessons.md`  
+  **Purpose:** Recorded mistakes, root causes, and permanent rules  
+  **Rule:**  
+  - MUST be read before coding.
+  - MUST NOT be violated.
+  - MUST be updated whenever a non-obvious bug or incorrect assumption is discovered.
+
+---
+
+## 🔁 Mandatory Workflow (Non-Optional)
+
+### Before writing any code
+1. Read `memo.md` to understand the current system state.
+2. Read `lessons.md` and ensure no rule is violated.
+3. Inspect the existing codebase for similar patterns or helpers.
+
+### While writing code
+- Do not introduce duplicate systems, hooks, or parallel logic.
+- Do not force refresh external frameworks (e.g., Blizzard UI) unless explicitly documented as safe.
+- Prefer data-driven behavior over toggle- or assumption-driven logic.
+- Use existing helpers and shared modules whenever possible.
+
+### After completing a task (feature or fix)
+1. Append an entry to `journal.md` describing:
+   - What changed
+   - Why it changed
+   - Key files involved
+2. If a bug, regression, or misunderstanding was involved:
+   - Add a new entry to `lessons.md` documenting:
+     - The symptom
+     - The real root cause
+     - The wrong approach
+     - The correct rule going forward
+
+---
+
+## 🧠 Structured Reasoning & Design
+
+- **Single Responsibility Principle (SRP):**  
+  Each class, module, or function must have one clear responsibility.
+
+- **Explicit Intent:**  
+  Code must explain *what it does* and *why*, not merely *how*.
+
+- **Readability Over Cleverness:**  
+  Prefer clarity and predictability over compact or “smart” solutions.
+
+---
 
 ## 🎯 Clarity & Explicitness
 
-* Clearly specify the purpose, parameters, and return values of each method using XML documentation comments.
-* Choose names that explicitly describe intent (e.g., `CalculateTotalPrice()` instead of `Calculate()` or `CalcTP()`).
-* Favor descriptive variable names (`customerAge` rather than `ca`).
+- Use explicit, descriptive names for functions, variables, and modules.
+- Avoid ambiguous or generic naming.
+- Code intent must be obvious without external explanation.
 
-## 🔄 Iterative Improvement
+---
 
-* Implement incremental changes and continuously validate with unit tests.
-* Regularly refactor code to simplify complexity and improve maintainability.
-* Conduct periodic peer reviews to integrate diverse perspectives and catch overlooked issues.
+## ♻️ Incremental & Safe Change
 
-## 🛡️ Robustness & Safety Nets
+- Prefer small, incremental changes.
+- Validate behavior after each step.
+- Refactor only when behavior is fully understood and stable.
 
-* Write unit tests covering critical paths and edge cases to ensure code stability and correctness.
-* Leverage static code analysis tools like Roslyn analyzers and StyleCop to maintain high-quality standards.
-* Use assertions liberally to document and enforce assumptions in code logic.
+---
 
-## 🏗️ Universal Design Patterns
+## 🛡️ Robustness & Regression Prevention
 
-* **Factory & Abstract Factory**: For managing object creation and reducing direct dependencies.
-* **Strategy Pattern**: To encapsulate varying algorithms and make behaviors interchangeable.
-* **Repository Pattern**: For abstracting data layer logic and enhancing testability.
-* **Dependency Injection**: Use constructor injection to clearly define dependencies and improve modularity.
+- Never reintroduce a bug documented in `lessons.md`.
+- Avoid “quick fixes” that bypass state, timing, or lifecycle rules.
+- Prefer post-layout or post-state reapplication over forced refreshes.
+- Assertions and defensive checks are encouraged when assumptions exist.
 
-## ♻️ Maintainable Code Habits
+---
 
-* Avoid magic numbers; define constants or configuration settings instead.
-* Keep methods short (ideally fewer than 30 lines) to enhance readability and testability.
-* Organize methods logically within classes (constructors first, public methods next, followed by private methods).
+## 🏗️ Architecture & Patterns
 
-## 🚦 Consistent Coding Style
+- Favor modular design and separation of concerns.
+- Prefer composition over inheritance where practical.
+- Use patterns (Factory, Strategy, Repository, Dependency Injection) only when they reduce complexity—not by default.
 
-* Adhere to established naming conventions:
+---
 
-  * Methods & Variables: `PascalCase`
-  * Private fields & parameters: `camelCase`
-  * Constants: `UPPERCASE_WITH_UNDERSCORES`
-* Consistently format your code using tools like `.editorconfig`.
+## ♻️ Maintainability Rules
+
+- Avoid magic numbers; use constants or configuration.
+- Keep functions short and focused.
+- Group related logic logically and consistently.
+
+---
+
+## 🚦 Consistency & Style
+
+- Follow established naming and formatting conventions.
+- Respect existing project conventions over personal preference.
+- Use automated formatting and linting when available.
+
+---
 
 ## 📈 Performance Awareness
 
-* Understand the performance implications of collections (prefer using `Dictionary` for key-value lookups over lists).
-* Minimize object allocations, especially within loops or performance-critical paths.
-* Favor efficient data structures and algorithms suited to the task at hand (e.g., HashSets for uniqueness checks).
+- Be conscious of performance-critical paths.
+- Avoid unnecessary allocations or repeated work.
+- Choose data structures intentionally.
 
-## 🛠️ Continuous Learning & Reflection
+---
 
-* Periodically review code written previously to identify opportunities for improvement.
-* Stay updated on language features and industry best practices.
-* Learn from established open-source C# projects and communities.
+## 🧠 Learning Is Mandatory (Not Optional)
 
-By internalizing these universal principles, you build a solid foundation to become a proficient and thoughtful C# developer.
+This project treats mistakes as **training data**, not failures.
+
+- If an issue caused confusion, regression, or repeated fixes:
+  → It MUST be recorded in `lessons.md`.
+- Future agents are expected to **learn from past pain**, not rediscover it.
+
+---
+
+## 🧭 Final Principle
+
+> The goal is not just to make the code work —  
+> the goal is to make the system **hard to misuse and hard to regress**.

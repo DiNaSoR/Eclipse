@@ -6,8 +6,10 @@ using HarmonyLib;
 using ProjectM;
 using ProjectM.Gameplay.Systems;
 using ProjectM.Shared;
+using System.Collections;
 using Unity.Collections;
 using Unity.Entities;
+using UnityEngine;
 using User = ProjectM.Network.User;
 using WeaponType = Bloodcraft.Interfaces.WeaponType;
 
@@ -21,6 +23,8 @@ internal static class GearLevelPatches // WeaponLevelSystem_Spawn, WeaponLevelSy
 
     static readonly bool _leveling = ConfigService.LevelingSystem;
     static readonly bool _expertise = ConfigService.ExpertiseSystem;
+
+    static readonly WaitForSeconds _gearLevelDelay = new(0.05f);
 
     static readonly Dictionary<ulong, int> _playerMaxWeaponLevels = [];
 
@@ -41,6 +45,9 @@ internal static class GearLevelPatches // WeaponLevelSystem_Spawn, WeaponLevelSy
                 else if (entityOwner.Owner.TryGetPlayer(out Entity player))
                 {
                     LevelingSystem.SetLevel(player);
+
+                    // Delayed call to ensure native systems have finished updating equipment values
+                    DelayedSetLevelRoutine(player).Start();
                 }
             }
         }
@@ -119,12 +126,25 @@ internal static class GearLevelPatches // WeaponLevelSystem_Spawn, WeaponLevelSy
                 else if (entityOwner.Owner.TryGetPlayer(out Entity player))
                 {
                     LevelingSystem.SetLevel(player);
+
+                    // Delayed call to ensure native systems have finished updating equipment values
+                    DelayedSetLevelRoutine(player).Start();
                 }
             }
         }
         finally
         {
             entities.Dispose();
+        }
+    }
+
+    static IEnumerator DelayedSetLevelRoutine(Entity player)
+    {
+        yield return _gearLevelDelay;
+
+        if (player.Exists())
+        {
+            LevelingSystem.SetLevel(player);
         }
     }
 

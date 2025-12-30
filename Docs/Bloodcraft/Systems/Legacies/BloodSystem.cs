@@ -1,6 +1,7 @@
 ﻿using Bloodcraft.Interfaces;
 using Bloodcraft.Resources;
 using Bloodcraft.Services;
+using Bloodcraft.Systems.Leveling;
 using Bloodcraft.Utilities;
 using ProjectM;
 using ProjectM.Network;
@@ -325,6 +326,12 @@ internal static class BloodSystem
         {
             HandleBloodLevelUp(user, bloodType, newLevel, steamId);
             Buffs.RefreshStats(user.LocalCharacter.GetEntityOnServer());
+
+            // Update gear level when blood legacy increases
+            if (ConfigService.LevelingSystem)
+            {
+                LevelingSystem.SetLevel(playerCharacter);
+            }
         }
 
         if (GetPlayerBool(steamId, BLOOD_LOG_KEY))

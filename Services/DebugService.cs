@@ -559,4 +559,129 @@ internal static class DebugService
 
         return sb.ToString();
     }
+
+    #region Equipment Tab Hierarchy Dump
+
+    const int MAX_DEPTH = 10;
+
+    /// <summary>
+    /// Dumps the full Equipment tab hierarchy with RectTransform data.
+    /// Press F3 with Character menu open to trigger.
+    /// </summary>
+    public static void DumpEquipmentTabHierarchy()
+    {
+        try
+        {
+            Core.Log.LogInfo("[Debug UI] F3 pressed. Dumping Equipment tab hierarchy...");
+
+            Transform equipmentTab = FindTransformByName("EquipmentTab", "CharacterInventorySubMenu(Clone)");
+            if (equipmentTab == null)
+            {
+                Core.Log.LogWarning("[Debug UI] EquipmentTab not found. Open the Character menu Equipment tab and press F3.");
+                return;
+            }
+
+            Core.Log.LogInfo("[Debug UI] === EQUIPMENT TAB HIERARCHY START ===");
+            DumpTransformHierarchy(equipmentTab, 0);
+            Core.Log.LogInfo("[Debug UI] === EQUIPMENT TAB HIERARCHY END ===");
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"[Debug UI] Failed to dump Equipment tab hierarchy: {ex}");
+        }
+    }
+
+    /// <summary>
+    /// Recursively dumps a transform and all children with full RectTransform data.
+    /// </summary>
+    /// <param name="transform">The transform to dump.</param>
+    /// <param name="depth">Current recursion depth.</param>
+    static void DumpTransformHierarchy(Transform transform, int depth)
+    {
+        if (transform == null || depth > MAX_DEPTH)
+        {
+            return;
+        }
+
+        string indent = new(' ', depth * 2);
+        RectTransform rt = transform.GetComponent<RectTransform>();
+
+        if (rt != null)
+        {
+            // Full RectTransform data for 1:1 HTML/CSS recreation
+            Core.Log.LogInfo($"[Debug UI] {indent}{transform.name} | " +
+                $"pos:({rt.anchoredPosition.x:F1},{rt.anchoredPosition.y:F1}) " +
+                $"size:({rt.sizeDelta.x:F1},{rt.sizeDelta.y:F1}) " +
+                $"anchor:({rt.anchorMin.x:F2},{rt.anchorMin.y:F2})-({rt.anchorMax.x:F2},{rt.anchorMax.y:F2}) " +
+                $"pivot:({rt.pivot.x:F2},{rt.pivot.y:F2}) " +
+                $"active:{transform.gameObject.activeSelf}");
+
+            // Log additional layout components if present
+            DumpLayoutComponents(transform, indent);
+        }
+        else
+        {
+            Core.Log.LogInfo($"[Debug UI] {indent}{transform.name} | (no RectTransform) active:{transform.gameObject.activeSelf}");
+        }
+
+        // Recurse into children
+        for (int i = 0; i < transform.childCount; i++)
+        {
+            DumpTransformHierarchy(transform.GetChild(i), depth + 1);
+        }
+    }
+
+    /// <summary>
+    /// Dumps layout-related components (LayoutGroup, LayoutElement, Image, Text).
+    /// </summary>
+    /// <param name="transform">The transform to inspect.</param>
+    /// <param name="indent">Current indentation string.</param>
+    static void DumpLayoutComponents(Transform transform, string indent)
+    {
+        // Check for VerticalLayoutGroup
+        var vlg = transform.GetComponent<VerticalLayoutGroup>();
+        if (vlg != null)
+        {
+            Core.Log.LogInfo($"[Debug UI] {indent}  [VLG] spacing:{vlg.spacing:F1} padding:(L:{vlg.padding.left},R:{vlg.padding.right},T:{vlg.padding.top},B:{vlg.padding.bottom}) childAlign:{vlg.childAlignment}");
+        }
+
+        // Check for HorizontalLayoutGroup
+        var hlg = transform.GetComponent<HorizontalLayoutGroup>();
+        if (hlg != null)
+        {
+            Core.Log.LogInfo($"[Debug UI] {indent}  [HLG] spacing:{hlg.spacing:F1} padding:(L:{hlg.padding.left},R:{hlg.padding.right},T:{hlg.padding.top},B:{hlg.padding.bottom}) childAlign:{hlg.childAlignment}");
+        }
+
+        // Check for GridLayoutGroup
+        var glg = transform.GetComponent<GridLayoutGroup>();
+        if (glg != null)
+        {
+            Core.Log.LogInfo($"[Debug UI] {indent}  [GLG] cellSize:({glg.cellSize.x:F1},{glg.cellSize.y:F1}) spacing:({glg.spacing.x:F1},{glg.spacing.y:F1}) constraint:{glg.constraint} constraintCount:{glg.constraintCount}");
+        }
+
+        // Check for LayoutElement
+        var le = transform.GetComponent<LayoutElement>();
+        if (le != null && (le.preferredWidth > 0 || le.preferredHeight > 0 || le.minWidth > 0 || le.minHeight > 0))
+        {
+            Core.Log.LogInfo($"[Debug UI] {indent}  [LE] min:({le.minWidth:F1},{le.minHeight:F1}) pref:({le.preferredWidth:F1},{le.preferredHeight:F1}) flex:({le.flexibleWidth:F1},{le.flexibleHeight:F1})");
+        }
+
+        // Check for Image (for backgrounds, fills)
+        var img = transform.GetComponent<Image>();
+        if (img != null)
+        {
+            string spriteName = img.sprite != null ? img.sprite.name : "none";
+            Core.Log.LogInfo($"[Debug UI] {indent}  [IMG] sprite:{spriteName} color:{FormatColor(img.color)} type:{img.type} fillAmount:{img.fillAmount:F2}");
+        }
+
+        // Check for TMP_Text
+        var tmp = transform.GetComponent<TMP_Text>();
+        if (tmp != null)
+        {
+            string textPreview = tmp.text?.Length > 20 ? tmp.text.Substring(0, 20) + "..." : tmp.text ?? "";
+            Core.Log.LogInfo($"[Debug UI] {indent}  [TMP] text:\"{textPreview}\" fontSize:{tmp.fontSize:F1} color:{FormatColor(tmp.color)} align:{tmp.alignment}");
+        }
+    }
+
+    #endregion
 }
