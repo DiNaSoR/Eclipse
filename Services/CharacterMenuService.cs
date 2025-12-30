@@ -60,30 +60,30 @@ internal static class CharacterMenuService
     const float ProfessionProgressWidth = 160f;
     const float ProfessionProgressHeight = 6f;
     const float ProfessionPercentWidth = 52f;
-    const float FamiliarSectionSpacing = 12f;
-    const float FamiliarColumnSpacing = 16f;
-    const float FamiliarCardMinHeight = 150f;
-    const float FamiliarCardInnerSpacing = 6f;
-    const int FamiliarCardPaddingHorizontal = 12;
-    const int FamiliarCardPaddingVertical = 10;
-    const float FamiliarActionRowHeight = 34f;
-    const float FamiliarActionSpacing = 6f;
-    const int FamiliarActionPaddingHorizontal = 12;
-    const int FamiliarActionPaddingVertical = 6;
-    const float FamiliarCommandWidth = 72f;
+    const float FamiliarSectionSpacing = 10f;
+    const float FamiliarColumnSpacing = 14f;
+    const float FamiliarCardMinHeight = 140f;
+    const float FamiliarCardInnerSpacing = 4f;
+    const int FamiliarCardPaddingHorizontal = 10;
+    const int FamiliarCardPaddingVertical = 8;
+    const float FamiliarActionRowHeight = 30f;
+    const float FamiliarActionSpacing = 4f;
+    const int FamiliarActionPaddingHorizontal = 10;
+    const int FamiliarActionPaddingVertical = 5;
+    const float FamiliarCommandWidth = 92f;
     const float FamiliarProgressHeight = 6f;
-    const float FamiliarBindCellWidth = 52f;
-    const float FamiliarBindCellHeight = 30f;
+    const float FamiliarBindCellWidth = 46f;
+    const float FamiliarBindCellHeight = 26f;
     const float FamiliarBindCellSpacing = 6f;
     const int FamiliarBindColumns = 5;
-    const float FamiliarTextHeightMultiplier = 1.25f;
-    const float FamiliarNameFontScale = 0.95f;
-    const float FamiliarStatsFontScale = 0.85f;
-    const float FamiliarMetaFontScale = 0.75f;
-    const float FamiliarSectionFontScale = 0.72f;
-    const float FamiliarActionFontScale = 0.85f;
-    const float FamiliarCommandFontScale = 0.7f;
-    const float FamiliarBindFontScale = 0.85f;
+    const float FamiliarTextHeightMultiplier = 1.3f;
+    const float FamiliarNameFontScale = 0.9f;
+    const float FamiliarStatsFontScale = 0.75f;
+    const float FamiliarMetaFontScale = 0.68f;
+    const float FamiliarSectionFontScale = 0.65f;
+    const float FamiliarActionFontScale = 0.72f;
+    const float FamiliarCommandFontScale = 0.6f;
+    const float FamiliarBindFontScale = 0.72f;
 
     static InventorySubMenu inventorySubMenu;
     static RectTransform bloodcraftTab;
@@ -139,6 +139,14 @@ internal static class CharacterMenuService
     static readonly Color FamiliarStatusTextColor = new(1f, 1f, 1f, 0.8f);
     static readonly Color FamiliarBondFillColor = new(0.88f, 0.75f, 0.45f, 0.9f);
     static readonly Color FamiliarBondBackgroundColor = new(0.1f, 0.1f, 0.1f, 0.8f);
+    static readonly string[] FamiliarCardSpriteNames = ["Window_Box", "Window_Box_Background", "SimpleBox_Normal"];
+    static readonly string[] FamiliarRowSpriteNames = ["Window_Box_Background", "TabGradient", "SimpleBox_Normal"];
+    static readonly string[] FamiliarDividerSpriteNames = ["Window_Divider_Horizontal_V_Red", "Divider_Horizontal"];
+    static readonly string[] FamiliarBindSpriteNames = ["SlotFrame_Smaller", "Slot_Normal", "ContainerSlot_Default"];
+    static readonly string[] FamiliarProgressBackgroundSpriteNames =
+        ["SimpleProgressBar_Empty_Default", "SimpleProgressBar_Mask", "Attribute_TierIndicator_Fixed"];
+    static readonly string[] FamiliarProgressFillSpriteNames =
+        ["SimpleProgressBar_Fill", "Attribute_TierIndicator_Fixed"];
 
     // Bloodcraft stats summary in Equipment tab
     static TextMeshProUGUI bloodcraftStatsSummary;
@@ -1198,6 +1206,7 @@ internal static class CharacterMenuService
     /// <returns>The familiars panel root transform.</returns>
     static Transform CreateFamiliarsPanel(Transform parent, TextMeshProUGUI reference)
     {
+        TextMeshProUGUI textReference = entryStyle ?? reference;
         RectTransform rectTransform = CreateRectTransformObject("BloodcraftFamiliars", parent);
         if (rectTransform == null)
         {
@@ -1210,14 +1219,14 @@ internal static class CharacterMenuService
         rectTransform.offsetMax = Vector2.zero;
         EnsureVerticalLayout(rectTransform, spacing: FamiliarSectionSpacing);
 
-        familiarsStatusText = CreateSectionSubHeader(rectTransform, reference, string.Empty);
+        familiarsStatusText = CreateSectionSubHeader(rectTransform, textReference, string.Empty);
         if (familiarsStatusText != null)
         {
             familiarsStatusText.alignment = TextAlignmentOptions.Left;
             familiarsStatusText.color = FamiliarStatusTextColor;
         }
 
-        familiarsContentRoot = CreateFamiliarsContentRoot(rectTransform, reference);
+        familiarsContentRoot = CreateFamiliarsContentRoot(rectTransform, textReference);
         rectTransform.gameObject.SetActive(false);
         return rectTransform;
     }
@@ -1266,7 +1275,7 @@ internal static class CharacterMenuService
         CreateFamiliarBoxCard(rightColumn, reference);
         CreateFamiliarBindCard(rightColumn, reference);
 
-        _ = CreateDividerLine(rectTransform);
+        _ = CreateFamiliarDivider(rectTransform);
         CreateFamiliarAdvancedActions(rectTransform, reference);
         return rectTransform;
     }
@@ -1417,6 +1426,7 @@ internal static class CharacterMenuService
         rectTransform.offsetMax = Vector2.zero;
 
         Image background = rectTransform.gameObject.AddComponent<Image>();
+        ApplySprite(background, FamiliarCardSpriteNames);
         background.color = FamiliarCardBackgroundColor;
         background.raycastTarget = false;
 
@@ -1468,6 +1478,10 @@ internal static class CharacterMenuService
         layout.childForceExpandHeight = false;
         layout.childControlHeight = true;
         layout.childControlWidth = true;
+
+        ContentSizeFitter fitter = rectTransform.gameObject.AddComponent<ContentSizeFitter>();
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
         return rectTransform;
     }
 
@@ -1488,6 +1502,7 @@ internal static class CharacterMenuService
         rectTransform.offsetMax = Vector2.zero;
 
         Image background = rectTransform.gameObject.AddComponent<Image>();
+        ApplySprite(background, FamiliarRowSpriteNames);
         background.color = isPrimary ? FamiliarPrimaryActionBackgroundColor : FamiliarActionBackgroundColor;
         background.raycastTarget = true;
 
@@ -1502,25 +1517,33 @@ internal static class CharacterMenuService
         layout.childControlHeight = true;
 
         LayoutElement rowLayout = rectTransform.gameObject.AddComponent<LayoutElement>();
-        rowLayout.minHeight = FamiliarActionRowHeight;
-        rowLayout.preferredHeight = FamiliarActionRowHeight;
+        float rowHeight = FamiliarActionRowHeight;
 
         TextMeshProUGUI labelText = CreateFamiliarText(rectTransform, reference, label,
             FamiliarActionFontScale, FontStyles.Normal, TextAlignmentOptions.Left, Color.white);
         if (labelText != null)
         {
+            labelText.enableWordWrapping = false;
+            labelText.overflowMode = TextOverflowModes.Ellipsis;
             LayoutElement labelLayout = labelText.GetComponent<LayoutElement>() ?? labelText.gameObject.AddComponent<LayoutElement>();
             labelLayout.flexibleWidth = 1f;
+            rowHeight = Mathf.Max(rowHeight, labelText.fontSize * FamiliarTextHeightMultiplier
+                + (FamiliarActionPaddingVertical * 2f));
         }
 
         TextMeshProUGUI commandText = CreateFamiliarText(rectTransform, reference, command,
             FamiliarCommandFontScale, FontStyles.Normal, TextAlignmentOptions.Right, FamiliarCommandTextColor);
         if (commandText != null)
         {
+            commandText.enableWordWrapping = false;
+            commandText.overflowMode = TextOverflowModes.Truncate;
             LayoutElement commandLayout = commandText.GetComponent<LayoutElement>() ?? commandText.gameObject.AddComponent<LayoutElement>();
             commandLayout.preferredWidth = FamiliarCommandWidth;
             commandLayout.minWidth = FamiliarCommandWidth;
         }
+
+        rowLayout.minHeight = rowHeight;
+        rowLayout.preferredHeight = rowHeight;
 
         SimpleStunButton button = rectTransform.gameObject.AddComponent<SimpleStunButton>();
         ConfigureCommandButton(button, command, true);
@@ -1573,6 +1596,7 @@ internal static class CharacterMenuService
         }
 
         Image background = rectTransform.gameObject.AddComponent<Image>();
+        ApplySprite(background, FamiliarBindSpriteNames);
         background.color = FamiliarActionBackgroundColor;
         background.raycastTarget = true;
 
@@ -1605,7 +1629,7 @@ internal static class CharacterMenuService
         rectTransform.offsetMax = Vector2.zero;
 
         Image background = rectTransform.gameObject.AddComponent<Image>();
-        background.sprite = ResolveProgressBackgroundSprite();
+        ApplySprite(background, FamiliarProgressBackgroundSpriteNames);
         background.color = FamiliarBondBackgroundColor;
         background.type = Image.Type.Sliced;
         background.raycastTarget = false;
@@ -1627,7 +1651,11 @@ internal static class CharacterMenuService
         fillRect.offsetMax = new Vector2(-1f, -1f);
 
         fill = fillRect.gameObject.AddComponent<Image>();
-        fill.sprite = ResolveProgressFillSprite();
+        Sprite fillSprite = ResolveSprite(FamiliarProgressFillSpriteNames);
+        if (fillSprite != null)
+        {
+            fill.sprite = fillSprite;
+        }
         fill.type = Image.Type.Filled;
         fill.fillMethod = Image.FillMethod.Horizontal;
         fill.fillOrigin = 0;
@@ -1635,6 +1663,32 @@ internal static class CharacterMenuService
         fill.color = FamiliarBondFillColor;
         fill.raycastTarget = false;
 
+        return rectTransform;
+    }
+
+    /// <summary>
+    /// Creates a divider styled for the familiars panel.
+    /// </summary>
+    static RectTransform CreateFamiliarDivider(Transform parent)
+    {
+        RectTransform rectTransform = CreateRectTransformObject("FamiliarDivider", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+
+        Image image = rectTransform.gameObject.AddComponent<Image>();
+        ApplySprite(image, FamiliarDividerSpriteNames);
+        image.color = new Color(1f, 1f, 1f, 0.6f);
+        image.raycastTarget = false;
+
+        LayoutElement layout = rectTransform.gameObject.AddComponent<LayoutElement>();
+        float height = image.sprite != null ? 8f : 2f;
+        layout.preferredHeight = height;
+        layout.minHeight = height;
         return rectTransform;
     }
 
@@ -3023,6 +3077,53 @@ internal static class CharacterMenuService
         layout.preferredHeight = ProfessionRowHeight;
 
         return label;
+    }
+
+    /// <summary>
+    /// Resolves the first available sprite from the provided names.
+    /// </summary>
+    static Sprite ResolveSprite(params string[] spriteNames)
+    {
+        if (spriteNames == null || spriteNames.Length == 0)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < spriteNames.Length; i++)
+        {
+            string name = spriteNames[i];
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                continue;
+            }
+
+            if (Sprites.TryGetValue(name, out Sprite sprite) && sprite != null)
+            {
+                return sprite;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Applies a sprite to an image if available.
+    /// </summary>
+    static void ApplySprite(Image image, params string[] spriteNames)
+    {
+        if (image == null)
+        {
+            return;
+        }
+
+        Sprite sprite = ResolveSprite(spriteNames);
+        if (sprite == null)
+        {
+            return;
+        }
+
+        image.sprite = sprite;
+        image.type = Image.Type.Sliced;
     }
 
     /// <summary>
