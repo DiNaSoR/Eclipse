@@ -48,9 +48,9 @@
       --familiar-ember: rgba(214, 156, 98, 0.55);
       --familiar-ink: rgba(6, 6, 8, 0.7);
       --familiar-line: rgba(255, 255, 255, 0.12);
-      --familiar-header-size: 12px;
-      --familiar-subheader-size: 10px;
-      --familiar-detail-size: 11px;
+      --familiar-header-size: 11px;
+      --familiar-subheader-size: 9px;
+      --familiar-detail-size: 10px;
       --familiar-icon-size: 18px;
     }
 
@@ -106,27 +106,42 @@
     /* Familiars Tab Styles */
     .familiar-layout {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      grid-template-areas:
-        "active quick"
-        "bind box";
-      gap: 12px 14px;
+      grid-template-columns: minmax(0, 1fr) 4px minmax(0, 1fr);
+      gap: 12px 4px;
+      align-items: stretch;
     }
 
-    .familiar-active-section {
-      grid-area: active;
+    .familiar-column-divider {
+      width: 4px;
+      background: url("./assets/sprites/ActionSlotDivider.png") center/4px 52px repeat-y;
+      opacity: 0.4;
+      pointer-events: none;
+      height: 80%;
+      align-self: center;
     }
 
-    .familiar-quick-section {
-      grid-area: quick;
+    .familiar-column {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 0;
+      position: relative;
+      z-index: 1;
     }
 
-    .familiar-bind-section {
-      grid-area: bind;
+    .familiar-column.is-right {
+      gap: 0;
     }
 
-    .familiar-box-section {
-      grid-area: box;
+    .familiar-column.is-right .familiar-box-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .divider.familiar-divider {
+      margin: 0;
     }
 
     .familiar-card {
@@ -162,7 +177,7 @@
       gap: 8px;
       padding: 4px 8px;
       margin: -4px -6px 8px;
-      background: url("./assets/sprites/TabGradient.png") center/100% 100% no-repeat;
+      background: url("./assets/sprites/Act_BG.png") center/100% 100% no-repeat;
       border-bottom: 1px solid var(--familiar-line);
       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
     }
@@ -207,7 +222,7 @@
     }
 
     .familiar-active-name {
-      font-size: 15px;
+      font-size: 14px;
       color: #f1d7b2;
       text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
       margin-bottom: 4px;
@@ -265,7 +280,7 @@
       align-items: center;
       gap: 8px;
       padding: 6px 10px;
-      background: url("./assets/sprites/TabGradient.png") center/100% 100% no-repeat;
+      background: url("./assets/sprites/Act_BG.png") center/100% 100% no-repeat;
       border: 1px solid rgba(255, 255, 255, 0.08);
     }
 
@@ -322,7 +337,7 @@
     }
 
     .familiar-action-icon.is-toggle {
-      background-image: url("./assets/sprites/Icon_Random.png");
+      background-image: url("./assets/sprites/Icon_SortItems.png");
     }
 
     .familiar-action-icon.is-unbind {
@@ -330,7 +345,7 @@
     }
 
     .familiar-action-icon.is-search {
-      background-image: url("./assets/sprites/Icon_LoadingWheel.png");
+      background-image: url("./assets/sprites/Icon_TakeItems.png");
     }
 
     .familiar-action-icon.is-overflow {
@@ -383,7 +398,7 @@
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       gap: 6px;
-      margin-top: 8px;
+      margin-top: 10px;
     }
 
     .familiar-bind-slot {
@@ -496,6 +511,36 @@
       border: 1px solid rgba(255, 255, 255, 0.08);
       font-size: var(--familiar-detail-size);
       color: rgba(255, 255, 255, 0.75);
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      outline: none;
+      font: inherit;
+      transition: background 0.2s, border-color 0.2s, transform 0.2s;
+    }
+
+    .familiar-box-row:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .familiar-box-row.is-empty,
+    .familiar-box-row:disabled {
+      cursor: default;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    .familiar-box-row.is-empty .familiar-box-icon,
+    .familiar-box-row:disabled .familiar-box-icon {
+      opacity: 0;
+    }
+
+    .familiar-box-row:focus-visible {
+      border-color: var(--familiar-ember);
+      box-shadow: 0 0 0 2px rgba(214, 156, 98, 0.2);
     }
 
     .familiar-box-row.is-active {
@@ -529,7 +574,7 @@
     }
 
     .familiar-advanced-section {
-      margin-top: 12px;
+      margin-top: 0;
     }
 
     .familiar-scrollable {
@@ -582,11 +627,10 @@
     @media (max-width: 720px) {
       .familiar-layout {
         grid-template-columns: 1fr;
-        grid-template-areas:
-          "active"
-          "quick"
-          "bind"
-          "box";
+      }
+
+      .familiar-column-divider {
+        display: none;
       }
 
       .familiar-scrollable {
@@ -675,16 +719,17 @@
 
     .divider {
       height: 8px;
-      background: url("./assets/sprites/Window_Divider_Horizontal_V_Red.png") center/100% 100% no-repeat;
+      background: url("./assets/sprites/Divider_Horizontal.png") center/100% 100% no-repeat;
       margin: 12px 0 8px;
       opacity: 0.8;
     }
 
     .prof-table {
       margin-top: 12px;
-      border-top: 1px solid var(--divider);
-      border-bottom: 1px solid var(--divider);
-      padding: 12px 0 6px;
+      padding: 16px 0 12px;
+      background:
+        url("./assets/sprites/Divider_Horizontal.png") top center/100% 8px no-repeat,
+        url("./assets/sprites/Divider_Horizontal.png") bottom center/100% 8px no-repeat;
     }
 
     .prof-header,
@@ -700,6 +745,9 @@
       font-size: 17px;
       color: #e6dfd5;
       margin-bottom: 8px;
+      padding: 6px 8px;
+      background: url("./assets/sprites/Act_BG.png") center/100% 100% no-repeat;
+      border: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .prof-header> :nth-child(5),
@@ -753,7 +801,7 @@
       gap: 12px;
       padding: 12px;
       margin-bottom: 12px;
-      background: url("./assets/sprites/Window_Box.png") center/100% 100% no-repeat;
+      background: url("./assets/sprites/Act_BG.png") center/100% 100% no-repeat;
     }
 
     .stat-weapon-icon {
@@ -1324,145 +1372,176 @@
           <div class="content-section is-active" id="tab-familiars">
             <div class="familiar-scrollable">
               <div class="familiar-layout familiar-animate">
-                <div class="familiar-card familiar-active-section familiar-animate delay-1">
-                  <div class="familiar-card-header is-active">
-                    <span class="familiar-card-icon"></span>
-                    <span class="familiar-card-title">Active Familiar</span>
+                <div class="familiar-column is-left">
+                  <div class="familiar-card familiar-active-section familiar-animate delay-1">
+                    <div class="familiar-card-header is-active">
+                      <span class="familiar-card-icon"></span>
+                      <span class="familiar-card-title">Active Familiar</span>
+                    </div>
+                    <div class="familiar-portrait"></div>
+                    <div class="familiar-active-name">Scout Lv.1</div>
+                    <div class="familiar-active-stats">HP:500 | PP:1 | SP:1</div>
+                    <div class="familiar-active-meta">Progress: 0% | Max: 90</div>
+                    <div class="familiar-bond-meter" style="--pct:0%;">
+                      <span></span>
+                    </div>
+                    <div class="familiar-bond-label">Bond Strength</div>
                   </div>
-                  <div class="familiar-portrait"></div>
-                  <div class="familiar-active-name">Scout Lv.1</div>
-                  <div class="familiar-active-stats">HP:500 | PP:1 | SP:1</div>
-                  <div class="familiar-active-meta">Progress: 0% | Max: 90</div>
-                  <div class="familiar-bond-meter" style="--pct:0%;">
-                    <span></span>
-                  </div>
-                  <div class="familiar-bond-label">Bond Strength</div>
-                </div>
 
-                <div class="familiar-card familiar-quick-section familiar-animate delay-1">
-                  <div class="familiar-card-header is-quick">
-                    <span class="familiar-card-icon"></span>
-                    <span class="familiar-card-title">Quick Actions</span>
+                  <div class="familiar-card familiar-bind-section familiar-animate delay-2">
+                    <div class="familiar-card-header is-bind">
+                      <span class="familiar-card-icon"></span>
+                      <span class="familiar-card-title">Bind Familiar (1-10)</span>
+                    </div>
+                    <div class="familiar-bind-grid">
+                      <div class="familiar-bind-slot is-active">1</div>
+                      <div class="familiar-bind-slot">2</div>
+                      <div class="familiar-bind-slot">3</div>
+                      <div class="familiar-bind-slot">4</div>
+                      <div class="familiar-bind-slot">5</div>
+                      <div class="familiar-bind-slot">6</div>
+                      <div class="familiar-bind-slot">7</div>
+                      <div class="familiar-bind-slot">8</div>
+                      <div class="familiar-bind-slot">9</div>
+                      <div class="familiar-bind-slot">10</div>
+                    </div>
+                    <div class="familiar-legend">Select a slot to bind.</div>
                   </div>
-                  <div class="familiar-action-list">
-                    <div class="familiar-action-row is-primary">
-                      <span class="familiar-action-icon is-call"></span>
-                      <span class="familiar-action-text">Call / Dismiss Familiar</span>
-                      <span class="familiar-action-command">.fam t</span>
-                    </div>
-                    <div class="familiar-action-row">
-                      <span class="familiar-action-icon is-toggle"></span>
-                      <span class="familiar-action-text">Toggle Combat Mode</span>
-                      <span class="familiar-action-command">.fam c</span>
-                    </div>
-                    <div class="familiar-action-row">
-                      <span class="familiar-action-icon is-unbind"></span>
-                      <span class="familiar-action-text">Unbind Familiar</span>
-                      <span class="familiar-action-command">.fam ub</span>
-                    </div>
-                  </div>
-                </div>
 
-                <div class="familiar-card familiar-bind-section familiar-animate delay-2">
-                  <div class="familiar-card-header is-bind">
-                    <span class="familiar-card-icon"></span>
-                    <span class="familiar-card-title">Bind Familiar (1-10)</span>
-                  </div>
-                  <div class="familiar-bind-grid">
-                    <div class="familiar-bind-slot is-active">1</div>
-                    <div class="familiar-bind-slot">2</div>
-                    <div class="familiar-bind-slot">3</div>
-                    <div class="familiar-bind-slot">4</div>
-                    <div class="familiar-bind-slot">5</div>
-                    <div class="familiar-bind-slot">6</div>
-                    <div class="familiar-bind-slot">7</div>
-                    <div class="familiar-bind-slot">8</div>
-                    <div class="familiar-bind-slot">9</div>
-                    <div class="familiar-bind-slot">10</div>
-                  </div>
-                  <div class="familiar-legend">Select a slot to bind.</div>
-                </div>
+                  <div class="divider familiar-divider"></div>
 
-                <div class="familiar-card familiar-box-section familiar-animate delay-2">
-                  <div class="familiar-card-header is-box">
-                    <span class="familiar-card-icon"></span>
-                    <span class="familiar-card-title">Box Management</span>
-                  </div>
-                  <div class="familiar-subheader-row">
-                    <span class="familiar-subheader">Select Box</span>
-                    <span class="familiar-command-pill">.fam boxes</span>
-                  </div>
-                  <div class="familiar-select">
-                    <select>
-                      <option>Box 1 - Forest</option>
-                      <option>Box 2 - Highlands</option>
-                      <option>Box 3 - Crypt</option>
-                      <option>Box 4 - Swamp</option>
-                    </select>
-                    <span class="familiar-select-arrow"></span>
-                  </div>
-                  <div class="familiar-subheader-row">
-                    <span class="familiar-subheader">Current Box</span>
-                    <span class="familiar-command-pill">.fam l</span>
-                  </div>
-                  <div class="familiar-box-list">
-                    <div class="familiar-box-row is-active">
-                      <span class="familiar-box-icon"></span>
-                      <span class="familiar-box-name">Nightstalker</span>
-                      <span class="familiar-box-level">Lv.23</span>
-                    </div>
-                    <div class="familiar-box-row">
-                      <span class="familiar-box-icon"></span>
-                      <span class="familiar-box-name">Scout</span>
-                      <span class="familiar-box-level">Lv.1</span>
-                    </div>
-                    <div class="familiar-box-row">
-                      <span class="familiar-box-icon"></span>
-                      <span class="familiar-box-name">Boneguard</span>
-                      <span class="familiar-box-level">Lv.12</span>
+                  <div class="familiar-advanced-section familiar-animate delay-3">
+                    <div class="familiar-section-label">Advanced</div>
+                    <div class="familiar-action-list">
+                      <div class="familiar-action-row">
+                        <span class="familiar-action-icon is-search"></span>
+                        <span class="familiar-action-text">Search Familiars</span>
+                      </div>
+                      <div class="familiar-action-row">
+                        <span class="familiar-action-icon is-overflow"></span>
+                        <span class="familiar-action-text">View Overflow</span>
+                      </div>
+                      <div class="familiar-action-row">
+                        <span class="familiar-action-icon is-emote"></span>
+                        <span class="familiar-action-text">Toggle Emote Actions</span>
+                      </div>
+                      <div class="familiar-action-row">
+                        <span class="familiar-action-icon is-show"></span>
+                        <span class="familiar-action-text">Show Emote Actions</span>
+                      </div>
+                      <div class="familiar-action-row">
+                        <span class="familiar-action-icon is-level"></span>
+                        <span class="familiar-action-text">Get Familiar Level</span>
+                      </div>
+                      <div class="familiar-action-row">
+                        <span class="familiar-action-icon is-prestige"></span>
+                        <span class="familiar-action-text">Prestige Familiar</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div class="divider"></div>
+                <div class="familiar-column-divider" aria-hidden="true"></div>
 
-              <div class="familiar-advanced-section familiar-animate delay-3">
-                <div class="familiar-section-label">Advanced</div>
-                <div class="familiar-action-list">
-                  <div class="familiar-action-row">
-                    <span class="familiar-action-icon is-search"></span>
-                    <span class="familiar-action-text">Search Familiars</span>
-                    <span class="familiar-action-command">.fam s</span>
+                <div class="familiar-column is-right">
+                  <div class="familiar-card familiar-quick-section familiar-animate delay-1">
+                    <div class="familiar-card-header is-quick">
+                      <span class="familiar-card-icon"></span>
+                      <span class="familiar-card-title">Quick Actions</span>
+                    </div>
+                    <div class="familiar-action-list">
+                      <div class="familiar-action-row is-primary">
+                        <span class="familiar-action-icon is-call"></span>
+                        <span class="familiar-action-text">Call / Dismiss Familiar</span>
+                      </div>
+                      <div class="familiar-action-row">
+                        <span class="familiar-action-icon is-toggle"></span>
+                        <span class="familiar-action-text">Toggle Combat Mode</span>
+                      </div>
+                      <div class="familiar-action-row">
+                        <span class="familiar-action-icon is-unbind"></span>
+                        <span class="familiar-action-text">Unbind Familiar</span>
+                      </div>
+                    </div>
                   </div>
-                  <div class="familiar-action-row">
-                    <span class="familiar-action-icon is-overflow"></span>
-                    <span class="familiar-action-text">View Overflow</span>
-                    <span class="familiar-action-command">.fam of</span>
-                  </div>
-                  <div class="familiar-action-row">
-                    <span class="familiar-action-icon is-emote"></span>
-                    <span class="familiar-action-text">Toggle Emote Actions</span>
-                    <span class="familiar-action-command">.fam e</span>
-                  </div>
-                  <div class="familiar-action-row">
-                    <span class="familiar-action-icon is-show"></span>
-                    <span class="familiar-action-text">Show Emote Actions</span>
-                    <span class="familiar-action-command">.fam actions</span>
-                  </div>
-                  <div class="familiar-action-row">
-                    <span class="familiar-action-icon is-level"></span>
-                    <span class="familiar-action-text">Get Familiar Level</span>
-                    <span class="familiar-action-command">.fam gl</span>
-                  </div>
-                  <div class="familiar-action-row">
-                    <span class="familiar-action-icon is-prestige"></span>
-                    <span class="familiar-action-text">Prestige Familiar</span>
-                    <span class="familiar-action-command">.fam pr</span>
+
+                  <div class="familiar-card familiar-box-section familiar-animate delay-2">
+                    <div class="familiar-card-header is-box">
+                      <span class="familiar-card-icon"></span>
+                      <span class="familiar-card-title">Box Management</span>
+                    </div>
+                    <div class="familiar-subheader-row">
+                      <span class="familiar-subheader">Select Box</span>
+                    </div>
+                    <div class="familiar-select">
+                      <select>
+                        <option>Box 1 - Forest</option>
+                        <option>Box 2 - Highlands</option>
+                        <option>Box 3 - Crypt</option>
+                        <option>Box 4 - Swamp</option>
+                      </select>
+                      <span class="familiar-select-arrow"></span>
+                    </div>
+                    <div class="familiar-subheader-row">
+                      <span class="familiar-subheader">Current Box</span>
+                    </div>
+                    <div class="familiar-box-list">
+                      <button type="button" class="familiar-box-row is-active">
+                        <span class="familiar-box-icon"></span>
+                        <span class="familiar-box-name">Skeleton Crossbow</span>
+                        <span class="familiar-box-level">Lv.1</span>
+                      </button>
+                      <button type="button" class="familiar-box-row">
+                        <span class="familiar-box-icon"></span>
+                        <span class="familiar-box-name">Wolf</span>
+                        <span class="familiar-box-level">Lv.1</span>
+                      </button>
+                      <button type="button" class="familiar-box-row">
+                        <span class="familiar-box-icon"></span>
+                        <span class="familiar-box-name">Thug</span>
+                        <span class="familiar-box-level">Lv.1</span>
+                      </button>
+                      <button type="button" class="familiar-box-row">
+                        <span class="familiar-box-icon"></span>
+                        <span class="familiar-box-name">Poacher</span>
+                        <span class="familiar-box-level">Lv.1</span>
+                      </button>
+                      <button type="button" class="familiar-box-row">
+                        <span class="familiar-box-icon"></span>
+                        <span class="familiar-box-name">Skeleton</span>
+                        <span class="familiar-box-level">Lv.1</span>
+                      </button>
+                      <button type="button" class="familiar-box-row">
+                        <span class="familiar-box-icon"></span>
+                        <span class="familiar-box-name">Scout</span>
+                        <span class="familiar-box-level">Lv.3</span>
+                      </button>
+                      <button type="button" class="familiar-box-row is-empty" disabled>
+                        <span class="familiar-box-icon"></span>
+                        <span class="familiar-box-name"></span>
+                        <span class="familiar-box-level"></span>
+                      </button>
+                      <button type="button" class="familiar-box-row is-empty" disabled>
+                        <span class="familiar-box-icon"></span>
+                        <span class="familiar-box-name"></span>
+                        <span class="familiar-box-level"></span>
+                      </button>
+                      <button type="button" class="familiar-box-row is-empty" disabled>
+                        <span class="familiar-box-icon"></span>
+                        <span class="familiar-box-name"></span>
+                        <span class="familiar-box-level"></span>
+                      </button>
+                      <button type="button" class="familiar-box-row is-empty" disabled>
+                        <span class="familiar-box-icon"></span>
+                        <span class="familiar-box-name"></span>
+                        <span class="familiar-box-level"></span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
+          </div>
           </div>
         </div>
 

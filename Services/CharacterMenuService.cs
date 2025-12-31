@@ -3,6 +3,7 @@ using Il2CppInterop.Runtime;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using ProjectM.UI;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text.RegularExpressions;
@@ -21,6 +22,7 @@ using Eclipse.Services.CharacterMenu;
 using Eclipse.Services.CharacterMenu.Interfaces;
 using Eclipse.Services.CharacterMenu.Tabs;
 using Eclipse.Services.CharacterMenu.Shared;
+using Eclipse.Services.HUD.Shared;
 
 namespace Eclipse.Services;
 
@@ -60,30 +62,46 @@ internal static class CharacterMenuService
     const float ProfessionProgressWidth = 160f;
     const float ProfessionProgressHeight = 6f;
     const float ProfessionPercentWidth = 52f;
-    const float FamiliarSectionSpacing = 10f;
-    const float FamiliarColumnSpacing = 14f;
+    const float FamiliarSectionSpacing = 8f;
+    const float FamiliarRightColumnSpacing = 0f;
+    const float FamiliarColumnSpacing = 4f;
     const float FamiliarCardMinHeight = 140f;
     const float FamiliarCardInnerSpacing = 4f;
     const int FamiliarCardPaddingHorizontal = 10;
     const int FamiliarCardPaddingVertical = 8;
-    const float FamiliarActionRowHeight = 30f;
+    const float FamiliarActionRowHeight = 28f;
     const float FamiliarActionSpacing = 4f;
     const int FamiliarActionPaddingHorizontal = 10;
-    const int FamiliarActionPaddingVertical = 5;
-    const float FamiliarCommandWidth = 92f;
+    const int FamiliarActionPaddingVertical = 4;
+    const float FamiliarCommandWidth = 80f;
     const float FamiliarProgressHeight = 6f;
     const float FamiliarBindCellWidth = 46f;
     const float FamiliarBindCellHeight = 26f;
     const float FamiliarBindCellSpacing = 6f;
     const int FamiliarBindColumns = 5;
-    const float FamiliarTextHeightMultiplier = 1.3f;
-    const float FamiliarNameFontScale = 0.9f;
-    const float FamiliarStatsFontScale = 0.75f;
-    const float FamiliarMetaFontScale = 0.68f;
-    const float FamiliarSectionFontScale = 0.65f;
-    const float FamiliarActionFontScale = 0.72f;
-    const float FamiliarCommandFontScale = 0.6f;
-    const float FamiliarBindFontScale = 0.72f;
+    const int FamiliarBoxSlotCount = 10;
+    const float FamiliarTextHeightMultiplier = 1.2f;
+    const float FamiliarColumnDividerWidth = 4f;
+    const float FamiliarColumnDividerHeightPercent = 0.8f;
+    const float FamiliarHeaderIconSize = 18f;
+    const float FamiliarActionIconSize = 16f;
+    const float FamiliarBoxIconSize = 16f;
+    const float FamiliarDropdownArrowSize = 12f;
+    const float FamiliarPortraitSize = 68f;
+    const float FamiliarPortraitOffsetX = -6f;
+    const float FamiliarPortraitOffsetY = -40f;
+    const float FamiliarNameFontScale = 0.75f;
+    const float FamiliarStatsFontScale = 0.58f;
+    const float FamiliarMetaFontScale = 0.52f;
+    const float FamiliarSectionFontScale = 0.58f;
+    const float FamiliarActionFontScale = 0.56f;
+    const float FamiliarCommandFontScale = 0.52f;
+    const float FamiliarBindFontScale = 0.56f;
+    const float FamiliarSubHeaderFontScale = 0.52f;
+    const int FamiliarCommandPaddingHorizontal = 6;
+    const int FamiliarCommandPaddingVertical = 2;
+    const float FamiliarBoxRefreshCooldownSeconds = 8f;
+    const float FamiliarBoxSwitchDelaySeconds = 2.1f;
 
     static InventorySubMenu inventorySubMenu;
     static RectTransform bloodcraftTab;
@@ -114,10 +132,23 @@ internal static class CharacterMenuService
     static Transform familiarsRoot;
     static Transform familiarsContentRoot;
     static TextMeshProUGUI familiarsStatusText;
+    static TextMeshProUGUI familiarReferenceText;
     static TextMeshProUGUI familiarActiveNameText;
     static TextMeshProUGUI familiarActiveStatsText;
     static TextMeshProUGUI familiarActiveMetaText;
     static Image familiarBondFill;
+    static Image familiarActivePortrait;
+    static TextMeshProUGUI familiarBoxSelectedText;
+    static Transform familiarBoxDropdownListRoot;
+    static Transform familiarBoxListRoot;
+    static readonly List<FamiliarBoxOptionRow> familiarBoxOptionRows = [];
+    static readonly List<FamiliarBoxRow> familiarBoxRows = [];
+    static float familiarBoxLastRefreshTime = -1000f;
+    static Coroutine familiarBoxSummonRoutine;
+    static int familiarBoxPendingSummonSlotIndex = -1;
+    static string familiarLastName = string.Empty;
+    static int familiarLastLevel = -1;
+    static int familiarLastPrestige = -1;
     static BloodcraftTab activeTab = BloodcraftTab.Prestige;
     static int bloodcraftTabIndex = -1;
     static int lastKnownTabIndex = -1;
@@ -128,25 +159,57 @@ internal static class CharacterMenuService
     static float lastSubTabHeight;
     static int lastSubTabCount;
     static float subTabReferenceFontSize;
-    static readonly Color FamiliarCardBackgroundColor = new(0f, 0f, 0f, 0.25f);
-    static readonly Color FamiliarActionBackgroundColor = new(0f, 0f, 0f, 0.2f);
-    static readonly Color FamiliarPrimaryActionBackgroundColor = new(0.45f, 0.16f, 0.08f, 0.35f);
+    static readonly Color FamiliarCardBackgroundColor = new(0f, 0f, 0f, 0.32f);
+    static readonly Color FamiliarActionBackgroundColor = new(0.05f, 0.05f, 0.08f, 0.75f);
+    static readonly Color FamiliarPrimaryActionBackgroundColor = new(0.5f, 0.22f, 0.12f, 0.45f);
     static readonly Color FamiliarNameColor = new(0.95f, 0.84f, 0.7f, 1f);
     static readonly Color FamiliarStatsColor = new(1f, 1f, 1f, 0.7f);
     static readonly Color FamiliarMetaColor = new(1f, 1f, 1f, 0.55f);
     static readonly Color FamiliarSectionLabelColor = new(0.9f, 0.87f, 0.83f, 1f);
     static readonly Color FamiliarCommandTextColor = new(1f, 1f, 1f, 0.6f);
+    static readonly Color FamiliarCommandBackgroundColor = new(0f, 0f, 0f, 0.35f);
+    static readonly Color FamiliarSubHeaderTextColor = new(1f, 1f, 1f, 0.55f);
+    static readonly Color FamiliarBoxRowTextColor = new(1f, 1f, 1f, 0.75f);
+    static readonly Color FamiliarBoxRowLevelColor = new(1f, 1f, 1f, 0.5f);
     static readonly Color FamiliarStatusTextColor = new(1f, 1f, 1f, 0.8f);
-    static readonly Color FamiliarBondFillColor = new(0.88f, 0.75f, 0.45f, 0.9f);
-    static readonly Color FamiliarBondBackgroundColor = new(0.1f, 0.1f, 0.1f, 0.8f);
+    static readonly Color FamiliarBondFillColor = new(0.75f, 0.38f, 0.21f, 0.95f);
+    static readonly Color FamiliarBondBackgroundColor = new(0f, 0f, 0f, 0.35f);
+    static readonly Color FamiliarHeaderBackgroundColor = new(0.1f, 0.1f, 0.12f, 0.95f);
+    static readonly Color FamiliarColumnDividerColor = new(1f, 1f, 1f, 0.4f);
     static readonly string[] FamiliarCardSpriteNames = ["Window_Box", "Window_Box_Background", "SimpleBox_Normal"];
     static readonly string[] FamiliarRowSpriteNames = ["Window_Box_Background", "TabGradient", "SimpleBox_Normal"];
-    static readonly string[] FamiliarDividerSpriteNames = ["Window_Divider_Horizontal_V_Red", "Divider_Horizontal"];
+    static readonly string[] FamiliarDividerSpriteNames = ["Divider_Horizontal", "Window_Divider_Horizontal_V_Red"];
+    static readonly string[] FamiliarHeaderSpriteNames = ["Act_BG", "TabGradient", "Window_Box_Background"];
+    static readonly string[] FamiliarColumnDividerSpriteNames = ["ActionSlotDivider"];
+    static readonly string[] SectionDividerSpriteNames = ["Divider_Horizontal", "Window_Divider_Horizontal_V_Red"];
     static readonly string[] FamiliarBindSpriteNames = ["SlotFrame_Smaller", "Slot_Normal", "ContainerSlot_Default"];
     static readonly string[] FamiliarProgressBackgroundSpriteNames =
         ["SimpleProgressBar_Empty_Default", "SimpleProgressBar_Mask", "Attribute_TierIndicator_Fixed"];
     static readonly string[] FamiliarProgressFillSpriteNames =
         ["SimpleProgressBar_Fill", "Attribute_TierIndicator_Fixed"];
+    static readonly string[] FamiliarCommandPillSpriteNames = ["SimpleBox_Normal", "Window_Box_Background"];
+    static readonly string[] FamiliarDropdownSpriteNames = ["Window_Box_Background", "SimpleBox_Normal"];
+    static readonly string[] FamiliarDropdownArrowSpriteNames = ["Arrow", "FoldoutButton_Arrow"];
+    static readonly string[] FamiliarHeaderActiveIconSpriteNames = ["Portrait_Small_Smoke_AlphaWolf", "Portrait_Small_Smoke_Unknown"];
+    static readonly string[] FamiliarHeaderQuickIconSpriteNames = ["ActionWheel_InnerCircle_Gradient", "ActionWheel_InnerCircle_Gradient"];
+    static readonly string[] FamiliarHeaderBindIconSpriteNames = ["SlotFrame_Smaller", "Slot_Normal"];
+    static readonly string[] FamiliarHeaderBoxIconSpriteNames = ["Box_InventoryExtraBagBG", "Window_Box_Background"];
+    static readonly string[] FamiliarHeaderDefaultIconSpriteNames = ["Stunlock_Icons_spellbook_blood", "IconBackground"];
+    static readonly string[] FamiliarActionIconCallSpriteNames = ["Icon_TakeItems", "Icon_DepositItems"];
+    static readonly string[] FamiliarActionIconToggleSpriteNames = ["Icon_SortItems", "Icon_DropItems"];
+    static readonly string[] FamiliarActionIconUnbindSpriteNames = ["Icon_DropItems", "Icon_SortItems"];
+    static readonly string[] FamiliarActionIconSearchSpriteNames = ["Icon_TakeItems", "Icon_DepositItems"];
+    static readonly string[] FamiliarActionIconOverflowSpriteNames = ["Icon_DepositItems", "Icon_TakeItems"];
+    static readonly string[] FamiliarActionIconEmoteSpriteNames = ["Icon_SortItems", "Icon_DropItems"];
+    static readonly string[] FamiliarActionIconShowSpriteNames = ["Icon_TakeItems", "Icon_DepositItems"];
+    static readonly string[] FamiliarActionIconLevelSpriteNames = ["spell_level_icon", "Icon_TakeItems"];
+    static readonly string[] FamiliarActionIconPrestigeSpriteNames = ["strength_level_icon", "Icon_TakeItems"];
+    static readonly string[] FamiliarBoxIconSpriteNames = ["Portrait_Small_Smoke_Unknown", "Portrait_Small_Smoke_AlphaWolf"];
+    static readonly string[] FamiliarBoxIconActiveSpriteNames = ["Portrait_Small_Smoke_AlphaWolf", "Portrait_Small_Smoke_Unknown"];
+    static readonly string[] FamiliarActivePortraitSpriteNames = ["Portrait_Small_Smoke_AlphaWolf", "Portrait_Small_Smoke_Unknown"];
+    static readonly string[] FamiliarInactivePortraitSpriteNames = ["Portrait_Small_Smoke_Unknown", "Portrait_Small_Smoke_AlphaWolf"];
+    static readonly string[] FamiliarBoxFallbackNames = ["Box 1 - Forest", "Box 2 - Highlands", "Box 3 - Crypt", "Box 4 - Swamp"];
+    const string FamiliarEmptySlotLabel = "Empty Slot";
 
     // Bloodcraft stats summary in Equipment tab
     static TextMeshProUGUI bloodcraftStatsSummary;
@@ -322,10 +385,21 @@ internal static class CharacterMenuService
         familiarsRoot = null;
         familiarsContentRoot = null;
         familiarsStatusText = null;
+        familiarReferenceText = null;
         familiarActiveNameText = null;
         familiarActiveStatsText = null;
         familiarActiveMetaText = null;
         familiarBondFill = null;
+        familiarActivePortrait = null;
+        familiarBoxSelectedText = null;
+        familiarBoxDropdownListRoot = null;
+        familiarBoxListRoot = null;
+        familiarBoxOptionRows.Clear();
+        familiarBoxRows.Clear();
+        familiarBoxLastRefreshTime = -1000f;
+        familiarLastName = string.Empty;
+        familiarLastLevel = -1;
+        familiarLastPrestige = -1;
         bloodcraftStatsSummary = null;
         activeTab = BloodcraftTab.Prestige;
         bloodcraftTabIndex = -1;
@@ -1207,6 +1281,7 @@ internal static class CharacterMenuService
     static Transform CreateFamiliarsPanel(Transform parent, TextMeshProUGUI reference)
     {
         TextMeshProUGUI textReference = entryStyle ?? reference;
+        familiarReferenceText = textReference;
         RectTransform rectTransform = CreateRectTransformObject("BloodcraftFamiliars", parent);
         if (rectTransform == null)
         {
@@ -1263,27 +1338,33 @@ internal static class CharacterMenuService
         topLayout.childAlignment = TextAnchor.UpperLeft;
         topLayout.spacing = FamiliarColumnSpacing;
         topLayout.childForceExpandWidth = true;
-        topLayout.childForceExpandHeight = false;
+        topLayout.childForceExpandHeight = true;
         topLayout.childControlWidth = true;
         topLayout.childControlHeight = true;
 
-        Transform leftColumn = CreateFamiliarColumn(topRow, "FamiliarLeftColumn");
-        Transform rightColumn = CreateFamiliarColumn(topRow, "FamiliarRightColumn");
+        Transform leftColumn = CreateFamiliarColumn(topRow, "FamiliarLeftColumn", FamiliarSectionSpacing);
+        _ = CreateFamiliarColumnDivider(topRow);
+        Transform rightColumn = CreateFamiliarColumn(topRow, "FamiliarRightColumn", FamiliarRightColumnSpacing);
 
         CreateFamiliarActiveCard(leftColumn, reference);
-        CreateFamiliarQuickActions(leftColumn, reference);
-        CreateFamiliarBoxCard(rightColumn, reference);
-        CreateFamiliarBindCard(rightColumn, reference);
+        CreateFamiliarBindCard(leftColumn, reference);
+        _ = CreateFamiliarDivider(leftColumn);
+        CreateFamiliarAdvancedActions(leftColumn, reference);
 
-        _ = CreateFamiliarDivider(rectTransform);
-        CreateFamiliarAdvancedActions(rectTransform, reference);
+        CreateFamiliarQuickActions(rightColumn, reference);
+        CreateFamiliarBoxCard(rightColumn, reference);
+
         return rectTransform;
     }
 
     /// <summary>
     /// Creates a vertical column for familiar content.
     /// </summary>
-    static Transform CreateFamiliarColumn(Transform parent, string name)
+    /// <param name="parent">The parent transform to attach the column.</param>
+    /// <param name="name">Name for the column object.</param>
+    /// <param name="spacing">Spacing between child elements.</param>
+    /// <returns>The column rect transform.</returns>
+    static Transform CreateFamiliarColumn(Transform parent, string name, float spacing)
     {
         RectTransform rectTransform = CreateRectTransformObject(name, parent);
         if (rectTransform == null)
@@ -1298,7 +1379,7 @@ internal static class CharacterMenuService
 
         VerticalLayoutGroup layout = rectTransform.gameObject.AddComponent<VerticalLayoutGroup>();
         layout.childAlignment = TextAnchor.UpperLeft;
-        layout.spacing = FamiliarSectionSpacing;
+        layout.spacing = spacing;
         layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = false;
         layout.childControlHeight = true;
@@ -1314,13 +1395,14 @@ internal static class CharacterMenuService
     /// </summary>
     static void CreateFamiliarActiveCard(Transform parent, TextMeshProUGUI reference)
     {
-        RectTransform card = CreateFamiliarCard(parent, "FamiliarActiveCard");
+        RectTransform card = CreateFamiliarCard(parent, "FamiliarActiveCard", stretchHeight: false);
         if (card == null)
         {
             return;
         }
 
-        _ = CreateFamiliarSectionLabel(card, reference, "Active Familiar");
+        _ = CreateFamiliarSectionLabel(card, reference, "Active Familiar", FamiliarHeaderActiveIconSpriteNames);
+        familiarActivePortrait = CreateFamiliarPortrait(card);
         familiarActiveNameText = CreateFamiliarText(card, reference, "No familiar bound", FamiliarNameFontScale,
             FontStyles.Bold, TextAlignmentOptions.Left, FamiliarNameColor);
         familiarActiveStatsText = CreateFamiliarText(card, reference, string.Empty, FamiliarStatsFontScale,
@@ -1334,20 +1416,58 @@ internal static class CharacterMenuService
     }
 
     /// <summary>
+    /// Creates a decorative portrait overlay for the active familiar card.
+    /// </summary>
+    /// <param name="parent">The parent transform to attach the portrait.</param>
+    /// <returns>The portrait image component.</returns>
+    static Image CreateFamiliarPortrait(Transform parent)
+    {
+        RectTransform rectTransform = CreateRectTransformObject("FamiliarPortrait", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+
+        rectTransform.anchorMin = new Vector2(1f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(1f, 1f);
+        rectTransform.sizeDelta = new Vector2(FamiliarPortraitSize, FamiliarPortraitSize);
+        rectTransform.anchoredPosition = new Vector2(FamiliarPortraitOffsetX, FamiliarPortraitOffsetY);
+
+        Image image = rectTransform.gameObject.AddComponent<Image>();
+        ApplySprite(image, FamiliarActivePortraitSpriteNames);
+        image.type = Image.Type.Simple;
+        image.preserveAspect = true;
+        image.color = new Color(1f, 1f, 1f, 0.45f);
+        image.raycastTarget = false;
+
+        LayoutElement layout = rectTransform.gameObject.AddComponent<LayoutElement>();
+        layout.ignoreLayout = true;
+
+        return image;
+    }
+
+    /// <summary>
     /// Creates the quick actions section.
     /// </summary>
     static void CreateFamiliarQuickActions(Transform parent, TextMeshProUGUI reference)
     {
-        _ = CreateFamiliarSectionLabel(parent, reference, "Quick Actions");
-        Transform listRoot = CreateFamiliarActionList(parent);
+        RectTransform card = CreateFamiliarCard(parent, "FamiliarQuickActionsCard", stretchHeight: false, enforceMinimumHeight: false);
+        if (card == null)
+        {
+            return;
+        }
+
+        _ = CreateFamiliarSectionLabel(card, reference, "Quick Actions", FamiliarHeaderQuickIconSpriteNames);
+        Transform listRoot = CreateFamiliarActionList(card);
         if (listRoot == null)
         {
             return;
         }
 
-        CreateFamiliarActionRow(listRoot, reference, "Call / Dismiss Familiar", ".fam t", true);
-        CreateFamiliarActionRow(listRoot, reference, "Toggle Combat Mode", ".fam c", false);
-        CreateFamiliarActionRow(listRoot, reference, "Unbind Familiar", ".fam ub", false);
+        CreateFamiliarActionRow(listRoot, reference, "Call / Dismiss Familiar", ".fam t", FamiliarActionIconCallSpriteNames, true);
+        CreateFamiliarActionRow(listRoot, reference, "Toggle Combat Mode", ".fam c", FamiliarActionIconToggleSpriteNames, false);
+        CreateFamiliarActionRow(listRoot, reference, "Unbind Familiar", ".fam ub", FamiliarActionIconUnbindSpriteNames, false);
     }
 
     /// <summary>
@@ -1355,21 +1475,19 @@ internal static class CharacterMenuService
     /// </summary>
     static void CreateFamiliarBoxCard(Transform parent, TextMeshProUGUI reference)
     {
-        RectTransform card = CreateFamiliarCard(parent, "FamiliarBoxCard");
+        RectTransform card = CreateFamiliarCard(parent, "FamiliarBoxCard", stretchHeight: true);
         if (card == null)
         {
             return;
         }
 
-        _ = CreateFamiliarSectionLabel(card, reference, "Box Management");
-        Transform listRoot = CreateFamiliarActionList(card);
-        if (listRoot == null)
-        {
-            return;
-        }
+        _ = CreateFamiliarSectionLabel(card, reference, "Box Management", FamiliarHeaderBoxIconSpriteNames);
+        _ = CreateFamiliarSubHeaderRow(card, reference, "Select Box");
+        _ = CreateFamiliarDropdownRow(card, reference, out familiarBoxSelectedText);
+        familiarBoxDropdownListRoot = CreateFamiliarBoxDropdownList(card);
+        _ = CreateFamiliarSubHeaderRow(card, reference, "Current Box");
 
-        CreateFamiliarActionRow(listRoot, reference, "List Boxes", ".fam boxes", false);
-        CreateFamiliarActionRow(listRoot, reference, "List Current Box", ".fam l", false);
+        familiarBoxListRoot = CreateFamiliarBoxList(card);
     }
 
     /// <summary>
@@ -1377,13 +1495,14 @@ internal static class CharacterMenuService
     /// </summary>
     static void CreateFamiliarBindCard(Transform parent, TextMeshProUGUI reference)
     {
-        RectTransform card = CreateFamiliarCard(parent, "FamiliarBindCard");
+        RectTransform card = CreateFamiliarCard(parent, "FamiliarBindCard", stretchHeight: false);
         if (card == null)
         {
             return;
         }
 
-        _ = CreateFamiliarSectionLabel(card, reference, "Bind Familiar (1-10)");
+        _ = CreateFamiliarSectionLabel(card, reference, "Bind Familiar (1-10)", FamiliarHeaderBindIconSpriteNames);
+        UIFactory.AddSpacer(card, 8f);
         _ = CreateFamiliarBindGrid(card, reference);
         _ = CreateFamiliarText(card, reference, "Select a slot to bind.", FamiliarMetaFontScale,
             FontStyles.Normal, TextAlignmentOptions.Center, FamiliarMetaColor);
@@ -1394,25 +1513,29 @@ internal static class CharacterMenuService
     /// </summary>
     static void CreateFamiliarAdvancedActions(Transform parent, TextMeshProUGUI reference)
     {
-        _ = CreateFamiliarSectionLabel(parent, reference, "Advanced");
+        _ = CreateFamiliarSectionLabel(parent, reference, "Advanced", FamiliarHeaderDefaultIconSpriteNames);
         Transform listRoot = CreateFamiliarActionList(parent);
         if (listRoot == null)
         {
             return;
         }
 
-        CreateFamiliarActionRow(listRoot, reference, "Search Familiars", ".fam s", false);
-        CreateFamiliarActionRow(listRoot, reference, "View Overflow", ".fam of", false);
-        CreateFamiliarActionRow(listRoot, reference, "Toggle Emote Actions", ".fam e", false);
-        CreateFamiliarActionRow(listRoot, reference, "Show Emote Actions", ".fam actions", false);
-        CreateFamiliarActionRow(listRoot, reference, "Get Familiar Level", ".fam gl", false);
-        CreateFamiliarActionRow(listRoot, reference, "Prestige Familiar", ".fam pr", false);
+        CreateFamiliarActionRow(listRoot, reference, "Search Familiars", ".fam s", FamiliarActionIconSearchSpriteNames, false);
+        CreateFamiliarActionRow(listRoot, reference, "View Overflow", ".fam of", FamiliarActionIconOverflowSpriteNames, false);
+        CreateFamiliarActionRow(listRoot, reference, "Toggle Emote Actions", ".fam e", FamiliarActionIconEmoteSpriteNames, false);
+        CreateFamiliarActionRow(listRoot, reference, "Show Emote Actions", ".fam actions", FamiliarActionIconShowSpriteNames, false);
+        CreateFamiliarActionRow(listRoot, reference, "Get Familiar Level", ".fam gl", FamiliarActionIconLevelSpriteNames, false);
+        CreateFamiliarActionRow(listRoot, reference, "Prestige Familiar", ".fam pr", FamiliarActionIconPrestigeSpriteNames, false);
     }
 
     /// <summary>
     /// Creates a card container for familiar sections.
     /// </summary>
-    static RectTransform CreateFamiliarCard(Transform parent, string name)
+    /// <param name="parent">The parent transform to attach the card.</param>
+    /// <param name="name">Name for the card object.</param>
+    /// <param name="stretchHeight">Whether the card should expand vertically.</param>
+    /// <returns>The card rect transform.</returns>
+    static RectTransform CreateFamiliarCard(Transform parent, string name, bool stretchHeight, bool enforceMinimumHeight = true)
     {
         RectTransform rectTransform = CreateRectTransformObject(name, parent);
         if (rectTransform == null)
@@ -1441,18 +1564,100 @@ internal static class CharacterMenuService
         layout.childControlWidth = true;
 
         LayoutElement layoutElement = rectTransform.gameObject.AddComponent<LayoutElement>();
-        layoutElement.minHeight = FamiliarCardMinHeight;
-        layoutElement.preferredHeight = FamiliarCardMinHeight;
+        layoutElement.flexibleWidth = 1f;
+        layoutElement.flexibleHeight = stretchHeight ? 1f : 0f;
+
+        if (enforceMinimumHeight)
+        {
+            layoutElement.minHeight = FamiliarCardMinHeight;
+            layoutElement.preferredHeight = FamiliarCardMinHeight;
+        }
+
         return rectTransform;
     }
 
     /// <summary>
     /// Creates a familiar section label.
     /// </summary>
-    static TextMeshProUGUI CreateFamiliarSectionLabel(Transform parent, TextMeshProUGUI reference, string text)
+    /// <param name="parent">The parent transform to attach the label.</param>
+    /// <param name="reference">Reference text used to style the label.</param>
+    /// <param name="text">Label text.</param>
+    /// <param name="iconSpriteNames">Sprite names for the section icon.</param>
+    /// <returns>The label text element.</returns>
+    static TextMeshProUGUI CreateFamiliarSectionLabel(Transform parent, TextMeshProUGUI reference, string text, string[] iconSpriteNames)
     {
-        return CreateFamiliarText(parent, reference, text.ToUpperInvariant(), FamiliarSectionFontScale,
-            FontStyles.Bold, TextAlignmentOptions.Left, FamiliarSectionLabelColor);
+        RectTransform rectTransform = CreateRectTransformObject($"{text}Header", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        Image background = rectTransform.gameObject.AddComponent<Image>();
+        ApplySprite(background, FamiliarHeaderSpriteNames);
+        background.color = FamiliarHeaderBackgroundColor;
+        background.raycastTarget = false;
+
+        HorizontalLayoutGroup layout = rectTransform.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.spacing = 6f;
+        layout.padding = CreatePadding(8, 8, 4, 4);
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+
+        LayoutElement headerLayout = rectTransform.gameObject.AddComponent<LayoutElement>();
+        float labelHeight = reference != null ? reference.fontSize * FamiliarSectionFontScale : 16f;
+        float headerHeight = (labelHeight * FamiliarTextHeightMultiplier) + 8f;
+        float minHeaderHeight = FamiliarHeaderIconSize + 8f;
+        float resolvedHeaderHeight = Mathf.Max(headerHeight, minHeaderHeight);
+        headerLayout.preferredHeight = resolvedHeaderHeight;
+        headerLayout.minHeight = resolvedHeaderHeight;
+
+        string[] resolvedIconSprites = iconSpriteNames ?? FamiliarHeaderDefaultIconSpriteNames;
+        RectTransform iconRect = CreateRectTransformObject($"{text}Icon", rectTransform);
+        if (iconRect != null)
+        {
+            Sprite iconSprite = ResolveSprite(resolvedIconSprites);
+            if (iconSprite != null)
+            {
+                iconRect.sizeDelta = new Vector2(FamiliarHeaderIconSize, FamiliarHeaderIconSize);
+
+                Image iconImage = iconRect.gameObject.AddComponent<Image>();
+                iconImage.sprite = iconSprite;
+                iconImage.type = Image.Type.Simple;
+                iconImage.preserveAspect = true;
+                iconImage.color = new Color(1f, 1f, 1f, 0.9f);
+                iconImage.raycastTarget = false;
+
+                LayoutElement iconLayout = iconRect.gameObject.AddComponent<LayoutElement>();
+                iconLayout.preferredWidth = FamiliarHeaderIconSize;
+                iconLayout.minWidth = FamiliarHeaderIconSize;
+                iconLayout.preferredHeight = FamiliarHeaderIconSize;
+                iconLayout.minHeight = FamiliarHeaderIconSize;
+            }
+            else
+            {
+                iconRect.gameObject.SetActive(false);
+            }
+        }
+
+        TextMeshProUGUI label = CreateFamiliarText(rectTransform, reference, text.ToUpperInvariant(),
+            FamiliarSectionFontScale, FontStyles.Bold, TextAlignmentOptions.Left, FamiliarSectionLabelColor);
+        if (label != null)
+        {
+            label.enableWordWrapping = false;
+            label.overflowMode = TextOverflowModes.Ellipsis;
+            LayoutElement labelLayout = label.GetComponent<LayoutElement>() ?? label.gameObject.AddComponent<LayoutElement>();
+            labelLayout.flexibleWidth = 1f;
+        }
+
+        return label;
     }
 
     /// <summary>
@@ -1488,7 +1693,19 @@ internal static class CharacterMenuService
     /// <summary>
     /// Creates a single familiar action row.
     /// </summary>
-    static void CreateFamiliarActionRow(Transform parent, TextMeshProUGUI reference, string label, string command, bool isPrimary)
+    /// <param name="parent">The parent transform to attach the row.</param>
+    /// <param name="reference">Reference text used to style the row.</param>
+    /// <param name="label">Row label text.</param>
+    /// <param name="command">Command to send when clicked.</param>
+    /// <param name="iconSpriteNames">Sprite names for the row icon.</param>
+    /// <param name="isPrimary">Whether the row is the primary action.</param>
+    static void CreateFamiliarActionRow(
+        Transform parent,
+        TextMeshProUGUI reference,
+        string label,
+        string command,
+        string[] iconSpriteNames,
+        bool isPrimary)
     {
         RectTransform rectTransform = CreateRectTransformObject("FamiliarActionRow", parent);
         if (rectTransform == null)
@@ -1519,6 +1736,12 @@ internal static class CharacterMenuService
         LayoutElement rowLayout = rectTransform.gameObject.AddComponent<LayoutElement>();
         float rowHeight = FamiliarActionRowHeight;
 
+        Image iconImage = CreateFamiliarIcon(rectTransform, FamiliarActionIconSize, iconSpriteNames, new Color(1f, 1f, 1f, 0.9f));
+        if (iconImage != null)
+        {
+            rowHeight = Mathf.Max(rowHeight, FamiliarActionIconSize + (FamiliarActionPaddingVertical * 2f));
+        }
+
         TextMeshProUGUI labelText = CreateFamiliarText(rectTransform, reference, label,
             FamiliarActionFontScale, FontStyles.Normal, TextAlignmentOptions.Left, Color.white);
         if (labelText != null)
@@ -1531,22 +1754,754 @@ internal static class CharacterMenuService
                 + (FamiliarActionPaddingVertical * 2f));
         }
 
-        TextMeshProUGUI commandText = CreateFamiliarText(rectTransform, reference, command,
-            FamiliarCommandFontScale, FontStyles.Normal, TextAlignmentOptions.Right, FamiliarCommandTextColor);
-        if (commandText != null)
-        {
-            commandText.enableWordWrapping = false;
-            commandText.overflowMode = TextOverflowModes.Truncate;
-            LayoutElement commandLayout = commandText.GetComponent<LayoutElement>() ?? commandText.gameObject.AddComponent<LayoutElement>();
-            commandLayout.preferredWidth = FamiliarCommandWidth;
-            commandLayout.minWidth = FamiliarCommandWidth;
-        }
+        _ = command;
 
         rowLayout.minHeight = rowHeight;
         rowLayout.preferredHeight = rowHeight;
 
         SimpleStunButton button = rectTransform.gameObject.AddComponent<SimpleStunButton>();
         ConfigureCommandButton(button, command, true);
+    }
+
+    /// <summary>
+    /// Creates a familiar icon element.
+    /// </summary>
+    /// <param name="parent">The parent transform to attach the icon.</param>
+    /// <param name="size">The icon size.</param>
+    /// <param name="spriteNames">Sprite names to resolve the icon.</param>
+    /// <param name="color">Tint color for the icon.</param>
+    /// <returns>The created image component.</returns>
+    static Image CreateFamiliarIcon(Transform parent, float size, string[] spriteNames, Color color)
+    {
+        RectTransform rectTransform = CreateRectTransformObject("FamiliarIcon", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+
+        Sprite sprite = ResolveSprite(spriteNames);
+        if (sprite == null)
+        {
+            rectTransform.gameObject.SetActive(false);
+            return null;
+        }
+
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(0f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+        rectTransform.sizeDelta = new Vector2(size, size);
+
+        Image image = rectTransform.gameObject.AddComponent<Image>();
+        image.sprite = sprite;
+        image.type = Image.Type.Simple;
+        image.preserveAspect = true;
+        image.color = color;
+        image.raycastTarget = false;
+
+        LayoutElement layout = rectTransform.gameObject.AddComponent<LayoutElement>();
+        layout.preferredWidth = size;
+        layout.minWidth = size;
+        layout.preferredHeight = size;
+        layout.minHeight = size;
+
+        return image;
+    }
+
+    /// <summary>
+    /// Creates a command pill for familiar rows.
+    /// </summary>
+    /// <param name="parent">The parent transform to attach the pill.</param>
+    /// <param name="reference">Reference text used to style the pill.</param>
+    /// <param name="command">The command to display.</param>
+    /// <returns>The command text element.</returns>
+    static TextMeshProUGUI CreateFamiliarCommandPill(Transform parent, TextMeshProUGUI reference, string command)
+    {
+        RectTransform rectTransform = CreateRectTransformObject("FamiliarCommandPill", parent);
+        if (rectTransform == null || reference == null)
+        {
+            return null;
+        }
+
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(0f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        Image background = rectTransform.gameObject.AddComponent<Image>();
+        ApplySprite(background, FamiliarCommandPillSpriteNames);
+        background.color = FamiliarCommandBackgroundColor;
+        background.raycastTarget = false;
+
+        HorizontalLayoutGroup layout = rectTransform.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.childAlignment = TextAnchor.MiddleCenter;
+        layout.padding = CreatePadding(FamiliarCommandPaddingHorizontal, FamiliarCommandPaddingHorizontal,
+            FamiliarCommandPaddingVertical, FamiliarCommandPaddingVertical);
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+
+        LayoutElement layoutElement = rectTransform.gameObject.AddComponent<LayoutElement>();
+        layoutElement.preferredWidth = FamiliarCommandWidth;
+        layoutElement.minWidth = FamiliarCommandWidth;
+
+        TextMeshProUGUI commandText = CreateFamiliarText(rectTransform, reference, command,
+            FamiliarCommandFontScale, FontStyles.Normal, TextAlignmentOptions.Center, FamiliarCommandTextColor);
+        return commandText;
+    }
+
+    /// <summary>
+    /// Creates a familiar subheader row with a command pill.
+    /// </summary>
+    /// <param name="parent">The parent transform to attach the row.</param>
+    /// <param name="reference">Reference text used to style the row.</param>
+    /// <param name="label">Subheader label.</param>
+    /// <returns>The label text element.</returns>
+    static TextMeshProUGUI CreateFamiliarSubHeaderRow(Transform parent, TextMeshProUGUI reference, string label)
+    {
+        RectTransform rectTransform = CreateRectTransformObject("FamiliarSubHeaderRow", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        HorizontalLayoutGroup layout = rectTransform.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.spacing = FamiliarActionSpacing;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+        layout.childControlHeight = true;
+        layout.childControlWidth = true;
+
+        LayoutElement rowLayout = rectTransform.gameObject.AddComponent<LayoutElement>();
+        rowLayout.preferredHeight = FamiliarActionRowHeight;
+        rowLayout.minHeight = FamiliarActionRowHeight;
+
+        TextMeshProUGUI labelText = CreateFamiliarText(rectTransform, reference, label.ToUpperInvariant(),
+            FamiliarSubHeaderFontScale, FontStyles.Normal, TextAlignmentOptions.Left, FamiliarSubHeaderTextColor);
+        if (labelText != null)
+        {
+            LayoutElement labelLayout = labelText.GetComponent<LayoutElement>() ?? labelText.gameObject.AddComponent<LayoutElement>();
+            labelLayout.flexibleWidth = 1f;
+        }
+
+        return labelText;
+    }
+
+    /// <summary>
+    /// Creates the dropdown row for selecting a familiar box.
+    /// </summary>
+    /// <param name="parent">The parent transform to attach the dropdown.</param>
+    /// <param name="reference">Reference text used to style the dropdown.</param>
+    /// <param name="selectedText">The created selection label.</param>
+    /// <returns>The dropdown root transform.</returns>
+    static RectTransform CreateFamiliarDropdownRow(Transform parent, TextMeshProUGUI reference, out TextMeshProUGUI selectedText)
+    {
+        selectedText = null;
+        RectTransform rectTransform = CreateRectTransformObject("FamiliarBoxSelect", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        Image background = rectTransform.gameObject.AddComponent<Image>();
+        ApplySprite(background, FamiliarDropdownSpriteNames);
+        background.color = FamiliarActionBackgroundColor;
+        background.raycastTarget = true;
+
+        HorizontalLayoutGroup layout = rectTransform.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.spacing = FamiliarActionSpacing;
+        layout.padding = CreatePadding(FamiliarActionPaddingHorizontal, FamiliarActionPaddingHorizontal,
+            FamiliarActionPaddingVertical, FamiliarActionPaddingVertical);
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+
+        LayoutElement rowLayout = rectTransform.gameObject.AddComponent<LayoutElement>();
+        rowLayout.preferredHeight = FamiliarActionRowHeight;
+        rowLayout.minHeight = FamiliarActionRowHeight;
+
+        selectedText = CreateFamiliarText(rectTransform, reference, string.Empty,
+            FamiliarActionFontScale, FontStyles.Normal, TextAlignmentOptions.Left, FamiliarBoxRowTextColor);
+        if (selectedText != null)
+        {
+            selectedText.text = FamiliarBoxFallbackNames.Length > 0 ? FamiliarBoxFallbackNames[0] : "Select a box";
+            LayoutElement labelLayout = selectedText.GetComponent<LayoutElement>() ?? selectedText.gameObject.AddComponent<LayoutElement>();
+            labelLayout.flexibleWidth = 1f;
+        }
+
+        _ = CreateFamiliarIcon(rectTransform, FamiliarDropdownArrowSize, FamiliarDropdownArrowSpriteNames,
+            new Color(1f, 1f, 1f, 0.7f));
+
+        SimpleStunButton button = rectTransform.gameObject.AddComponent<SimpleStunButton>();
+        ConfigureActionButton(button, ToggleFamiliarBoxDropdown, true);
+
+        return rectTransform;
+    }
+
+    /// <summary>
+    /// Toggles the familiar box dropdown visibility and refreshes box names.
+    /// </summary>
+    static void ToggleFamiliarBoxDropdown()
+    {
+        if (familiarBoxDropdownListRoot == null)
+        {
+            Quips.SendCommand(".fam boxes");
+            return;
+        }
+
+        bool isVisible = familiarBoxDropdownListRoot.gameObject.activeSelf;
+        SetFamiliarBoxDropdownVisible(!isVisible);
+
+        if (!isVisible)
+        {
+            Quips.SendCommand(".fam boxes");
+        }
+    }
+
+    static void SetFamiliarBoxDropdownVisible(bool visible)
+    {
+        if (familiarBoxDropdownListRoot == null)
+        {
+            return;
+        }
+
+        familiarBoxDropdownListRoot.gameObject.SetActive(visible);
+        if (visible)
+        {
+            UpdateFamiliarBoxDropdownOptions();
+        }
+    }
+
+    /// <summary>
+    /// Updates the dropdown list with the latest familiar box names.
+    /// </summary>
+    static void UpdateFamiliarBoxDropdownOptions()
+    {
+        if (familiarBoxDropdownListRoot == null)
+        {
+            return;
+        }
+
+        if (_familiarBoxNames.Count == 0)
+        {
+            EnsureFamiliarBoxOptionRows(1);
+            FamiliarBoxOptionRow placeholder = familiarBoxOptionRows[0];
+            if (placeholder.NameText != null)
+            {
+                placeholder.NameText.text = "No boxes loaded";
+                placeholder.NameText.alpha = 0.65f;
+            }
+            if (placeholder.Background != null)
+            {
+                placeholder.Background.color = FamiliarActionBackgroundColor;
+                placeholder.Background.raycastTarget = false;
+            }
+            if (placeholder.Button != null)
+            {
+                ConfigureActionButton(placeholder.Button, null, false);
+                placeholder.LastBoxName = string.Empty;
+                placeholder.LastIsSelected = false;
+                placeholder.LastButtonEnabled = false;
+            }
+            return;
+        }
+
+        EnsureFamiliarBoxOptionRows(_familiarBoxNames.Count);
+
+        int rowCount = Math.Min(_familiarBoxNames.Count, familiarBoxOptionRows.Count);
+        for (int i = 0; i < rowCount; i++)
+        {
+            FamiliarBoxOptionRow row = familiarBoxOptionRows[i];
+            string boxName = _familiarBoxNames[i];
+            bool isSelected = !string.IsNullOrWhiteSpace(_familiarActiveBox)
+                && boxName.Equals(_familiarActiveBox, StringComparison.OrdinalIgnoreCase);
+            bool enabled = !string.IsNullOrWhiteSpace(boxName);
+
+            if (row.NameText != null)
+            {
+                row.NameText.text = boxName;
+                row.NameText.alpha = enabled ? 1f : 0.65f;
+            }
+
+            if (row.Background != null)
+            {
+                row.Background.color = isSelected ? FamiliarPrimaryActionBackgroundColor : FamiliarActionBackgroundColor;
+                row.Background.raycastTarget = enabled;
+            }
+
+            if (row.Button != null
+                && (!string.Equals(row.LastBoxName, boxName, StringComparison.Ordinal)
+                    || row.LastIsSelected != isSelected
+                    || row.LastButtonEnabled != enabled))
+            {
+                ConfigureActionButton(row.Button, enabled ? () => SelectFamiliarBox(boxName) : null, enabled);
+                row.LastBoxName = boxName;
+                row.LastIsSelected = isSelected;
+                row.LastButtonEnabled = enabled;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Ensures the dropdown list has enough row objects.
+    /// </summary>
+    /// <param name="count">The number of rows required.</param>
+    static void EnsureFamiliarBoxOptionRows(int count)
+    {
+        if (familiarBoxDropdownListRoot == null)
+        {
+            return;
+        }
+
+        TextMeshProUGUI reference = familiarReferenceText;
+        if (reference == null)
+        {
+            return;
+        }
+
+        while (familiarBoxOptionRows.Count < count)
+        {
+            FamiliarBoxOptionRow row = CreateFamiliarBoxOptionRow(familiarBoxDropdownListRoot, reference);
+            if (row?.Root == null)
+            {
+                break;
+            }
+
+            familiarBoxOptionRows.Add(row);
+        }
+
+        for (int i = 0; i < familiarBoxOptionRows.Count; i++)
+        {
+            bool isActive = i < count;
+            familiarBoxOptionRows[i].Root.SetActive(isActive);
+        }
+    }
+
+    static FamiliarBoxOptionRow CreateFamiliarBoxOptionRow(Transform parent, TextMeshProUGUI reference)
+    {
+        RectTransform rectTransform = CreateRectTransformObject($"FamiliarBoxOption_{familiarBoxOptionRows.Count + 1}", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        Image background = rectTransform.gameObject.AddComponent<Image>();
+        ApplySprite(background, FamiliarDropdownSpriteNames);
+        background.color = FamiliarActionBackgroundColor;
+        background.raycastTarget = true;
+
+        HorizontalLayoutGroup layout = rectTransform.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.spacing = FamiliarActionSpacing;
+        layout.padding = CreatePadding(FamiliarActionPaddingHorizontal, FamiliarActionPaddingHorizontal,
+            FamiliarActionPaddingVertical, FamiliarActionPaddingVertical);
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+
+        LayoutElement rowLayout = rectTransform.gameObject.AddComponent<LayoutElement>();
+        rowLayout.preferredHeight = FamiliarActionRowHeight;
+        rowLayout.minHeight = FamiliarActionRowHeight;
+
+        TextMeshProUGUI label = CreateFamiliarText(rectTransform, reference, string.Empty,
+            FamiliarActionFontScale, FontStyles.Normal, TextAlignmentOptions.Left, FamiliarBoxRowTextColor);
+        if (label != null)
+        {
+            label.enableWordWrapping = false;
+            label.overflowMode = TextOverflowModes.Ellipsis;
+            LayoutElement labelLayout = label.GetComponent<LayoutElement>() ?? label.gameObject.AddComponent<LayoutElement>();
+            labelLayout.flexibleWidth = 1f;
+        }
+
+        SimpleStunButton button = rectTransform.gameObject.AddComponent<SimpleStunButton>();
+        ConfigureActionButton(button, null, false);
+
+        return new FamiliarBoxOptionRow(rectTransform.gameObject, background, label, button);
+    }
+
+    static RectTransform CreateFamiliarBoxDropdownList(Transform parent)
+    {
+        RectTransform rectTransform = CreateRectTransformObject("FamiliarBoxDropdownList", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        VerticalLayoutGroup layout = rectTransform.gameObject.AddComponent<VerticalLayoutGroup>();
+        layout.childAlignment = TextAnchor.UpperLeft;
+        layout.spacing = FamiliarActionSpacing;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+        layout.childControlHeight = true;
+        layout.childControlWidth = true;
+
+        ContentSizeFitter fitter = rectTransform.gameObject.AddComponent<ContentSizeFitter>();
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+
+        rectTransform.gameObject.SetActive(false);
+        return rectTransform;
+    }
+
+    static void SelectFamiliarBox(string boxName)
+    {
+        if (string.IsNullOrWhiteSpace(boxName))
+        {
+            return;
+        }
+
+        SetFamiliarBoxDropdownVisible(false);
+
+        if (boxName.Equals(_familiarActiveBox, StringComparison.OrdinalIgnoreCase))
+        {
+            Quips.SendCommand(".fam l");
+            return;
+        }
+
+        _familiarActiveBox = boxName;
+        _familiarBoxEntries.Clear();
+        familiarBoxLastRefreshTime = Time.realtimeSinceStartup;
+
+        Quips.SendCommand($".fam cb {QuoteChatArgument(boxName)}");
+        Quips.SendCommand(".fam l");
+    }
+
+    /// <summary>
+    /// Creates the list container for familiar box entries.
+    /// </summary>
+    /// <param name="parent">The parent transform to attach the list.</param>   
+    /// <returns>The list root transform.</returns>
+    static Transform CreateFamiliarBoxList(Transform parent)
+    {
+        RectTransform rectTransform = CreateRectTransformObject("FamiliarBoxList", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        VerticalLayoutGroup layout = rectTransform.gameObject.AddComponent<VerticalLayoutGroup>();
+        layout.childAlignment = TextAnchor.UpperLeft;
+        layout.spacing = FamiliarActionSpacing;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+        layout.childControlHeight = true;
+        layout.childControlWidth = true;
+
+        LayoutElement layoutElement = rectTransform.gameObject.AddComponent<LayoutElement>();
+        layoutElement.flexibleHeight = 1f;
+
+        return rectTransform;
+    }
+
+    /// <summary>
+    /// Creates a familiar box row entry.
+    /// </summary>
+    /// <param name="parent">The parent transform to attach the row.</param>
+    /// <returns>The created row references.</returns>
+    static FamiliarBoxRow CreateFamiliarBoxRow(Transform parent)
+    {
+        TextMeshProUGUI reference = familiarReferenceText;
+        if (reference == null)
+        {
+            return null;
+        }
+
+        RectTransform rectTransform = CreateRectTransformObject($"FamiliarBoxRow_{familiarBoxRows.Count + 1}", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        Image background = rectTransform.gameObject.AddComponent<Image>();
+        ApplySprite(background, FamiliarRowSpriteNames);
+        background.color = FamiliarActionBackgroundColor;
+        background.raycastTarget = true;
+
+        HorizontalLayoutGroup layout = rectTransform.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.spacing = FamiliarActionSpacing;
+        layout.padding = CreatePadding(FamiliarActionPaddingHorizontal, FamiliarActionPaddingHorizontal,
+            FamiliarActionPaddingVertical, FamiliarActionPaddingVertical);
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+
+        LayoutElement rowLayout = rectTransform.gameObject.AddComponent<LayoutElement>();
+        rowLayout.preferredHeight = FamiliarActionRowHeight;
+        rowLayout.minHeight = FamiliarActionRowHeight;
+
+        Image icon = CreateFamiliarIcon(rectTransform, FamiliarBoxIconSize, FamiliarBoxIconSpriteNames, new Color(1f, 1f, 1f, 0.9f));
+
+        TextMeshProUGUI nameText = CreateFamiliarText(rectTransform, reference, string.Empty,
+            FamiliarActionFontScale, FontStyles.Normal, TextAlignmentOptions.Left, FamiliarBoxRowTextColor);
+        if (nameText != null)
+        {
+            LayoutElement nameLayout = nameText.GetComponent<LayoutElement>() ?? nameText.gameObject.AddComponent<LayoutElement>();
+            nameLayout.flexibleWidth = 1f;
+        }
+
+        TextMeshProUGUI levelText = CreateFamiliarText(rectTransform, reference, string.Empty,
+            FamiliarSubHeaderFontScale, FontStyles.Normal, TextAlignmentOptions.Right, FamiliarBoxRowLevelColor);
+        if (levelText != null)
+        {
+            levelText.enableWordWrapping = false;
+            levelText.overflowMode = TextOverflowModes.Truncate;
+        }
+
+        SimpleStunButton button = rectTransform.gameObject.AddComponent<SimpleStunButton>();
+        ConfigureCommandButton(button, string.Empty, false);
+
+        return new FamiliarBoxRow(rectTransform.gameObject, background, icon, nameText, levelText, button);
+    }
+
+    /// <summary>
+    /// Ensures the familiar box list has the requested number of rows.
+    /// </summary>
+    /// <param name="count">The number of rows required.</param>
+    static void EnsureFamiliarBoxRows(int count)
+    {
+        if (familiarBoxListRoot == null)
+        {
+            return;
+        }
+
+        while (familiarBoxRows.Count < count)
+        {
+            FamiliarBoxRow row = CreateFamiliarBoxRow(familiarBoxListRoot);
+            if (row?.Root == null)
+            {
+                break;
+            }
+
+            familiarBoxRows.Add(row);
+        }
+
+        for (int i = 0; i < familiarBoxRows.Count; i++)
+        {
+            bool isActive = i < count;
+            familiarBoxRows[i].Root.SetActive(isActive);
+        }
+    }
+
+    /// <summary>
+    /// Updates familiar box rows with the provided data.
+    /// </summary>
+    /// <param name="entries">The box entries to display.</param>
+    static void UpdateFamiliarBoxRows(IReadOnlyList<FamiliarBoxEntry> entries)
+    {
+        if (entries == null)
+        {
+            return;
+        }
+
+        EnsureFamiliarBoxRows(entries.Count);
+
+        int rowCount = Math.Min(entries.Count, familiarBoxRows.Count);
+        for (int i = 0; i < rowCount; i++)
+        {
+            FamiliarBoxRow row = familiarBoxRows[i];
+            FamiliarBoxEntry entry = entries[i];
+
+            if (row.NameText != null)
+            {
+                row.NameText.text = entry.Name;
+                row.NameText.alpha = entry.IsPlaceholder ? 0.6f : 1f;
+            }
+
+            if (row.LevelText != null)
+            {
+                row.LevelText.text = entry.Level > 0 ? $"Lv.{entry.Level}" : string.Empty;
+                row.LevelText.alpha = entry.IsPlaceholder ? 0.4f : 1f;
+            }
+
+            if (row.Icon != null)
+            {
+                if (entry.IsPlaceholder)
+                {
+                    row.Icon.enabled = false;
+                }
+                else
+                {
+                    ApplySprite(row.Icon, entry.IsActive ? FamiliarBoxIconActiveSpriteNames : FamiliarBoxIconSpriteNames);
+                    row.Icon.type = Image.Type.Simple;
+                    row.Icon.preserveAspect = true;
+                    row.Icon.color = new Color(1f, 1f, 1f, 0.9f);
+                    row.Icon.enabled = row.Icon.sprite != null;
+                }
+            }
+
+            if (row.Background != null)
+            {
+                row.Background.color = entry.IsActive ? FamiliarPrimaryActionBackgroundColor : FamiliarActionBackgroundColor;
+            }
+
+            if (row.Button != null)
+            {
+                bool enabled = !entry.IsPlaceholder
+                    && entry.SlotIndex >= 1
+                    && entry.SlotIndex <= FamiliarBoxSlotCount
+                    && !string.IsNullOrWhiteSpace(entry.Name);
+
+                if (row.LastSlotIndex != entry.SlotIndex
+                    || row.LastIsActive != entry.IsActive
+                    || row.LastButtonEnabled != enabled)
+                {
+                    ConfigureActionButton(row.Button, CreateFamiliarBoxRowAction(entry, enabled), enabled);
+                    row.LastSlotIndex = entry.SlotIndex;
+                    row.LastIsActive = entry.IsActive;
+                    row.LastButtonEnabled = enabled;
+                }
+
+                if (row.Background != null)
+                {
+                    row.Background.raycastTarget = enabled;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Creates the click action for a familiar box row.
+    /// </summary>
+    /// <param name="entry">The box entry being displayed.</param>
+    /// <param name="enabled">Whether the action should be enabled.</param>
+    /// <returns>The click action.</returns>
+    static Action CreateFamiliarBoxRowAction(FamiliarBoxEntry entry, bool enabled)
+    {
+        if (!enabled)
+        {
+            return null;
+        }
+
+        if (entry.IsActive)
+        {
+            return () =>
+            {
+                ClearPendingFamiliarBoxSwitch();
+                Quips.SendCommand(".fam t");
+            };
+        }
+
+        int slotIndex = entry.SlotIndex;
+        return () => TriggerFamiliarBoxSlotBind(slotIndex);
+    }
+
+    static void TriggerFamiliarBoxSlotBind(int slotIndex)
+    {
+        if (slotIndex < 1 || slotIndex > FamiliarBoxSlotCount)
+        {
+            return;
+        }
+
+        bool hasActiveFamiliar = !ResolveFamiliarDisplayName().Equals("None", StringComparison.OrdinalIgnoreCase);
+        if (!hasActiveFamiliar)
+        {
+            ClearPendingFamiliarBoxSwitch();
+            Quips.SendCommand($".fam b {slotIndex}");
+            return;
+        }
+
+        QueueFamiliarBoxSwitch(slotIndex);
+    }
+
+    static void QueueFamiliarBoxSwitch(int slotIndex)
+    {
+        familiarBoxPendingSummonSlotIndex = slotIndex;
+        if (familiarBoxSummonRoutine != null)
+        {
+            return;
+        }
+
+        familiarBoxSummonRoutine = Core.StartCoroutine(DelayedBindFamiliarFromBoxRoutine());
+    }
+
+    static IEnumerator DelayedBindFamiliarFromBoxRoutine()
+    {
+        Quips.SendCommand(".fam ub");
+
+        yield return new WaitForSecondsRealtime(FamiliarBoxSwitchDelaySeconds);
+
+        int slotIndex = familiarBoxPendingSummonSlotIndex;
+        familiarBoxPendingSummonSlotIndex = -1;
+        familiarBoxSummonRoutine = null;
+
+        if (slotIndex < 1 || slotIndex > FamiliarBoxSlotCount)
+        {
+            yield break;
+        }
+
+        Quips.SendCommand($".fam b {slotIndex}");
+    }
+
+    static void ClearPendingFamiliarBoxSwitch()
+    {
+        familiarBoxPendingSummonSlotIndex = -1;
+        if (familiarBoxSummonRoutine == null)
+        {
+            return;
+        }
+
+        Core.StopCoroutine(familiarBoxSummonRoutine);
+        familiarBoxSummonRoutine = null;
+    }
+
+    /// <summary>
+    /// Quotes a chat command argument if needed (e.g., names with spaces).
+    /// </summary>
+    /// <param name="value">The argument value.</param>
+    /// <returns>A quoted argument string.</returns>
+    static string QuoteChatArgument(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "\"\"";
+        }
+
+        string trimmed = value.Trim();
+        string escaped = trimmed.Replace("\"", "\\\"");
+        return escaped.Contains(' ') ? $"\"{escaped}\"" : escaped;
     }
 
     /// <summary>
@@ -1568,12 +2523,14 @@ internal static class CharacterMenuService
         GridLayoutGroup layout = rectTransform.gameObject.AddComponent<GridLayoutGroup>();
         layout.cellSize = new Vector2(FamiliarBindCellWidth, FamiliarBindCellHeight);
         layout.spacing = new Vector2(FamiliarBindCellSpacing, FamiliarBindCellSpacing);
-        layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;        
         layout.constraintCount = FamiliarBindColumns;
         layout.childAlignment = TextAnchor.UpperLeft;
+        layout.padding = CreatePadding(0, 0, 10, 4);
 
         LayoutElement gridLayout = rectTransform.gameObject.AddComponent<LayoutElement>();
-        gridLayout.preferredHeight = (FamiliarBindCellHeight * 2f) + FamiliarBindCellSpacing;
+        float gridHeight = (FamiliarBindCellHeight * 2f) + FamiliarBindCellSpacing + layout.padding.top + layout.padding.bottom;
+        gridLayout.preferredHeight = gridHeight;
         gridLayout.minHeight = gridLayout.preferredHeight;
 
         for (int i = 1; i <= 10; i++)
@@ -1667,6 +2624,52 @@ internal static class CharacterMenuService
     }
 
     /// <summary>
+    /// Creates the vertical divider between familiar columns.
+    /// </summary>
+    /// <param name="parent">The parent transform to attach the divider.</param>
+    /// <returns>The divider rect transform.</returns>
+    static RectTransform CreateFamiliarColumnDivider(Transform parent)
+    {
+        RectTransform rectTransform = CreateRectTransformObject("FamiliarColumnDivider", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+        rectTransform.anchorMin = new Vector2(0f, 0f);
+        rectTransform.anchorMax = new Vector2(0f, 1f);
+        rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        rectTransform.sizeDelta = new Vector2(FamiliarColumnDividerWidth, 0f);
+        rectTransform.anchoredPosition = Vector2.zero;
+
+        LayoutElement layout = rectTransform.gameObject.AddComponent<LayoutElement>();
+        layout.preferredWidth = FamiliarColumnDividerWidth;
+        layout.minWidth = FamiliarColumnDividerWidth;
+        layout.flexibleWidth = 0f;
+        layout.flexibleHeight = 1f;
+
+        RectTransform imageRect = CreateRectTransformObject("FamiliarColumnDividerImage", rectTransform);
+        if (imageRect == null)
+        {
+            return rectTransform;
+        }
+
+        float inset = (1f - FamiliarColumnDividerHeightPercent) * 0.5f;
+        imageRect.anchorMin = new Vector2(0f, inset);
+        imageRect.anchorMax = new Vector2(1f, 1f - inset);
+        imageRect.pivot = new Vector2(0.5f, 0.5f);
+        imageRect.offsetMin = Vector2.zero;
+        imageRect.offsetMax = Vector2.zero;
+
+        Image image = imageRect.gameObject.AddComponent<Image>();
+        ApplySprite(image, FamiliarColumnDividerSpriteNames);
+        image.type = Image.Type.Tiled;
+        image.color = FamiliarColumnDividerColor;
+        image.raycastTarget = false;
+
+        return rectTransform;
+    }
+
+    /// <summary>
     /// Creates a divider styled for the familiars panel.
     /// </summary>
     static RectTransform CreateFamiliarDivider(Transform parent)
@@ -1755,6 +2758,11 @@ internal static class CharacterMenuService
         rectTransform.pivot = new Vector2(0f, 1f);
         rectTransform.offsetMin = Vector2.zero;
         rectTransform.offsetMax = Vector2.zero;
+
+        Image background = rectTransform.gameObject.AddComponent<Image>();
+        ApplySprite(background, FamiliarHeaderSpriteNames);
+        background.color = FamiliarHeaderBackgroundColor;
+        background.raycastTarget = false;
 
         HorizontalLayoutGroup layout = rectTransform.gameObject.AddComponent<HorizontalLayoutGroup>();
         layout.childAlignment = TextAnchor.MiddleLeft;
@@ -1864,14 +2872,14 @@ internal static class CharacterMenuService
         rectTransform.pivot = new Vector2(0f, 1f);
 
         Image image = rectTransform.gameObject.AddComponent<Image>();
-        image.sprite = ResolveProgressBackgroundSprite();
-        image.color = new Color(1f, 1f, 1f, 0.2f);
-        image.type = Image.Type.Sliced;
+        ApplySprite(image, SectionDividerSpriteNames);
+        image.color = new Color(1f, 1f, 1f, 0.7f);
         image.raycastTarget = false;
 
         LayoutElement layout = rectTransform.gameObject.AddComponent<LayoutElement>();
-        layout.preferredHeight = 2f;
-        layout.minHeight = 2f;
+        float height = image.sprite != null ? 8f : 2f;
+        layout.preferredHeight = height;
+        layout.minHeight = height;
         return rectTransform;
     }
 
@@ -1893,6 +2901,11 @@ internal static class CharacterMenuService
         rectTransform.offsetMin = Vector2.zero;
         rectTransform.offsetMax = Vector2.zero;
 
+        Image background = rectTransform.gameObject.AddComponent<Image>();
+        ApplySprite(background, FamiliarHeaderSpriteNames);
+        background.color = FamiliarHeaderBackgroundColor;
+        background.raycastTarget = false;
+
         HorizontalLayoutGroup layout = rectTransform.gameObject.AddComponent<HorizontalLayoutGroup>();
         layout.childAlignment = TextAnchor.MiddleLeft;
         layout.spacing = 12f;
@@ -1900,6 +2913,7 @@ internal static class CharacterMenuService
         layout.childForceExpandHeight = false;
         layout.childControlHeight = true;
         layout.childControlWidth = true;
+        layout.padding = CreatePadding(8, 8, 4, 4);
 
         LayoutElement rowLayout = rectTransform.gameObject.AddComponent<LayoutElement>();
         rowLayout.preferredHeight = ProfessionRowHeight;
@@ -1971,7 +2985,7 @@ internal static class CharacterMenuService
             return _alchemyProgressFill.sprite;
         }
 
-        if (Sprites.TryGetValue("Attribute_TierIndicator_Fixed", out Sprite fallback))
+        if (HudData.Sprites.TryGetValue("Attribute_TierIndicator_Fixed", out Sprite fallback))
         {
             return fallback;
         }
@@ -1995,7 +3009,7 @@ internal static class CharacterMenuService
             return _alchemyFill.sprite;
         }
 
-        if (Sprites.TryGetValue("Attribute_TierIndicator_Fixed", out Sprite fallback))
+        if (HudData.Sprites.TryGetValue("Attribute_TierIndicator_Fixed", out Sprite fallback))
         {
             return fallback;
         }
@@ -2010,7 +3024,7 @@ internal static class CharacterMenuService
     /// <returns>The profession icon sprite or null.</returns>
     static Sprite ResolveProfessionIcon(Profession profession)
     {
-        if (ProfessionIcons.TryGetValue(profession, out string spriteName) && Sprites.TryGetValue(spriteName, out Sprite sprite))
+        if (ProfessionIcons.TryGetValue(profession, out string spriteName) && HudData.Sprites.TryGetValue(spriteName, out Sprite sprite))
         {
             return sprite;
         }
@@ -2547,6 +3561,14 @@ internal static class CharacterMenuService
             familiarActiveNameText.fontStyle = hasFamiliar ? FontStyles.Bold : FontStyles.Italic;
         }
 
+        if (familiarActivePortrait != null)
+        {
+            ApplySprite(familiarActivePortrait, hasFamiliar ? FamiliarActivePortraitSpriteNames : FamiliarInactivePortraitSpriteNames);
+            familiarActivePortrait.type = Image.Type.Simple;
+            familiarActivePortrait.preserveAspect = true;
+            familiarActivePortrait.color = hasFamiliar ? new Color(1f, 1f, 1f, 0.45f) : new Color(1f, 1f, 1f, 0.25f);
+        }
+
         string statsLine = BuildFamiliarStatsLine();
         if (familiarActiveStatsText != null)
         {
@@ -2567,6 +3589,108 @@ internal static class CharacterMenuService
             bool isMaxLevel = _familiarMaxLevel > 0 && _familiarLevel >= _familiarMaxLevel;
             familiarBondFill.fillAmount = isMaxLevel ? 1f : progress;
         }
+
+        UpdateFamiliarBoxPanel(hasFamiliar, displayName);
+    }
+
+    /// <summary>
+    /// Updates the familiar box selection and list UI.
+    /// </summary>
+    /// <param name="hasFamiliar">Whether an active familiar exists.</param>
+    /// <param name="displayName">The active familiar display name.</param>
+    static void UpdateFamiliarBoxPanel(bool hasFamiliar, string displayName)
+    {
+        bool hasName = !string.IsNullOrWhiteSpace(displayName);
+        bool levelChanged = hasFamiliar && (_familiarLevel != familiarLastLevel || _familiarPrestige != familiarLastPrestige);
+        bool nameChanged = hasName && !displayName.Equals(familiarLastName, StringComparison.OrdinalIgnoreCase);
+
+        if (familiarBoxSelectedText != null)
+        {
+            string fallbackLabel = FamiliarBoxFallbackNames.Length > 0 ? FamiliarBoxFallbackNames[0] : "Select a box";
+            string selectedBox = string.IsNullOrWhiteSpace(_familiarActiveBox)
+                ? (_familiarBoxNames.Count > 0 ? _familiarBoxNames[0] : fallbackLabel)
+                : _familiarActiveBox;
+            familiarBoxSelectedText.text = selectedBox;
+        }
+
+        List<FamiliarBoxEntry> entries = BuildFamiliarBoxEntries(hasFamiliar, displayName);
+        UpdateFamiliarBoxRows(entries);
+        UpdateFamiliarBoxDropdownOptions();
+
+        if (_familiarBoxEntries.Count == 0 || _familiarBoxNames.Count == 0 || levelChanged || nameChanged)
+        {
+            RequestFamiliarBoxData();
+        }
+
+        if (hasName)
+        {
+            familiarLastName = displayName;
+        }
+        if (hasFamiliar)
+        {
+            familiarLastLevel = _familiarLevel;
+            familiarLastPrestige = _familiarPrestige;
+        }
+    }
+
+    static void RequestFamiliarBoxData()
+    {
+        float now = Time.realtimeSinceStartup;
+        if (now - familiarBoxLastRefreshTime < FamiliarBoxRefreshCooldownSeconds)
+        {
+            return;
+        }
+
+        familiarBoxLastRefreshTime = now;
+        Quips.SendCommand(".fam boxes");
+        Quips.SendCommand(".fam l");
+    }
+
+    /// <summary>
+    /// Builds a placeholder list of familiar box entries.
+    /// </summary>
+    /// <param name="hasFamiliar">Whether an active familiar exists.</param>
+    /// <param name="displayName">The active familiar display name.</param>
+    /// <returns>The list of entries to display.</returns>
+    static List<FamiliarBoxEntry> BuildFamiliarBoxEntries(bool hasFamiliar, string displayName)
+    {
+        List<FamiliarBoxEntry> entries = new(FamiliarBoxSlotCount);
+        Dictionary<int, FamiliarBoxEntryData> entriesBySlot = [];
+
+        for (int i = 0; i < _familiarBoxEntries.Count; i++)
+        {
+            FamiliarBoxEntryData entry = _familiarBoxEntries[i];
+            if (entry == null)
+            {
+                continue;
+            }
+
+            if (entry.SlotIndex < 1 || entry.SlotIndex > FamiliarBoxSlotCount)
+            {
+                continue;
+            }
+
+            if (!entriesBySlot.ContainsKey(entry.SlotIndex))
+            {
+                entriesBySlot[entry.SlotIndex] = entry;
+            }
+        }
+
+        for (int slotIndex = 1; slotIndex <= FamiliarBoxSlotCount; slotIndex++)
+        {
+            if (entriesBySlot.TryGetValue(slotIndex, out FamiliarBoxEntryData slotEntry))
+            {
+                bool isActive = hasFamiliar && slotEntry.Name.Equals(displayName, StringComparison.OrdinalIgnoreCase);
+                int level = isActive ? _familiarLevel : slotEntry.Level;
+                entries.Add(new FamiliarBoxEntry(slotIndex, slotEntry.Name, level, isActive, false));
+            }
+            else
+            {
+                entries.Add(new FamiliarBoxEntry(slotIndex, string.Empty, 0, false, true));
+            }
+        }
+
+        return entries;
     }
 
     /// <summary>
@@ -3097,7 +4221,7 @@ internal static class CharacterMenuService
                 continue;
             }
 
-            if (Sprites.TryGetValue(name, out Sprite sprite) && sprite != null)
+            if (HudData.Sprites.TryGetValue(name, out Sprite sprite) && sprite != null)
             {
                 return sprite;
             }
@@ -3284,6 +4408,75 @@ internal static class CharacterMenuService
     }
 
     // BloodcraftEntry is defined in Eclipse.Services.CharacterMenu.Interfaces.ICharacterMenuTab
+
+    /// <summary>
+    /// Holds UI references for a familiar box dropdown option.
+    /// </summary>
+    sealed class FamiliarBoxOptionRow
+    {
+        public GameObject Root { get; }
+        public Image Background { get; }
+        public TextMeshProUGUI NameText { get; }
+        public SimpleStunButton Button { get; }
+        public string LastBoxName { get; set; } = string.Empty;
+        public bool LastIsSelected { get; set; }
+        public bool LastButtonEnabled { get; set; }
+
+        public FamiliarBoxOptionRow(GameObject root, Image background, TextMeshProUGUI nameText, SimpleStunButton button)
+        {
+            Root = root;
+            Background = background;
+            NameText = nameText;
+            Button = button;
+        }
+    }
+
+    /// <summary>
+    /// Holds UI references for a familiar box list row.
+    /// </summary>
+    sealed class FamiliarBoxRow
+    {
+        public GameObject Root { get; }
+        public Image Background { get; }
+        public Image Icon { get; }
+        public TextMeshProUGUI NameText { get; }
+        public TextMeshProUGUI LevelText { get; }
+        public SimpleStunButton Button { get; }
+        public int LastSlotIndex { get; set; } = -1;
+        public bool LastIsActive { get; set; }
+        public bool LastButtonEnabled { get; set; }
+
+        public FamiliarBoxRow(GameObject root, Image background, Image icon, TextMeshProUGUI nameText, TextMeshProUGUI levelText, SimpleStunButton button)
+        {
+            Root = root;
+            Background = background;
+            Icon = icon;
+            NameText = nameText;
+            LevelText = levelText;
+            Button = button;
+        }
+    }
+
+    /// <summary>
+    /// Holds familiar box list data.
+    /// </summary>
+    readonly struct FamiliarBoxEntry
+    {
+        public int SlotIndex { get; }
+        public string Name { get; }
+        public int Level { get; }
+        public bool IsActive { get; }
+        public bool IsPlaceholder { get; }
+
+        public FamiliarBoxEntry(int slotIndex, string name, int level, bool isActive, bool isPlaceholder)
+        {
+            SlotIndex = slotIndex;
+            Name = name;
+            Level = level;
+            IsActive = isActive;
+            IsPlaceholder = isPlaceholder;
+        }
+    }
 
     /// <summary>
     /// Holds UI references for a profession row entry.

@@ -101,10 +101,17 @@ internal static class ClientChatSystemPatch
                     ChatMessageServerEvent chatMessage = entity.Read<ChatMessageServerEvent>();
                     string message = chatMessage.MessageText.Value;
 
-                    if (chatMessage.MessageType.Equals(ServerChatMessageType.System) && CheckMAC(message, out string originalMessage))
+                    if (chatMessage.MessageType.Equals(ServerChatMessageType.System))
                     {
-                        HandleServerMessage(originalMessage);
-                        EntityManager.DestroyEntity(entity);
+                        if (CheckMAC(message, out string originalMessage))
+                        {
+                            HandleServerMessage(originalMessage);
+                            EntityManager.DestroyEntity(entity);
+                        }
+                        else
+                        {
+                            DataService.TryParseFamiliarBoxChatMessage(message);
+                        }
                     }
                 }
             }

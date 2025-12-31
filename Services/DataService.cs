@@ -1,5 +1,7 @@
 ﻿using Stunlock.Core;
+using System;
 using System.Globalization;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using static Eclipse.Services.CanvasService.DataHUD;
 
@@ -287,9 +289,18 @@ internal static class DataService
     public static bool _familiarSystemEnabled;
     public static bool _familiarBattlesEnabled;
     public static string _familiarActiveBattleGroup = string.Empty;
+    public static string _familiarActiveBox = string.Empty;
     public static bool _statBonusDataReady;
     public static WeaponStatBonusData _weaponStatBonusData;
     public static readonly List<FamiliarBattleGroupData> _familiarBattleGroups = [];
+    public static readonly List<string> _familiarBoxNames = [];
+    public static readonly List<FamiliarBoxEntryData> _familiarBoxEntries = [];
+    static bool _familiarBoxListCaptureActive;
+    static bool _familiarBoxEntriesCaptureActive;
+    static readonly Regex FamiliarColorTagRegex = new(@"<\/?color[^>]*>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    static readonly Regex FamiliarBoxEntryRegex = new(
+        @"^\s*(?<slot>\d+)\s*\|\s*(?<name>.+?)\s*\[(?<level>\d+)\]\s*(\[(?<prestige>\d+)\])?\s*$",
+        RegexOptions.Compiled);
     public class ProfessionData(string enchantingProgress, string enchantingLevel, string alchemyProgress, string alchemyLevel,
         string harvestingProgress, string harvestingLevel, string blacksmithingProgress, string blacksmithingLevel,
         string tailoringProgress, string tailoringLevel, string woodcuttingProgress, string woodcuttingLevel, string miningProgress,
@@ -344,6 +355,14 @@ internal static class DataService
         public int Prestige { get; set; } = int.Parse(prestige, CultureInfo.InvariantCulture);
         public string FamiliarName { get; set; } = !string.IsNullOrEmpty(familiarName) ? familiarName : "Familiar";
         public List<string> FamiliarStats { get; set; } = !string.IsNullOrEmpty(familiarStats) ? [..new List<string> { familiarStats[..4], familiarStats[4..7], familiarStats[7..] }.Select(stat => int.Parse(stat, CultureInfo.InvariantCulture).ToString())] : ["", "", ""];
+    }
+    public class FamiliarBoxEntryData(int slotIndex, string name, int level, int prestige, bool isShiny)
+    {
+        public int SlotIndex { get; } = slotIndex;
+        public string Name { get; } = name;
+        public int Level { get; } = level;
+        public int Prestige { get; } = prestige;
+        public bool IsShiny { get; } = isShiny;
     }
     public class ShiftSpellData(string index)
     {
@@ -847,6 +866,176 @@ internal static class DataService
             Core.Log.LogWarning($"Failed to parse familiar battle data: {ex}");
         }
     }
+
+    /// <summary>
+    /// Parses familiar box data from system chat replies.
+    /// </summary>
+    /// <param name="message">The chat message to inspect.</param>
+    /// <returns>True when the message was handled as familiar box data.</returns>
+    public static bool TryParseFamiliarBoxChatMessage(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return false;
+        }
+
+        string cleanMessage = StripFamiliarColorTags(message).Trim();
+        if (string.IsNullOrWhiteSpace(cleanMessage))
+        {
+            return false;
+        }
+
+        if (cleanMessage.Equals("Familiar Boxes:", StringComparison.OrdinalIgnoreCase))
+        {
+            _familiarBoxNames.Clear();
+            _familiarBoxListCaptureActive = true;
+            _familiarBoxEntriesCaptureActive = false;
+            return true;
+        }
+
+        if (cleanMessage.StartsWith("Box Selected -", StringComparison.OrdinalIgnoreCase))
+        {
+            string boxName = cleanMessage.Replace("Box Selected -", string.Empty, StringComparison.OrdinalIgnoreCase).Trim();
+            if (!string.IsNullOrWhiteSpace(boxName))
+            {
+                _familiarActiveBox = boxName;
+            }
+            _familiarBoxEntries.Clear();
+            _familiarBoxEntriesCaptureActive = false;
+            return true;
+        }
+
+        if (cleanMessage.Equals("Couldn't find active box!", StringComparison.OrdinalIgnoreCase))
+        {
+            _familiarActiveBox = string.Empty;
+            _familiarBoxEntries.Clear();
+            _familiarBoxEntriesCaptureActive = false;
+            return true;
+        }
+
+        if (cleanMessage.Equals("You don't have any unlocks yet!", StringComparison.OrdinalIgnoreCase))
+        {
+            _familiarBoxNames.Clear();
+            _familiarBoxListCaptureActive = false;
+            return true;
+        }
+
+        if (IsFamiliarBoxHeader(message, cleanMessage))
+        {
+            _familiarActiveBox = cleanMessage.TrimEnd(':').Trim();
+            _familiarBoxEntries.Clear();
+            _familiarBoxEntriesCaptureActive = true;
+            _familiarBoxListCaptureActive = false;
+            return true;
+        }
+
+        if (_familiarBoxListCaptureActive)
+        {
+            if (!message.Contains("color=white", StringComparison.OrdinalIgnoreCase))
+            {
+                _familiarBoxListCaptureActive = false;
+                return false;
+            }
+
+            bool parsed = TryParseFamiliarBoxListLine(cleanMessage);
+            if (!parsed)
+            {
+                _familiarBoxListCaptureActive = false;
+            }
+            return parsed;
+        }
+
+        if (_familiarBoxEntriesCaptureActive)
+        {
+            bool parsed = TryParseFamiliarBoxEntry(cleanMessage);
+            if (!parsed)
+            {
+                _familiarBoxEntriesCaptureActive = false;
+            }
+            return parsed;
+        }
+
+        return false;
+    }
+
+    static bool IsFamiliarBoxHeader(string rawMessage, string cleanMessage)
+    {
+        if (!rawMessage.Contains("color=white", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!cleanMessage.EndsWith(":", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return !cleanMessage.Equals("Familiar Boxes:", StringComparison.OrdinalIgnoreCase);
+    }
+
+    static bool TryParseFamiliarBoxListLine(string cleanMessage)
+    {
+        if (string.IsNullOrWhiteSpace(cleanMessage))
+        {
+            return false;
+        }
+
+        string[] parts = cleanMessage.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length == 0)
+        {
+            return false;
+        }
+
+        foreach (string part in parts)
+        {
+            if (!string.IsNullOrWhiteSpace(part))
+            {
+                _familiarBoxNames.Add(part);
+            }
+        }
+
+        return true;
+    }
+
+    static bool TryParseFamiliarBoxEntry(string cleanMessage)
+    {
+        Match match = FamiliarBoxEntryRegex.Match(cleanMessage);
+        if (!match.Success)
+        {
+            return false;
+        }
+
+        int slotIndex = 0;
+        if (match.Groups["slot"].Success)
+        {
+            int.TryParse(match.Groups["slot"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out slotIndex);
+        }
+
+        string name = match.Groups["name"].Value.Trim();
+        bool isShiny = false;
+        if (name.EndsWith("*", StringComparison.Ordinal))
+        {
+            isShiny = true;
+            name = name.TrimEnd('*').TrimEnd();
+        }
+
+        if (!int.TryParse(match.Groups["level"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int level))
+        {
+            level = 0;
+        }
+
+        int prestige = 0;
+        if (match.Groups["prestige"].Success)
+        {
+            int.TryParse(match.Groups["prestige"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out prestige);
+        }
+
+        _familiarBoxEntries.Add(new FamiliarBoxEntryData(slotIndex, name, level, prestige, isShiny));
+        return true;
+    }
+
+    static string StripFamiliarColorTags(string message)
+        => FamiliarColorTagRegex.Replace(message, string.Empty);
     /// <summary>
     /// Parses the weapon stat bonus payload and updates cached data.
     /// </summary>
