@@ -7,11 +7,11 @@ using ProjectM.UI;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
+using static Eclipse.Services.CanvasService.DataHUD;
 using static Eclipse.Services.DataService;
 
 namespace Eclipse.Services.CharacterMenu.Tabs;
@@ -26,7 +26,7 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
 
     private const float FamiliarSectionSpacing = 8f;
     private const float FamiliarRightColumnSpacing = 0f;
-    private const float FamiliarColumnSpacing = 4f;
+    private const float FamiliarColumnSpacing = 2f;
     private const float FamiliarCardMinHeight = 140f;
     private const float FamiliarCardInnerSpacing = 4f;
     private const int FamiliarCardPaddingHorizontal = 10;
@@ -37,13 +37,9 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
     private const int FamiliarActionPaddingVertical = 4;
     private const float FamiliarCommandWidth = 80f;
     private const float FamiliarProgressHeight = 6f;
-    private const float FamiliarBindCellWidth = 46f;
-    private const float FamiliarBindCellHeight = 26f;
-    private const float FamiliarBindCellSpacing = 6f;
-    private const int FamiliarBindColumns = 5;
     private const int FamiliarBoxSlotCount = 10;
     private const float FamiliarTextHeightMultiplier = 1.2f;
-    private const float FamiliarColumnDividerWidth = 4f;
+    private const float FamiliarColumnDividerWidth = 2f;
     private const float FamiliarColumnDividerHeightPercent = 0.8f;
     private const float FamiliarHeaderIconSize = 18f;
     private const float FamiliarActionIconSize = 16f;
@@ -58,13 +54,11 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
     private const float FamiliarSectionFontScale = 0.58f;
     private const float FamiliarActionFontScale = 0.56f;
     private const float FamiliarCommandFontScale = 0.52f;
-    private const float FamiliarBindFontScale = 0.56f;
     private const float FamiliarSubHeaderFontScale = 0.52f;
     private const int FamiliarCommandPaddingHorizontal = 6;
     private const int FamiliarCommandPaddingVertical = 2;
     private const float FamiliarBoxRefreshCooldownSeconds = 8f;
     private const float FamiliarBoxSwitchDelaySeconds = 2.1f;
-    private const string FamiliarEmptySlotLabel = "Empty Slot";
 
     #endregion
 
@@ -93,7 +87,6 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
     private static readonly string[] FamiliarDividerSpriteNames = ["Divider_Horizontal", "Window_Divider_Horizontal_V_Red"];
     private static readonly string[] FamiliarHeaderSpriteNames = ["Act_BG", "TabGradient", "Window_Box_Background"];
     private static readonly string[] FamiliarColumnDividerSpriteNames = ["ActionSlotDivider"];
-    private static readonly string[] FamiliarBindSpriteNames = ["SlotFrame_Smaller", "Slot_Normal", "ContainerSlot_Default"];
     private static readonly string[] FamiliarProgressBackgroundSpriteNames =
         ["SimpleProgressBar_Empty_Default", "SimpleProgressBar_Mask", "Attribute_TierIndicator_Fixed"];
     private static readonly string[] FamiliarProgressFillSpriteNames =
@@ -103,7 +96,6 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
     private static readonly string[] FamiliarDropdownArrowSpriteNames = ["Arrow", "FoldoutButton_Arrow"];
     private static readonly string[] FamiliarHeaderActiveIconSpriteNames = ["Portrait_Small_Smoke_AlphaWolf", "Portrait_Small_Smoke_Unknown"];
     private static readonly string[] FamiliarHeaderQuickIconSpriteNames = ["ActionWheel_InnerCircle_Gradient", "ActionWheel_InnerCircle_Gradient"];
-    private static readonly string[] FamiliarHeaderBindIconSpriteNames = ["SlotFrame_Smaller", "Slot_Normal"];
     private static readonly string[] FamiliarHeaderBoxIconSpriteNames = ["Box_InventoryExtraBagBG", "Window_Box_Background"];
     private static readonly string[] FamiliarHeaderDefaultIconSpriteNames = ["Stunlock_Icons_spellbook_blood", "IconBackground"];
     private static readonly string[] FamiliarActionIconCallSpriteNames = ["Icon_TakeItems", "Icon_DepositItems"];
@@ -344,7 +336,6 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         Transform rightColumn = CreateFamiliarColumn(topRow, "FamiliarRightColumn", FamiliarRightColumnSpacing);
 
         CreateFamiliarActiveCard(leftColumn, reference);
-        CreateFamiliarBindCard(leftColumn, reference);
         _ = CreateFamiliarDivider(leftColumn);
         CreateFamiliarAdvancedActions(leftColumn, reference);
 
@@ -466,21 +457,6 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         _boxListRoot = CreateFamiliarBoxList(card);
     }
 
-    private static void CreateFamiliarBindCard(Transform parent, TextMeshProUGUI reference)
-    {
-        RectTransform card = CreateFamiliarCard(parent, "FamiliarBindCard", stretchHeight: false);
-        if (card == null)
-        {
-            return;
-        }
-
-        _ = CreateFamiliarSectionLabel(card, reference, "Bind Familiar (1-10)", FamiliarHeaderBindIconSpriteNames);
-        UIFactory.AddSpacer(card, 8f);
-        _ = CreateFamiliarBindGrid(card, reference);
-        _ = CreateFamiliarText(card, reference, "Select a slot to bind.", FamiliarMetaFontScale,
-            FontStyles.Normal, TextAlignmentOptions.Center, FamiliarMetaColor);
-    }
-
     private static void CreateFamiliarAdvancedActions(Transform parent, TextMeshProUGUI reference)
     {
         _ = CreateFamiliarSectionLabel(parent, reference, "Advanced", FamiliarHeaderDefaultIconSpriteNames);
@@ -595,9 +571,9 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
                 iconLayout.minWidth = FamiliarHeaderIconSize;
                 iconLayout.preferredHeight = FamiliarHeaderIconSize;
                 iconLayout.minHeight = FamiliarHeaderIconSize;
-            }
-            else
-            {
+        }
+        else
+        {
                 iconRect.gameObject.SetActive(false);
             }
         }
@@ -1001,9 +977,9 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         }
     }
 
-    private static FamiliarBoxOptionRow CreateFamiliarBoxOptionRow(Transform parent, TextMeshProUGUI reference)
+    private FamiliarBoxOptionRow CreateFamiliarBoxOptionRow(Transform parent, TextMeshProUGUI reference)
     {
-        RectTransform rectTransform = CreateRectTransformObject($"FamiliarBoxOption_{Guid.NewGuid()}", parent);
+        RectTransform rectTransform = CreateRectTransformObject($"FamiliarBoxOption_{_boxOptionRows.Count + 1}", parent);
         if (rectTransform == null)
         {
             return null;
@@ -1381,64 +1357,6 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         string trimmed = value.Trim();
         string escaped = trimmed.Replace("\"", "\\\"");
         return escaped.Contains(' ') ? $"\"{escaped}\"" : escaped;
-    }
-
-    private static Transform CreateFamiliarBindGrid(Transform parent, TextMeshProUGUI reference)
-    {
-        RectTransform rectTransform = CreateRectTransformObject("FamiliarBindGrid", parent);
-        if (rectTransform == null)
-        {
-            return null;
-        }
-        rectTransform.anchorMin = new Vector2(0f, 1f);
-        rectTransform.anchorMax = new Vector2(1f, 1f);
-        rectTransform.pivot = new Vector2(0f, 1f);
-        rectTransform.offsetMin = Vector2.zero;
-        rectTransform.offsetMax = Vector2.zero;
-
-        GridLayoutGroup layout = rectTransform.gameObject.AddComponent<GridLayoutGroup>();
-        layout.cellSize = new Vector2(FamiliarBindCellWidth, FamiliarBindCellHeight);
-        layout.spacing = new Vector2(FamiliarBindCellSpacing, FamiliarBindCellSpacing);
-        layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        layout.constraintCount = FamiliarBindColumns;
-        layout.childAlignment = TextAnchor.UpperLeft;
-        layout.padding = CreatePadding(0, 0, 10, 4);
-
-        LayoutElement gridLayout = rectTransform.gameObject.AddComponent<LayoutElement>();
-        float gridHeight = (FamiliarBindCellHeight * 2f) + FamiliarBindCellSpacing + layout.padding.top + layout.padding.bottom;
-        gridLayout.preferredHeight = gridHeight;
-        gridLayout.minHeight = gridLayout.preferredHeight;
-
-        for (int i = 1; i <= 10; i++)
-        {
-            CreateFamiliarBindSlot(rectTransform, reference, i);
-        }
-
-        return rectTransform;
-    }
-
-    private static void CreateFamiliarBindSlot(Transform parent, TextMeshProUGUI reference, int slotIndex)
-    {
-        RectTransform rectTransform = CreateRectTransformObject($"FamiliarSlot_{slotIndex}", parent);
-        if (rectTransform == null)
-        {
-            return;
-        }
-
-        Image background = rectTransform.gameObject.AddComponent<Image>();
-        ApplySprite(background, FamiliarBindSpriteNames);
-        background.color = FamiliarActionBackgroundColor;
-        background.raycastTarget = true;
-
-        TextMeshProUGUI label = CreateFamiliarText(rectTransform, reference, slotIndex.ToString(CultureInfo.InvariantCulture),
-            FamiliarBindFontScale, FontStyles.Normal, TextAlignmentOptions.Center, Color.white);
-        if (label != null)
-        {
-            label.raycastTarget = false;
-        }
-
-        SimpleStunButton button = rectTransform.gameObject.AddComponent<SimpleStunButton>();
-        ConfigureCommandButton(button, $".fam b {slotIndex}", true);
     }
 
     private static RectTransform CreateFamiliarProgressBar(Transform parent, out Image fill)
