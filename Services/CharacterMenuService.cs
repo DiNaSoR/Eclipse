@@ -356,6 +356,7 @@ internal static class CharacterMenuService
     {
         // Reset the modular CharacterMenu system
         CharacterMenuIntegration.Reset();
+        _familiarsTab.Reset();
 
         inventorySubMenu = null;
         bloodcraftTab = null;
@@ -811,7 +812,7 @@ internal static class CharacterMenuService
 
         professionsRoot = CreateProfessionPanel(bodyRoot, referenceText);
         statBonusesRoot = CreateStatBonusesPanel(bodyRoot, referenceText);
-        familiarsRoot = CreateFamiliarsPanel(bodyRoot, referenceText);
+        familiarsRoot = _familiarsTab.CreatePanel(bodyRoot, entryStyle ?? referenceText);
         return tabRoot;
     }
 
@@ -3255,7 +3256,7 @@ internal static class CharacterMenuService
         else if (activeTab == BloodcraftTab.Familiars)
         {
             EnsureEntries(0);
-            UpdateFamiliarsPanel();
+            _familiarsTab.UpdatePanel();
         }
     }
 
@@ -3279,6 +3280,7 @@ internal static class CharacterMenuService
     static readonly PrestigeTab _prestigeTab = new();
     static readonly ExoformTab _exoformTab = new();
     static readonly BattlesTab _battlesTab = new();
+    static readonly FamiliarsTab _familiarsTab = new();
 
     // Note: AppendPrestigeEntries, AppendExoFormEntries, and AppendFamiliarBattleEntries
     // have been moved to their respective tab components in Services/CharacterMenu/Tabs/
