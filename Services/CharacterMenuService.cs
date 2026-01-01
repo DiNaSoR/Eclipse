@@ -103,6 +103,22 @@ internal static class CharacterMenuService
     static readonly Color FamiliarHeaderBackgroundColor = new(0.1f, 0.1f, 0.12f, 0.95f);
     static readonly string[] FamiliarHeaderSpriteNames = ["Act_BG", "TabGradient", "Window_Box_Background"];
     static readonly string[] SectionDividerSpriteNames = ["Divider_Horizontal", "Window_Divider_Horizontal_V_Red"];
+    static readonly string[] StatBonusesDefaultWeaponIconSpriteNames = ["Poneti_Icon_Sword_v2_48", "strength_level_icon"];
+
+    static readonly Dictionary<string, string[]> WeaponTypeIconSpriteNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "Sword", ["Poneti_Icon_Sword_v2_48", "Stunlock_Icon_BoneSword01"] },
+        { "Axe", ["Poneti_Icon_Axe_v2_04", "Stunlock_Icon_BoneAxe01"] },
+        { "Mace", ["Poneti_Icon_Hammer_30", "Stunlock_Icon_BoneMace01"] },
+        { "Spear", ["Poneti_Icon_Spear_v2_01", "Poneti_Icon_Sword_v2_48"] },
+        { "Crossbow", ["Poneti_Icon_Crossbow_v2_01", "Poneti_Icon_Bow_v2_01"] },
+        { "GreatSword", ["Poneti_Icon_Greatsword_v2_01", "Poneti_Icon_Sword_v2_48"] },
+        { "Slashers", ["Poneti_Icon_Dagger_v2_01", "Poneti_Icon_Sword_v2_48"] },
+        { "Pistols", ["Poneti_Icon_Pistol_v2_01", "Poneti_Icon_Crossbow_v2_01"] },
+        { "Reaper", ["Poneti_Icon_Scythe_v2_01", "Poneti_Icon_Axe_v2_04"] },
+        { "Longbow", ["Poneti_Icon_Bow_v2_01", "Poneti_Icon_Crossbow_v2_01"] },
+        { "Whip", ["Poneti_Icon_Whip_v2_01", "Poneti_Icon_Sword_v2_48"] }
+    };
 
     // Bloodcraft stats summary in Equipment tab
     static TextMeshProUGUI bloodcraftStatsSummary;
@@ -1185,13 +1201,16 @@ internal static class CharacterMenuService
         rowLayout.preferredHeight = 48f;
         rowLayout.minHeight = 48f;
 
-        // Weapon icon placeholder
+        // Weapon icon
         RectTransform iconRect = CreateRectTransformObject("WeaponIcon", rectTransform);
         if (iconRect != null)
         {
             iconRect.sizeDelta = new Vector2(40f, 40f);
             Image iconImage = iconRect.gameObject.AddComponent<Image>();
-            iconImage.color = new Color(1f, 1f, 1f, 0.2f);
+            ApplySprite(iconImage, StatBonusesDefaultWeaponIconSpriteNames);
+            iconImage.type = Image.Type.Simple;
+            iconImage.preserveAspect = true;
+            iconImage.color = new Color(1f, 1f, 1f, 0.9f);
             statBonusesWeaponImage = iconImage;
             iconImage.raycastTarget = false;
             LayoutElement iconLayout = iconRect.gameObject.AddComponent<LayoutElement>();
@@ -1841,19 +1860,15 @@ internal static class CharacterMenuService
                 statBonusesWeaponText.text = data.WeaponType;
             }
 
-            /*
-            if (statBonusesWeaponImage != null)
+            // Update weapon icon based on weapon type
+            if (statBonusesWeaponImage != null && !string.IsNullOrEmpty(data.WeaponType))
             {
-                // Try set icon from equipped weapon if it matches
-                // Commented out due to build errors finding ItemIcon/Entity types correctly in this context
-                // var weaponEntity = Core.LocalCharacter.Read<Equipment>().WeaponSlot.SlotEntity._Entity;
-                // if (weaponEntity != Entity.Null && weaponEntity.Has<ItemIcon>())
-                // {
-                //    statBonusesWeaponImage.sprite = weaponEntity.Read<ItemIcon>().Icon;
-                //    statBonusesWeaponImage.color = Color.white;
-                // }
+                string[] iconSprites = GetWeaponTypeIconSprites(data.WeaponType);
+                ApplySprite(statBonusesWeaponImage, iconSprites);
+                statBonusesWeaponImage.type = Image.Type.Simple;
+                statBonusesWeaponImage.preserveAspect = true;
+                statBonusesWeaponImage.color = new Color(1f, 1f, 1f, 0.9f);
             }
-            */
 
             if (statBonusesCountText != null)
             {
@@ -2428,6 +2443,24 @@ internal static class CharacterMenuService
 
         image.sprite = sprite;
         image.type = Image.Type.Sliced;
+    }
+
+    /// <summary>
+    /// Gets the sprite names for a given weapon type.
+    /// </summary>
+    static string[] GetWeaponTypeIconSprites(string weaponType)
+    {
+        if (string.IsNullOrEmpty(weaponType))
+        {
+            return StatBonusesDefaultWeaponIconSpriteNames;
+        }
+
+        if (WeaponTypeIconSpriteNames.TryGetValue(weaponType, out string[] sprites))
+        {
+            return sprites;
+        }
+
+        return StatBonusesDefaultWeaponIconSpriteNames;
     }
 
     /// <summary>

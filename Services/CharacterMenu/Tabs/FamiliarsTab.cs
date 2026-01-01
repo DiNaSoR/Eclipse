@@ -81,6 +81,11 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
     private static readonly Color FamiliarBondBackgroundColor = new(0f, 0f, 0f, 0.35f);
     private static readonly Color FamiliarHeaderBackgroundColor = new(0.1f, 0.1f, 0.12f, 0.95f);
     private static readonly Color FamiliarColumnDividerColor = new(1f, 1f, 1f, 0.4f);
+    private static readonly Color FamiliarToggleEnabledTextColor = new(0.35f, 0.9f, 0.4f, 1f);
+    private static readonly Color FamiliarToggleDisabledTextColor = new(0.9f, 0.35f, 0.35f, 1f);
+    private static readonly Color FamiliarShinyNameColorA = new(1f, 0.86f, 0.25f, 1f);
+    private static readonly Color FamiliarShinyNameColorB = new(1f, 1f, 1f, 1f);
+    private const float FamiliarShinyPulseSpeed = 4f;
 
     private static readonly string[] FamiliarCardSpriteNames = ["Window_Box", "Window_Box_Background", "SimpleBox_Normal"];
     private static readonly string[] FamiliarRowSpriteNames = ["Window_Box_Background", "TabGradient", "SimpleBox_Normal"];
@@ -127,6 +132,8 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
     private TextMeshProUGUI _activeMetaText;
     private Image _bondFill;
     private Image _activePortrait;
+    private TextMeshProUGUI _toggleCombatModeLabel;
+    private TextMeshProUGUI _toggleEmoteActionsLabel;
 
     private TextMeshProUGUI _boxSelectedText;
     private Transform _boxDropdownListRoot;
@@ -254,6 +261,7 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
             _bondFill.fillAmount = isMaxLevel ? 1f : progress;
         }
 
+        UpdateToggleIndicators();
         UpdateFamiliarBoxPanel(hasFamiliar, displayName);
     }
 
@@ -281,6 +289,8 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         _activeMetaText = null;
         _bondFill = null;
         _activePortrait = null;
+        _toggleCombatModeLabel = null;
+        _toggleEmoteActionsLabel = null;
         _boxSelectedText = null;
         _boxDropdownListRoot = null;
         _boxListRoot = null;
@@ -420,7 +430,7 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         return image;
     }
 
-    private static void CreateFamiliarQuickActions(Transform parent, TextMeshProUGUI reference)
+    private void CreateFamiliarQuickActions(Transform parent, TextMeshProUGUI reference)
     {
         RectTransform card = CreateFamiliarCard(parent, "FamiliarQuickActionsCard", stretchHeight: false, enforceMinimumHeight: false);
         if (card == null)
@@ -435,9 +445,9 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
             return;
         }
 
-        CreateFamiliarActionRow(listRoot, reference, "Call / Dismiss Familiar", ".fam t", FamiliarActionIconCallSpriteNames, true);
-        CreateFamiliarActionRow(listRoot, reference, "Toggle Combat Mode", ".fam c", FamiliarActionIconToggleSpriteNames, false);
-        CreateFamiliarActionRow(listRoot, reference, "Unbind Familiar", ".fam ub", FamiliarActionIconUnbindSpriteNames, false);
+        _ = CreateFamiliarActionRow(listRoot, reference, "Call / Dismiss Familiar", ".fam t", FamiliarActionIconCallSpriteNames, true);
+        _toggleCombatModeLabel = CreateFamiliarActionRow(listRoot, reference, "Toggle Combat Mode", ".fam c", FamiliarActionIconToggleSpriteNames, false);
+        _ = CreateFamiliarActionRow(listRoot, reference, "Unbind Familiar", ".fam ub", FamiliarActionIconUnbindSpriteNames, false);
     }
 
     private void CreateFamiliarBoxCard(Transform parent, TextMeshProUGUI reference)
@@ -457,7 +467,7 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         _boxListRoot = CreateFamiliarBoxList(card);
     }
 
-    private static void CreateFamiliarAdvancedActions(Transform parent, TextMeshProUGUI reference)
+    private void CreateFamiliarAdvancedActions(Transform parent, TextMeshProUGUI reference)
     {
         _ = CreateFamiliarSectionLabel(parent, reference, "Advanced", FamiliarHeaderDefaultIconSpriteNames);
         Transform listRoot = CreateFamiliarActionList(parent);
@@ -466,12 +476,12 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
             return;
         }
 
-        CreateFamiliarActionRow(listRoot, reference, "Search Familiars", ".fam s", FamiliarActionIconSearchSpriteNames, false);
-        CreateFamiliarActionRow(listRoot, reference, "View Overflow", ".fam of", FamiliarActionIconOverflowSpriteNames, false);
-        CreateFamiliarActionRow(listRoot, reference, "Toggle Emote Actions", ".fam e", FamiliarActionIconEmoteSpriteNames, false);
-        CreateFamiliarActionRow(listRoot, reference, "Show Emote Actions", ".fam actions", FamiliarActionIconShowSpriteNames, false);
-        CreateFamiliarActionRow(listRoot, reference, "Get Familiar Level", ".fam gl", FamiliarActionIconLevelSpriteNames, false);
-        CreateFamiliarActionRow(listRoot, reference, "Prestige Familiar", ".fam pr", FamiliarActionIconPrestigeSpriteNames, false);
+        _ = CreateFamiliarActionRow(listRoot, reference, "Search Familiars", ".fam s", FamiliarActionIconSearchSpriteNames, false);
+        _ = CreateFamiliarActionRow(listRoot, reference, "View Overflow", ".fam of", FamiliarActionIconOverflowSpriteNames, false);
+        _toggleEmoteActionsLabel = CreateFamiliarActionRow(listRoot, reference, "Toggle Emote Actions", ".fam e", FamiliarActionIconEmoteSpriteNames, false);
+        _ = CreateFamiliarActionRow(listRoot, reference, "Show Emote Actions", ".fam actions", FamiliarActionIconShowSpriteNames, false);
+        _ = CreateFamiliarActionRow(listRoot, reference, "Get Familiar Level", ".fam gl", FamiliarActionIconLevelSpriteNames, false);
+        _ = CreateFamiliarActionRow(listRoot, reference, "Prestige Familiar", ".fam pr", FamiliarActionIconPrestigeSpriteNames, false);
     }
 
     private static RectTransform CreateFamiliarCard(Transform parent, string name, bool stretchHeight, bool enforceMinimumHeight = true)
@@ -618,7 +628,7 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         return rectTransform;
     }
 
-    private static void CreateFamiliarActionRow(
+    private static TextMeshProUGUI CreateFamiliarActionRow(
         Transform parent,
         TextMeshProUGUI reference,
         string label,
@@ -629,7 +639,7 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         RectTransform rectTransform = CreateRectTransformObject("FamiliarActionRow", parent);
         if (rectTransform == null)
         {
-            return;
+            return null;
         }
         rectTransform.anchorMin = new Vector2(0f, 1f);
         rectTransform.anchorMax = new Vector2(1f, 1f);
@@ -680,6 +690,7 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
 
         SimpleStunButton button = rectTransform.gameObject.AddComponent<SimpleStunButton>();
         ConfigureCommandButton(button, command, true);
+        return labelText;
     }
 
     private static Image CreateFamiliarIcon(Transform parent, float size, string[] spriteNames, Color color)
@@ -1214,6 +1225,17 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
             {
                 row.NameText.text = entry.Name;
                 row.NameText.alpha = entry.IsPlaceholder ? 0.6f : 1f;
+
+                // Shiny familiars: animated highlight on the name text
+                if (!entry.IsPlaceholder && entry.IsShiny)
+                {
+                    float t = 0.5f + (0.5f * Mathf.Sin((Time.realtimeSinceStartup * FamiliarShinyPulseSpeed) + (entry.SlotIndex * 0.35f)));
+                    row.NameText.color = Color.Lerp(FamiliarShinyNameColorA, FamiliarShinyNameColorB, t);
+                }
+                else
+                {
+                    row.NameText.color = FamiliarBoxRowTextColor;
+                }
             }
 
             if (row.LevelText != null)
@@ -1519,6 +1541,36 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
 
     #region Familiar Panel Updates
 
+    private void UpdateToggleIndicators()
+    {
+        ApplyToggleIndicator(_toggleCombatModeLabel, "Toggle Combat Mode", _familiarCombatModeEnabled);
+        ApplyToggleIndicator(_toggleEmoteActionsLabel, "Toggle Emote Actions", _familiarEmoteActionsEnabled);
+    }
+
+    private static void ApplyToggleIndicator(TextMeshProUGUI label, string baseLabel, bool? enabled)
+    {
+        if (label == null)
+        {
+            return;
+        }
+
+        if (enabled == true)
+        {
+            label.text = $"{baseLabel} (ON)";
+            label.color = FamiliarToggleEnabledTextColor;
+        }
+        else if (enabled == false)
+        {
+            label.text = $"{baseLabel} (OFF)";
+            label.color = FamiliarToggleDisabledTextColor;
+        }
+        else
+        {
+            label.text = baseLabel;
+            label.color = Color.white;
+        }
+    }
+
     private void UpdateFamiliarBoxPanel(bool hasFamiliar, string displayName)
     {
         bool hasName = !string.IsNullOrWhiteSpace(displayName);
@@ -1597,11 +1649,11 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
             {
                 bool isActive = hasFamiliar && slotEntry.Name.Equals(displayName, StringComparison.OrdinalIgnoreCase);
                 int level = isActive ? _familiarLevel : slotEntry.Level;
-                entries.Add(new FamiliarBoxEntry(slotIndex, slotEntry.Name, level, isActive, false));
+                entries.Add(new FamiliarBoxEntry(slotIndex, slotEntry.Name, level, isActive, false, slotEntry.IsShiny));
             }
             else
             {
-                entries.Add(new FamiliarBoxEntry(slotIndex, string.Empty, 0, false, true));
+                entries.Add(new FamiliarBoxEntry(slotIndex, string.Empty, 0, false, true, false));
             }
         }
 
@@ -1819,14 +1871,16 @@ internal class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         public int Level { get; }
         public bool IsActive { get; }
         public bool IsPlaceholder { get; }
+        public bool IsShiny { get; }
 
-        public FamiliarBoxEntry(int slotIndex, string name, int level, bool isActive, bool isPlaceholder)
+        public FamiliarBoxEntry(int slotIndex, string name, int level, bool isActive, bool isPlaceholder, bool isShiny)
         {
             SlotIndex = slotIndex;
             Name = name;
             Level = level;
             IsActive = isActive;
             IsPlaceholder = isPlaceholder;
+            IsShiny = isShiny;
         }
     }
 

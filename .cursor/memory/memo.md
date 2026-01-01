@@ -1,15 +1,15 @@
 ﻿# Project Memo
 
-Last updated: 2025-12-31
+Last updated: 2026-01-02
 
 ## V Rising Mod – Familiars (current truth)
 
 - Ownership:
-  - UI: `Services/CharacterMenuService.cs`
+  - UI: `Services/CharacterMenu/Tabs/FamiliarsTab.cs` (created/updated via `Services/CharacterMenuService.cs`)
   - Box/chat updates: `Services/DataService.cs` + `Patches/ClientChatSystemPatch.cs`
   - Sprite allowlist: `Services/HUD/Shared/HudData.cs`
 
-- Familiars UI is owned by `Services/CharacterMenuService.cs` (single owner; avoid parallel UI implementations).
+- Familiars UI is owned by `Services/CharacterMenu/Tabs/FamiliarsTab.cs` (single owner; avoid parallel UI implementations).
 
 - Familiars box live updates are driven by chat parsing:
   - Parsing: `Services/DataService.cs`

@@ -290,6 +290,8 @@ internal static class DataService
     public static bool _familiarBattlesEnabled;
     public static string _familiarActiveBattleGroup = string.Empty;
     public static string _familiarActiveBox = string.Empty;
+    public static bool? _familiarCombatModeEnabled;
+    public static bool? _familiarEmoteActionsEnabled;
     public static bool _statBonusDataReady;
     public static WeaponStatBonusData _weaponStatBonusData;
     public static readonly List<FamiliarBattleGroupData> _familiarBattleGroups = [];
@@ -885,6 +887,11 @@ internal static class DataService
             return false;
         }
 
+        if (TryParseFamiliarToggleChatMessage(cleanMessage))
+        {
+            return true;
+        }
+
         if (cleanMessage.Equals("Familiar Boxes:", StringComparison.OrdinalIgnoreCase))
         {
             _familiarBoxNames.Clear();
@@ -953,6 +960,56 @@ internal static class DataService
                 _familiarBoxEntriesCaptureActive = false;
             }
             return parsed;
+        }
+
+        return false;
+    }
+
+    static bool TryParseFamiliarToggleChatMessage(string cleanMessage)
+    {
+        if (string.IsNullOrWhiteSpace(cleanMessage))
+        {
+            return false;
+        }
+
+        if (cleanMessage.StartsWith("Emote actions", StringComparison.OrdinalIgnoreCase))
+        {
+            if (cleanMessage.Contains("enabled", StringComparison.OrdinalIgnoreCase))
+            {
+                _familiarEmoteActionsEnabled = true;
+                return true;
+            }
+
+            if (cleanMessage.Contains("disabled", StringComparison.OrdinalIgnoreCase))
+            {
+                _familiarEmoteActionsEnabled = false;
+                return true;
+            }
+
+            return false;
+        }
+
+        if (cleanMessage.StartsWith("Familiar combat", StringComparison.OrdinalIgnoreCase))
+        {
+            if (cleanMessage.Contains("not enabled", StringComparison.OrdinalIgnoreCase))
+            {
+                _familiarCombatModeEnabled = false;
+                return true;
+            }
+
+            if (cleanMessage.Contains("enabled", StringComparison.OrdinalIgnoreCase))
+            {
+                _familiarCombatModeEnabled = true;
+                return true;
+            }
+
+            if (cleanMessage.Contains("disabled", StringComparison.OrdinalIgnoreCase))
+            {
+                _familiarCombatModeEnabled = false;
+                return true;
+            }
+
+            return false;
         }
 
         return false;
