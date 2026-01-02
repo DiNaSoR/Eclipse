@@ -75,6 +75,17 @@ Last updated: 2026-01-02
 
 ---
 
+## V Rising Mod – Professions (current truth)
+
+- Ownership:
+  - UI: `Services/CharacterMenu/Tabs/ProfessionsTab.cs` (panel-based; created/updated via `Services/CharacterMenuService.cs`)
+  - Data source: `Services/DataService.cs` (`ParsePlayerData` → `_enchanting*`, `_alchemy*`, etc.)
+
+- Notes:
+  - When `Plugin.Professions` is disabled, the tab shows “Profession UI disabled.”
+
+---
+
 ## Eclipse modular architecture (current truth)
 
 - Ownership:

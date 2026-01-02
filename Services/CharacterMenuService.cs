@@ -5,8 +5,6 @@ using ProjectM.UI;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Text.RegularExpressions;
 using Stunlock.Core;
 using TMPro;
 using UnityEngine;
@@ -53,15 +51,6 @@ internal static class CharacterMenuService
     const int SubTabPaddingTop = 0;
     const int SubTabPaddingBottom = 0;
     const float SubTabSpacing = 0f;
-    const float ProfessionHeaderFontScale = 0.93f;
-    const float ProfessionFontScale = 0.82f;
-    const float ProfessionRowHeight = 30f;
-    const float ProfessionIconSize = 24f;
-    const float ProfessionNameWidth = 160f;
-    const float ProfessionLevelWidth = 52f;
-    const float ProfessionProgressWidth = 160f;
-    const float ProfessionProgressHeight = 6f;
-    const float ProfessionPercentWidth = 52f;
 
     static InventorySubMenu inventorySubMenu;
     static RectTransform bloodcraftTab;
@@ -79,10 +68,6 @@ internal static class CharacterMenuService
     static readonly List<SimpleStunButton> subTabButtons = [];
     static readonly List<TMP_Text> subTabLabels = [];
     static Transform professionsRoot;
-    static Transform professionsListRoot;
-    static TextMeshProUGUI professionsStatusText;
-    static TextMeshProUGUI professionsSummaryText;
-    static readonly List<ProfessionRow> professionRows = [];
     static Transform prestigeRoot;
     static Transform exoformRoot;
     static Transform statBonusesRoot;
@@ -247,6 +232,7 @@ internal static class CharacterMenuService
         CharacterMenuIntegration.Reset();
         _familiarsTab.Reset();
         _statBonusesTab.Reset();
+        _professionsTab.Reset();
         _exoformTab.Reset();
         _prestigeTab.Reset();
 
@@ -266,10 +252,6 @@ internal static class CharacterMenuService
         subTabButtons.Clear();
         subTabLabels.Clear();
         professionsRoot = null;
-        professionsListRoot = null;
-        professionsStatusText = null;
-        professionsSummaryText = null;
-        professionRows.Clear();
         prestigeRoot = null;
         statBonusesRoot = null;
         exoformRoot = null;
@@ -683,7 +665,7 @@ internal static class CharacterMenuService
             entryTemplate = CreateEntryTemplate(entriesRoot, referenceText);
         }
 
-        professionsRoot = CreateProfessionPanel(bodyRoot, referenceText);
+        professionsRoot = _professionsTab.CreatePanel(bodyRoot, referenceText);
         prestigeRoot = _prestigeTab.CreatePanel(bodyRoot, referenceText);
         exoformRoot = _exoformTab.CreatePanel(bodyRoot, referenceText);
         statBonusesRoot = _statBonusesTab.CreatePanel(bodyRoot, referenceText);
@@ -1080,36 +1062,6 @@ internal static class CharacterMenuService
         => UIFactory.ConfigureSubTabLabelRect(label);
 
     /// <summary>
-    /// Creates the professions panel container.
-    /// </summary>
-    /// <param name="parent">The parent transform to attach the panel.</param>
-    /// <param name="reference">Reference text used to style labels.</param>
-    /// <returns>The professions panel root transform.</returns>
-    static Transform CreateProfessionPanel(Transform parent, TextMeshProUGUI reference)
-    {
-        RectTransform rectTransform = CreateRectTransformObject("BloodcraftProfessions", parent);
-        if (rectTransform == null)
-        {
-            return null;
-        }
-        rectTransform.anchorMin = new Vector2(0f, 1f);
-        rectTransform.anchorMax = new Vector2(1f, 1f);
-        rectTransform.pivot = new Vector2(0f, 1f);
-        rectTransform.offsetMin = Vector2.zero;
-        rectTransform.offsetMax = Vector2.zero;
-        EnsureVerticalLayout(rectTransform);
-
-        professionsStatusText = CreateSectionSubHeader(rectTransform, reference, string.Empty);
-        CreateProfessionHeaderRow(rectTransform, reference);
-        professionsListRoot = CreateProfessionListRoot(rectTransform);
-        _ = CreateDividerLine(rectTransform);
-        professionsSummaryText = CreateSectionSubHeader(rectTransform, reference, string.Empty);
-
-        rectTransform.gameObject.SetActive(false);
-        return rectTransform;
-    }
-
-    /// <summary>
     /// Creates a divider line for section separation.
     /// </summary>
     /// <param name="parent">The parent transform to attach the divider.</param>
@@ -1125,7 +1077,27 @@ internal static class CharacterMenuService
         rectTransform.pivot = new Vector2(0f, 1f);
 
         Image image = rectTransform.gameObject.AddComponent<Image>();
-        ApplySprite(image, SectionDividerSpriteNames);
+        Sprite dividerSprite = null;
+        for (int i = 0; i < SectionDividerSpriteNames.Length; i++)
+        {
+            string spriteName = SectionDividerSpriteNames[i];
+            if (string.IsNullOrWhiteSpace(spriteName))
+            {
+                continue;
+            }
+
+            if (HudData.Sprites.TryGetValue(spriteName, out Sprite sprite) && sprite != null)
+            {
+                dividerSprite = sprite;
+                break;
+            }
+        }
+
+        image.sprite = dividerSprite;
+        if (dividerSprite != null)
+        {
+            image.type = Image.Type.Sliced;
+        }
         image.color = new Color(1f, 1f, 1f, 0.7f);
         image.raycastTarget = false;
 
@@ -1136,157 +1108,8 @@ internal static class CharacterMenuService
         return rectTransform;
     }
 
-    /// <summary>
-    /// Creates the profession header row.
-    /// </summary>
-    /// <param name="parent">The parent transform to attach the row.</param>
-    /// <param name="reference">Reference text used to style labels.</param>
-    static void CreateProfessionHeaderRow(Transform parent, TextMeshProUGUI reference)
-    {
-        RectTransform rectTransform = CreateRectTransformObject("ProfessionHeaderRow", parent);
-        if (rectTransform == null)
-        {
-            return;
-        }
-        rectTransform.anchorMin = new Vector2(0f, 1f);
-        rectTransform.anchorMax = new Vector2(1f, 1f);
-        rectTransform.pivot = new Vector2(0f, 1f);
-        rectTransform.offsetMin = Vector2.zero;
-        rectTransform.offsetMax = Vector2.zero;
-
-        Image background = rectTransform.gameObject.AddComponent<Image>();
-        ApplySprite(background, FamiliarHeaderSpriteNames);
-        background.color = FamiliarHeaderBackgroundColor;
-        background.raycastTarget = false;
-
-        HorizontalLayoutGroup layout = rectTransform.gameObject.AddComponent<HorizontalLayoutGroup>();
-        layout.childAlignment = TextAnchor.MiddleLeft;
-        layout.spacing = 12f;
-        layout.childForceExpandWidth = false;
-        layout.childForceExpandHeight = false;
-        layout.childControlHeight = true;
-        layout.childControlWidth = true;
-        layout.padding = CreatePadding(8, 8, 4, 4);
-
-        LayoutElement rowLayout = rectTransform.gameObject.AddComponent<LayoutElement>();
-        rowLayout.preferredHeight = ProfessionRowHeight;
-        rowLayout.minHeight = ProfessionRowHeight;
-
-        AddSpacer(rectTransform, ProfessionIconSize);
-        CreateHeaderLabel(rectTransform, reference, "Profession", ProfessionNameWidth, TextAlignmentOptions.Left);
-        CreateHeaderLabel(rectTransform, reference, "Level", ProfessionLevelWidth, TextAlignmentOptions.Center);
-        CreateHeaderLabel(rectTransform, reference, "Progress", 0f, TextAlignmentOptions.Left, 1f);
-        AddSpacer(rectTransform, ProfessionPercentWidth);
-    }
-
-    /// <summary>
-    /// Creates the professions list container.
-    /// </summary>
-    /// <param name="parent">The parent transform to attach the list.</param>
-    /// <returns>The list root transform.</returns>
-    static Transform CreateProfessionListRoot(Transform parent)
-        => UIFactory.CreateListRoot(parent, "ProfessionList");
-
-    /// <summary>
-    /// Adds a fixed-width spacer to a layout.
-    /// </summary>
-    /// <param name="parent">The parent transform to attach the spacer.</param>
-    /// <param name="width">The width for the spacer.</param>
-    static void AddSpacer(Transform parent, float width)
-        => UIFactory.AddHorizontalSpacer(parent, width, ProfessionRowHeight);
-
-    /// <summary>
-    /// Creates a header label with fixed width.
-    /// </summary>
-    /// <param name="parent">The parent transform to attach the label.</param>
-    /// <param name="reference">Reference text used to style labels.</param>
-    /// <param name="text">Label text.</param>
-    /// <param name="width">Preferred width.</param>
-    static TextMeshProUGUI CreateHeaderLabel(Transform parent, TextMeshProUGUI reference, string text, float width,
-        TextAlignmentOptions alignment, float flexibleWidth = 0f)
-    {
-        TextMeshProUGUI label = CreateTextElement(parent, $"Header_{text}", reference, ProfessionHeaderFontScale, FontStyles.Bold);
-        if (label == null)
-        {
-            return null;
-        }
-        label.text = text;
-        label.alignment = alignment;
-
-        LayoutElement layout = label.gameObject.AddComponent<LayoutElement>();
-        layout.preferredWidth = width;
-        layout.minWidth = width;
-        layout.flexibleWidth = flexibleWidth;
-        layout.preferredHeight = ProfessionRowHeight;
-        layout.minHeight = ProfessionRowHeight;
-        return label;
-    }
-
-    /// <summary>
-    /// Resolves a sprite for progress bar backgrounds.
-    /// </summary>
-    /// <returns>The resolved sprite or null.</returns>
-    static Sprite ResolveProgressBackgroundSprite()
-    {
-        if (_alchemyFill != null && _alchemyFill.sprite != null)
-        {
-            return _alchemyFill.sprite;
-        }
-
-        if (_alchemyProgressFill != null && _alchemyProgressFill.sprite != null)
-        {
-            return _alchemyProgressFill.sprite;
-        }
-
-        if (HudData.Sprites.TryGetValue("Attribute_TierIndicator_Fixed", out Sprite fallback))
-        {
-            return fallback;
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Resolves a sprite for progress bar fills.
-    /// </summary>
-    /// <returns>The resolved sprite or null.</returns>
-    static Sprite ResolveProgressFillSprite()
-    {
-        if (_alchemyProgressFill != null && _alchemyProgressFill.sprite != null)
-        {
-            return _alchemyProgressFill.sprite;
-        }
-
-        if (_alchemyFill != null && _alchemyFill.sprite != null)
-        {
-            return _alchemyFill.sprite;
-        }
-
-        if (HudData.Sprites.TryGetValue("Attribute_TierIndicator_Fixed", out Sprite fallback))
-        {
-            return fallback;
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Resolves the icon sprite for a profession.
-    /// </summary>
-    /// <param name="profession">The profession to resolve.</param>
-    /// <returns>The profession icon sprite or null.</returns>
-    static Sprite ResolveProfessionIcon(Profession profession)
-    {
-        if (ProfessionIcons.TryGetValue(profession, out string spriteName) && HudData.Sprites.TryGetValue(spriteName, out Sprite sprite))
-        {
-            return sprite;
-        }
-
-        return null;
-    }
-
-    // Copies text styling - delegates to UIFactory with additional properties
-    static void CopyTextStyle(TextMeshProUGUI source, TextMeshProUGUI target)
+    // Copies text styling - delegates to UIFactory with additional properties  
+    static void CopyTextStyle(TextMeshProUGUI source, TextMeshProUGUI target)   
     {
         UIFactory.CopyTextStyle(source, target);
         if (source != null && target != null)
@@ -1493,7 +1316,7 @@ internal static class CharacterMenuService
         else if (activeTab == BloodcraftTab.Professions)
         {
             EnsureEntries(0);
-            UpdateProfessionPanel();
+            _professionsTab.UpdatePanel();
         }
         else if (activeTab == BloodcraftTab.Exoform)
         {
@@ -1527,6 +1350,7 @@ internal static class CharacterMenuService
     static readonly ExoformTab _exoformTab = new();
     static readonly BattlesTab _battlesTab = new();
     static readonly StatBonusesTab _statBonusesTab = new();
+    static readonly ProfessionsTab _professionsTab = new();
     static readonly FamiliarsTab _familiarsTab = new();
 
     // Note: AppendPrestigeEntries, AppendExoFormEntries, and AppendFamiliarBattleEntries
@@ -1614,441 +1438,6 @@ internal static class CharacterMenuService
     }
 
     /// <summary>
-    /// Updates the profession panel UI.
-    /// </summary>
-    static void UpdateProfessionPanel()
-    {
-        if (professionsRoot == null || professionsListRoot == null)
-        {
-            return;
-        }
-
-        if (!_professionBars)
-        {
-            if (professionsStatusText != null)
-            {
-                professionsStatusText.text = "Profession UI disabled.";
-                professionsStatusText.gameObject.SetActive(true);
-            }
-
-            professionsListRoot.gameObject.SetActive(false);
-            if (professionsSummaryText != null)
-            {
-                professionsSummaryText.text = string.Empty;
-            }
-            return;
-        }
-
-        if (professionsStatusText != null)
-        {
-            professionsStatusText.text = string.Empty;
-            professionsStatusText.gameObject.SetActive(false);
-        }
-
-        professionsListRoot.gameObject.SetActive(true);
-
-        List<ProfessionEntry> entries = [..GetProfessionEntries()];
-        EnsureProfessionRows(entries.Count);
-
-        int rowCount = Math.Min(entries.Count, professionRows.Count);
-        for (int i = 0; i < rowCount; i++)
-        {
-            UpdateProfessionRow(professionRows[i], entries[i]);
-        }
-
-        if (professionsSummaryText != null)
-        {
-            professionsSummaryText.text = BuildProfessionSummaryText(entries);
-        }
-    }
-
-    /// <summary>
-    /// Creates a styled text element from a reference.
-    /// </summary>
-    static TextMeshProUGUI CreateText(Transform parent, TextMeshProUGUI reference, string content, float fontSize, TextAlignmentOptions alignment)
-        => UIFactory.CreateText(parent, reference, content, fontSize, alignment);
-
-    /// <summary>
-    /// Creates a simple text element using the global entry style.
-    /// </summary>
-    static TextMeshProUGUI CreateSimpleText(Transform parent, string text, float fontSize)
-    {
-        RectTransform rectTransform = CreateRectTransformObject("Text", parent);
-        if (rectTransform == null)
-        {
-            return null;
-        }
-
-        TextMeshProUGUI tmpText = rectTransform.gameObject.AddComponent<TextMeshProUGUI>();
-        if (entryStyle != null)
-        {
-            CopyTextStyle(entryStyle, tmpText);
-        }
-        
-        tmpText.text = text;
-        tmpText.fontSize = fontSize;
-        tmpText.color = Color.white;
-        tmpText.raycastTarget = false;
-
-        return tmpText;
-    }
-
-    /// <summary>
-    /// Ensures the profession row list has the requested count.
-    /// </summary>
-    /// <param name="count">The number of rows required.</param>
-    static void EnsureProfessionRows(int count)
-    {
-        if (professionsListRoot == null)
-        {
-            return;
-        }
-
-        while (professionRows.Count < count)
-        {
-            ProfessionRow row = CreateProfessionRow(professionsListRoot);
-            if (row == null)
-            {
-                break;
-            }
-
-            professionRows.Add(row);
-        }
-
-        for (int i = 0; i < professionRows.Count; i++)
-        {
-            bool isActive = i < count;
-            professionRows[i].Root.SetActive(isActive);
-        }
-    }
-
-    /// <summary>
-    /// Creates a profession row entry with icon, labels, and progress bar.
-    /// </summary>
-    /// <param name="parent">The parent transform to attach the row.</param>
-    /// <returns>The created row.</returns>
-    static ProfessionRow CreateProfessionRow(Transform parent)
-    {
-        TextMeshProUGUI reference = entryStyle ?? headerText;
-        if (reference == null)
-        {
-            return null;
-        }
-        RectTransform rectTransform = CreateRectTransformObject($"ProfessionRow_{professionRows.Count + 1}", parent);
-        if (rectTransform == null)
-        {
-            return null;
-        }
-        rectTransform.anchorMin = new Vector2(0f, 1f);
-        rectTransform.anchorMax = new Vector2(1f, 1f);
-        rectTransform.pivot = new Vector2(0f, 1f);
-        rectTransform.offsetMin = Vector2.zero;
-        rectTransform.offsetMax = Vector2.zero;
-
-        Image background = rectTransform.gameObject.AddComponent<Image>();
-        background.sprite = ResolveProgressBackgroundSprite();
-        background.color = new Color(0f, 0f, 0f, 0.35f);
-        background.type = Image.Type.Sliced;
-        background.raycastTarget = false;
-
-        HorizontalLayoutGroup layout = rectTransform.gameObject.AddComponent<HorizontalLayoutGroup>();
-        layout.childAlignment = TextAnchor.MiddleLeft;
-        layout.spacing = 12f;
-        layout.childForceExpandWidth = false;
-        layout.childForceExpandHeight = false;
-        layout.childControlWidth = true;
-        layout.childControlHeight = true;
-
-        LayoutElement rowLayout = rectTransform.gameObject.AddComponent<LayoutElement>();
-        rowLayout.preferredHeight = ProfessionRowHeight;
-        rowLayout.minHeight = ProfessionRowHeight;
-
-        Image icon = CreateProfessionIcon(rectTransform);
-        TextMeshProUGUI nameText = CreateRowLabel(rectTransform, reference, ProfessionNameWidth, TextAlignmentOptions.Left);
-        TextMeshProUGUI levelText = CreateRowLabel(rectTransform, reference, ProfessionLevelWidth, TextAlignmentOptions.Center);
-        Image progressFill = CreateProgressBar(rectTransform, out Image progressBackground);
-        TextMeshProUGUI progressText = CreateRowLabel(rectTransform, reference, ProfessionPercentWidth, TextAlignmentOptions.Right);
-
-        return new ProfessionRow(rectTransform.gameObject, icon, nameText, levelText, progressFill, progressBackground, progressText);
-    }
-
-    /// <summary>
-    /// Updates a profession row with live data.
-    /// </summary>
-    /// <param name="row">The row to update.</param>
-    /// <param name="entry">The profession data.</param>
-    static void UpdateProfessionRow(ProfessionRow row, ProfessionEntry entry)
-    {
-        if (row == null)
-        {
-            return;
-        }
-
-        Sprite iconSprite = ResolveProfessionIcon(entry.Profession);
-        if (row.Icon != null)
-        {
-            if (iconSprite != null)
-            {
-                row.Icon.sprite = iconSprite;
-                row.Icon.enabled = true;
-            }
-            else
-            {
-                row.Icon.enabled = false;
-            }
-        }
-
-        string name = SplitPascalCase(entry.Profession.ToString());
-        if (row.NameText != null)
-        {
-            row.NameText.text = name;
-        }
-
-        if (row.LevelText != null)
-        {
-            row.LevelText.text = entry.Level.ToString(CultureInfo.InvariantCulture);
-        }
-
-        float progress = Math.Clamp(entry.Progress, 0f, 1f);
-        if (row.ProgressFill != null)
-        {
-            row.ProgressFill.fillAmount = progress;
-        }
-
-        if (row.ProgressText != null)
-        {
-            row.ProgressText.text = $"{progress * 100f:0}%";
-        }
-
-        if (ProfessionColors.TryGetValue(entry.Profession, out Color color))
-        {
-            Color textColor = new(color.r, color.g, color.b, 1f);
-            if (row.NameText != null)
-            {
-                row.NameText.color = textColor;
-            }
-
-            if (row.ProgressFill != null)
-            {
-                row.ProgressFill.color = new Color(color.r, color.g, color.b, 0.9f);
-            }
-
-            if (row.ProgressBackground != null)
-            {
-                row.ProgressBackground.color = new Color(color.r * 0.2f, color.g * 0.2f, color.b * 0.2f, 0.6f);
-            }
-        }
-
-        if (row.LevelText != null)
-        {
-            row.LevelText.color = Color.white;
-        }
-
-        if (row.ProgressText != null)
-        {
-            row.ProgressText.color = new Color(1f, 1f, 1f, 0.85f);
-        }
-    }
-
-    /// <summary>
-    /// Builds the summary text for the profession panel.
-    /// </summary>
-    /// <param name="entries">The profession entries.</param>
-    /// <returns>The summary text.</returns>
-    static string BuildProfessionSummaryText(List<ProfessionEntry> entries)
-    {
-        if (entries.Count == 0)
-        {
-            return "No profession data available.";
-        }
-
-        int totalLevel = 0;
-        float totalProgress = 0f;
-
-        for (int i = 0; i < entries.Count; i++)
-        {
-            totalLevel += entries[i].Level;
-            totalProgress += entries[i].Progress;
-        }
-
-        float averageProgress = totalProgress / entries.Count;
-        return $"Total Level: {totalLevel}   Avg Progress: {averageProgress * 100f:0}%";
-    }
-
-    /// <summary>
-    /// Creates the profession icon image.
-    /// </summary>
-    /// <param name="parent">The parent transform to attach the icon.</param>
-    /// <returns>The image component.</returns>
-    static Image CreateProfessionIcon(Transform parent)
-    {
-        RectTransform rectTransform = CreateRectTransformObject("ProfessionIcon", parent);
-        if (rectTransform == null)
-        {
-            return null;
-        }
-        rectTransform.sizeDelta = new Vector2(ProfessionIconSize, ProfessionIconSize);
-
-        Image icon = rectTransform.gameObject.AddComponent<Image>();
-        icon.preserveAspect = true;
-        icon.raycastTarget = false;
-
-        LayoutElement layout = rectTransform.gameObject.AddComponent<LayoutElement>();
-        layout.preferredWidth = ProfessionIconSize;
-        layout.minWidth = ProfessionIconSize;
-        layout.preferredHeight = ProfessionIconSize;
-        layout.minHeight = ProfessionIconSize;
-
-        return icon;
-    }
-
-    /// <summary>
-    /// Creates a row label with fixed width.
-    /// </summary>
-    /// <param name="parent">The parent transform to attach the label.</param>
-    /// <param name="reference">Reference text for styling.</param>
-    /// <param name="width">Preferred width.</param>
-    /// <param name="alignment">Text alignment.</param>
-    /// <returns>The label component.</returns>
-    static TextMeshProUGUI CreateRowLabel(Transform parent, TextMeshProUGUI reference, float width, TextAlignmentOptions alignment)
-    {
-        TextMeshProUGUI label = CreateTextElement(parent, "RowLabel", reference, ProfessionFontScale, FontStyles.Normal);
-        if (label == null)
-        {
-            return null;
-        }
-        label.alignment = alignment;
-        label.text = string.Empty;
-
-        LayoutElement layout = label.gameObject.AddComponent<LayoutElement>();
-        layout.preferredWidth = width;
-        layout.minWidth = width;
-        layout.preferredHeight = ProfessionRowHeight;
-
-        return label;
-    }
-
-    /// <summary>
-    /// Resolves the first available sprite from the provided names.
-    /// </summary>
-    static Sprite ResolveSprite(params string[] spriteNames)
-    {
-        if (spriteNames == null || spriteNames.Length == 0)
-        {
-            return null;
-        }
-
-        for (int i = 0; i < spriteNames.Length; i++)
-        {
-            string name = spriteNames[i];
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                continue;
-            }
-
-            if (HudData.Sprites.TryGetValue(name, out Sprite sprite) && sprite != null)
-            {
-                return sprite;
-            }
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Applies a sprite to an image if available.
-    /// </summary>
-    static void ApplySprite(Image image, params string[] spriteNames)
-    {
-        if (image == null)
-        {
-            return;
-        }
-
-        Sprite sprite = ResolveSprite(spriteNames);
-        if (sprite == null)
-        {
-            return;
-        }
-
-        image.sprite = sprite;
-        image.type = Image.Type.Sliced;
-    }
-
-    /// <summary>
-    /// Creates a progress bar and returns the fill image.
-    /// </summary>
-    /// <param name="parent">The parent transform to attach the bar.</param>
-    /// <param name="background">The progress bar background image.</param>
-    /// <returns>The fill image component.</returns>
-    static Image CreateProgressBar(Transform parent, out Image background)
-    {
-        RectTransform rectTransform = CreateRectTransformObject("ProgressBar", parent);
-        if (rectTransform == null)
-        {
-            background = null;
-            return null;
-        }
-        rectTransform.sizeDelta = new Vector2(ProfessionProgressWidth, ProfessionProgressHeight);
-
-        background = rectTransform.gameObject.AddComponent<Image>();
-        background.sprite = ResolveProgressBackgroundSprite();
-        background.color = new Color(0.1f, 0.1f, 0.1f, 0.8f);
-        background.type = Image.Type.Sliced;
-        background.raycastTarget = false;
-
-        LayoutElement layout = rectTransform.gameObject.AddComponent<LayoutElement>();
-        layout.minWidth = ProfessionProgressWidth;
-        layout.preferredWidth = 0f;
-        layout.flexibleWidth = 1f;
-        layout.preferredHeight = ProfessionProgressHeight;
-        layout.minHeight = ProfessionProgressHeight;
-
-        RectTransform fillRect = CreateRectTransformObject("Fill", rectTransform);
-        if (fillRect == null)
-        {
-            return null;
-        }
-        fillRect.anchorMin = new Vector2(0f, 0f);
-        fillRect.anchorMax = new Vector2(1f, 1f);
-        fillRect.offsetMin = new Vector2(1f, 1f);
-        fillRect.offsetMax = new Vector2(-1f, -1f);
-
-        Image fill = fillRect.gameObject.AddComponent<Image>();
-        fill.sprite = ResolveProgressFillSprite();
-        fill.type = Image.Type.Filled;
-        fill.fillMethod = Image.FillMethod.Horizontal;
-        fill.fillOrigin = 0;
-        fill.fillAmount = 0f;
-        fill.raycastTarget = false;
-
-        return fill;
-    }
-
-    /// <summary>
-    // Note: CyclePrestigeType, ResolveActiveExoForm, ResolveAbilityName, FindBattleGroup, FormatFamiliarSlot
-    // have been moved to their respective tab components in Services/CharacterMenu/Tabs/
-
-    /// <summary>
-    /// Returns the profession entries for display.
-    /// </summary>
-    /// <returns>Ordered profession entries.</returns>
-    static IEnumerable<ProfessionEntry> GetProfessionEntries()
-    {
-        return new[]
-        {
-            new ProfessionEntry(Profession.Enchanting, _enchantingLevel, _enchantingProgress),
-            new ProfessionEntry(Profession.Alchemy, _alchemyLevel, _alchemyProgress),
-            new ProfessionEntry(Profession.Harvesting, _harvestingLevel, _harvestingProgress),
-            new ProfessionEntry(Profession.Blacksmithing, _blacksmithingLevel, _blacksmithingProgress),
-            new ProfessionEntry(Profession.Tailoring, _tailoringLevel, _tailoringProgress),
-            new ProfessionEntry(Profession.Woodcutting, _woodcuttingLevel, _woodcuttingProgress),
-            new ProfessionEntry(Profession.Mining, _miningLevel, _miningProgress),
-            new ProfessionEntry(Profession.Fishing, _fishingLevel, _fishingProgress)
-        };
-    }
-
-    /// <summary>
     /// Ensures the entry list has enough UI objects for the requested count.
     /// </summary>
     /// <param name="count">The number of entries required.</param>
@@ -2130,51 +1519,6 @@ internal static class CharacterMenuService
         }
 
         button.onClick.AddListener((UnityAction)(() => action()));
-    }
-
-    // BloodcraftEntry is defined in Eclipse.Services.CharacterMenu.Interfaces.ICharacterMenuTab
-
-    /// <summary>
-    /// Holds UI references for a profession row entry.
-    /// </summary>
-    sealed class ProfessionRow
-    {
-        public GameObject Root { get; }
-        public Image Icon { get; }
-        public TextMeshProUGUI NameText { get; }
-        public TextMeshProUGUI LevelText { get; }
-        public Image ProgressFill { get; }
-        public Image ProgressBackground { get; }
-        public TextMeshProUGUI ProgressText { get; }
-
-        public ProfessionRow(GameObject root, Image icon, TextMeshProUGUI nameText, TextMeshProUGUI levelText,
-            Image progressFill, Image progressBackground, TextMeshProUGUI progressText)
-        {
-            Root = root;
-            Icon = icon;
-            NameText = nameText;
-            LevelText = levelText;
-            ProgressFill = progressFill;
-            ProgressBackground = progressBackground;
-            ProgressText = progressText;
-        }
-    }
-
-    /// <summary>
-    /// Holds profession data for the Bloodcraft tab.
-    /// </summary>
-    readonly struct ProfessionEntry
-    {
-        public Profession Profession { get; }
-        public int Level { get; }
-        public float Progress { get; }
-
-        public ProfessionEntry(Profession profession, int level, float progress)
-        {
-            Profession = profession;
-            Level = level;
-            Progress = progress;
-        }
     }
 
 }
