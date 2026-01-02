@@ -198,3 +198,32 @@
   - `Services/CharacterMenu/*`
   - `CanvasService.cs`
   - `CharacterMenuService.cs`
+
+---
+
+## L-007 — ProjectM/UI name collisions: avoid Unity EventSystems pointer handler interfaces
+
+### Status
+- Active
+
+### Tags
+- [UI] [Build] [Compat]
+
+### Introduced
+- 2026-01-02
+
+### Symptom
+- Build fails when adding hover handlers like `IPointerEnterHandler` / `IPointerExitHandler` to UI components.
+
+### Root cause
+- In this repo/runtime, `IPointerEnterHandler` / `IPointerExitHandler` resolve to ProjectM/UI types (not Unity’s `UnityEngine.EventSystems` interfaces), causing invalid inheritance (C# error: “cannot have multiple base classes”).
+
+### Wrong approach (DO NOT REPEAT)
+- Implementing Unity-style pointer handler interfaces on `MonoBehaviour` for hover effects.
+
+### Correct approach
+- Prefer existing interaction components (e.g. `SimpleStunButton`) and/or ProjectM UI hooks.
+- If hover feedback is required, implement it using established ProjectM-compatible patterns (or omit hover styling).
+
+### Rule
+> Do not rely on Unity EventSystems pointer handler interfaces for UI hover in this project; use ProjectM-compatible interaction paths.

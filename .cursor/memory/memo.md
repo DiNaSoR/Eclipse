@@ -34,10 +34,15 @@ Last updated: 2026-01-02
 
 - Ownership:
   - UI: `Services/CharacterMenu/Tabs/StatBonusesTab.cs` (created/updated via `Services/CharacterMenuService.cs`)
-  - Data payload + parsing: `Docs/Bloodcraft/Interfaces/EclipseInterface.cs` → `Patches/ClientChatSystemPatch.cs` → `Services/DataService.cs` (`ParseWeaponStatBonusData`)
+  - Data payload + parsing:
+    - Weapon Expertise stats: `Docs/Bloodcraft/Interfaces/EclipseInterface.cs` → `Patches/ClientChatSystemPatch.cs` → `Services/DataService.cs` (`ParseWeaponStatBonusData`)
+    - Blood Legacies stats: `Docs/Bloodcraft/Interfaces/EclipseInterface.cs` (ProgressToClient / LegacyData) → `Patches/ClientChatSystemPatch.cs` → `Services/DataService.cs` (`ParsePlayerData`) → `Services/CanvasService.cs` (`DataHUD._legacy*`)
   - Sprite allowlist: `Services/HUD/Shared/HudData.cs`
 
 - Stat Bonuses UI is owned by `Services/CharacterMenu/Tabs/StatBonusesTab.cs` (single owner; avoid parallel UI implementations).
+- Stat Bonuses panel supports two modes:
+  - Weapon Expertise (interactive via `.wep cst …`)
+  - Blood Legacies (interactive via `.bl cst …`)
 
 ---
 

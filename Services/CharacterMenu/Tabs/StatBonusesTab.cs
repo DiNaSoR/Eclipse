@@ -11,6 +11,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 using static Eclipse.Services.DataService;
+using static Eclipse.Services.CanvasService.DataHUD;
 
 namespace Eclipse.Services.CharacterMenu.Tabs;
 
@@ -20,6 +21,12 @@ namespace Eclipse.Services.CharacterMenu.Tabs;
 /// </summary>
 internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
 {
+    private enum StatBonusesMode
+    {
+        WeaponExpertise,
+        BloodLegacies
+    }
+
     #region Constants
 
     // Header layout (matches Docs/DesignMock/index.html: .stat-header)
@@ -45,11 +52,15 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
     private const float CheckBoxSize = 18f;
     private const float ValueWidth = 50f;
 
+    private const float ModeTabsHeight = 36f;
+    private const float ModeTabFontScale = 0.9f;
+
     #endregion
 
     #region Styles
 
-    private static readonly Color HeaderFallbackBackgroundColor = new(0.1f, 0.1f, 0.12f, 0.95f);
+    // Match Familiars header tint for consistency across Bloodcraft tabs.
+    private static readonly Color HeaderBackgroundColor = new(0.1f, 0.1f, 0.12f, 0.95f);
     private static readonly Color HeaderBorderColor = new(1f, 1f, 1f, 0.08f);
     private static readonly Color HeaderNameColor = new(0.95f, 0.84f, 0.7f, 1f);
     private static readonly Color HeaderMetaColor = new(1f, 1f, 1f, 0.6f);
@@ -78,9 +89,15 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
     private static readonly Color LevelBarFillA = new(0.831f, 0.639f, 0.310f, 1f); // #d4a34f
     private static readonly Color LevelBarFillB = new(0.945f, 0.820f, 0.478f, 1f); // #f1d17a
 
+    private static readonly Color ModeTabBackgroundColor = new(0.05f, 0.05f, 0.08f, 0.75f);
+    private static readonly Color ModeTabActiveBackgroundColor = new(0.50f, 0.22f, 0.12f, 0.45f);
+    private static readonly Color ModeTabInactiveTextColor = new(0.84f, 0.82f, 0.78f, 1f);
+    private static readonly Color ModeTabActiveTextColor = new(0.96f, 0.89f, 0.89f, 1f);
+
     private static readonly string[] HeaderSpriteNames = ["Act_BG", "TabGradient", "Window_Box_Background"];
     private static readonly string[] DividerSpriteNames = ["Divider_Horizontal", "Window_Divider_Horizontal_V_Red"];
     private static readonly string[] DefaultWeaponIconSpriteNames = ["Poneti_Icon_Sword_v2_48", "strength_level_icon"];
+    private static readonly string[] DefaultBloodIconSpriteNames = ["Stunlock_Icons_spellbook_blood", "IconBackground"];
     private static readonly string[] RowSpriteNames = ["Window_Box_Background", "TabGradient", "SimpleBox_Normal"];
     private static readonly string[] LevelBarBackgroundSpriteNames = ["SimpleProgressBar_Empty_Default", "SimpleProgressBar_Mask", "Attribute_TierIndicator_Fixed"];
     private static readonly string[] LevelBarFillSpriteNames = ["SimpleProgressBar_Fill", "Attribute_TierIndicator_Fixed"];
@@ -100,9 +117,26 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         { "Whip", ["Poneti_Icon_Whip_v2_01", "Poneti_Icon_Sword_v2_48"] }
     };
 
+    private static readonly Dictionary<string, string[]> BloodTypeIconSpriteNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "Worker", ["BloodType_Worker_Big", "BloodType_Worker_Small", "Stunlock_Icons_spellbook_blood"] },
+        { "Warrior", ["BloodType_Warrior_Big", "BloodType_Warrior_Small", "Stunlock_Icons_spellbook_blood"] },
+        { "Scholar", ["BloodType_Scholar_Big", "BloodType_Scholar_Small", "Stunlock_Icons_spellbook_blood"] },
+        { "Rogue", ["BloodType_Rogue_Big", "BloodType_Rogue_Small", "Stunlock_Icons_spellbook_blood"] },
+        { "Mutant", ["BloodType_Mutant_Big", "BloodType_Mutant_Small", "Stunlock_Icons_spellbook_blood"] },
+        { "Draculin", ["BloodType_Draculin_Big", "BloodType_Draculin_Small", "Stunlock_Icons_spellbook_blood"] },
+        { "Creature", ["BloodType_Creature_Big", "BloodType_Creature_Small", "Stunlock_Icons_spellbook_blood"] },
+        { "Brute", ["BloodType_Brute_Big", "BloodType_Brute_Small", "Stunlock_Icons_spellbook_blood"] },
+        { "Corruption", ["BloodType_Corruption_Big", "BloodType_Corruption_Small", "Stunlock_Icons_spellbook_blood"] },
+    };
+
     #endregion
 
     #region Fields
+
+    private StatBonusesMode _mode = StatBonusesMode.WeaponExpertise;
+    private ModeTab _weaponModeTab;
+    private ModeTab _bloodModeTab;
 
     private Transform _panelRoot;
     private Transform _listRoot;
@@ -112,6 +146,7 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
     private TextMeshProUGUI _headerLevelText;
     private Image _levelFillImage;
     private TextMeshProUGUI _levelPercentText;
+    private TextMeshProUGUI _hintText;
     private TextMeshProUGUI _referenceText;
     private readonly List<StatBonusRow> _rows = [];
 
@@ -136,7 +171,7 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         RectTransform rectTransform = CreateRectTransformObject("BloodcraftStatBonuses", parent);
         if (rectTransform == null)
         {
-            return null;
+        return null;
         }
         rectTransform.anchorMin = new Vector2(0f, 1f);
         rectTransform.anchorMax = new Vector2(1f, 1f);
@@ -145,16 +180,17 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         rectTransform.offsetMax = Vector2.zero;
         EnsureVerticalLayout(rectTransform);
 
+        CreateModeTabs(rectTransform, reference);
         CreateWeaponHeader(rectTransform, reference);
         _ = CreateDividerLine(rectTransform);
         _listRoot = CreateListRoot(rectTransform);
 
-        TextMeshProUGUI hintText = UIFactory.CreateSectionSubHeader(rectTransform, reference,
+        _hintText = UIFactory.CreateSectionSubHeader(rectTransform, reference,
             "Click a stat to toggle. Use .wep cst [Weapon] [StatIndex] in chat.");
-        if (hintText != null)
+        if (_hintText != null)
         {
-            hintText.alpha = 0.5f;
-            hintText.alignment = TextAlignmentOptions.Center;
+            _hintText.alpha = 0.5f;
+            _hintText.alignment = TextAlignmentOptions.Center;
         }
 
         rectTransform.gameObject.SetActive(false);
@@ -169,76 +205,16 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
             return;
         }
 
-        if (_statBonusDataReady && _weaponStatBonusData != null)
+        UpdateModeTabVisuals();
+        UpdateHintText();
+
+        if (_mode == StatBonusesMode.WeaponExpertise)
         {
-            WeaponStatBonusData data = _weaponStatBonusData;
-
-            if (_weaponImage != null && !string.IsNullOrEmpty(data.WeaponType))
-            {
-                string[] iconSprites = GetWeaponTypeIconSprites(data.WeaponType);
-                Sprite sprite = ResolveSprite(iconSprites);
-                if (sprite == null)
-                {
-                    // No placeholder boxes if sprite can't resolve (lessons.md L-002)
-                    _weaponImage.gameObject.SetActive(false);
-                }
-                else
-                {
-                    _weaponImage.sprite = sprite;
-                    _weaponImage.gameObject.SetActive(true);
-                    _weaponImage.type = Image.Type.Simple;
-                    _weaponImage.preserveAspect = true;
-                    _weaponImage.color = new Color(1f, 1f, 1f, 0.9f);
-                }
-            }
-
-            UpdateHeader(data.WeaponType, data.SelectedStats.Count, data.MaxStatChoices, data.ExpertiseLevel, data.ExpertiseProgress);
-
-            List<StatBonusEntry> entries = [];
-            foreach (StatBonusDataEntry stat in data.AvailableStats)
-            {
-                entries.Add(new StatBonusEntry(stat.StatIndex, stat.StatName, stat.Value, stat.IsSelected));
-            }
-
-            EnsureRows(entries.Count);
-
-            int rowCount = Math.Min(entries.Count, _rows.Count);
-            Action<int> onClicked = (index) => Quips.SendCommand($".wep cst {data.WeaponType} {index}");
-
-            for (int i = 0; i < rowCount; i++)
-            {
-                UpdateRow(_rows[i], entries[i], onClicked);
-            }
+            UpdateWeaponExpertisePanel();
         }
         else
         {
-            UpdateHeader("Mock Sword", selectedCount: 0, maxChoices: 3, level: 67, progress01: 0.45f);
-
-            List<StatBonusEntry> mockEntries =
-            [
-                new StatBonusEntry(1, "Max Health", 250f, false),
-                new StatBonusEntry(2, "Movement Speed", 0.15f, false),
-                new StatBonusEntry(3, "Primary Attack Speed", 0.12f, false),
-                new StatBonusEntry(4, "Physical Life Leech", 0.05f, false),
-                new StatBonusEntry(5, "Spell Life Leech", 0.05f, false),
-                new StatBonusEntry(6, "Primary Life Leech", 0.05f, false),
-                new StatBonusEntry(7, "Physical Power", 15f, false),
-                new StatBonusEntry(8, "Spell Power", 15f, false),
-                new StatBonusEntry(9, "Physical Crit Chance", 0.08f, false),
-                new StatBonusEntry(10, "Physical Crit Damage", 0.25f, false),
-                new StatBonusEntry(11, "Spell Crit Chance", 0.08f, false),
-                new StatBonusEntry(12, "Spell Crit Damage", 0.25f, false)
-            ];
-
-            EnsureRows(mockEntries.Count);
-
-            Action<int> onMockClicked = (statIndex) => Core.Log.LogInfo($"[Mock] Clicked stat index: {statIndex}");
-
-            int rowCount = Math.Min(mockEntries.Count, _rows.Count);
-            for (int i = 0; i < rowCount; i++)
-            {
-                UpdateRow(_rows[i], mockEntries[i], onMockClicked);
-            }
+            UpdateBloodLegaciesPanel();
         }
     }
 
@@ -254,6 +230,9 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
     public override void Reset()
     {
         base.Reset();
+        _mode = StatBonusesMode.WeaponExpertise;
+        _weaponModeTab = null;
+        _bloodModeTab = null;
         _panelRoot = null;
         _listRoot = null;
         _weaponImage = null;
@@ -262,6 +241,7 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         _headerLevelText = null;
         _levelFillImage = null;
         _levelPercentText = null;
+        _hintText = null;
         _referenceText = null;
         _rows.Clear();
     }
@@ -269,6 +249,136 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
     #endregion
 
     #region Panel Construction
+
+    private void CreateModeTabs(Transform parent, TextMeshProUGUI reference)
+    {
+        RectTransform rectTransform = CreateRectTransformObject("StatBonusesModeTabs", parent);
+        if (rectTransform == null)
+        {
+            return;
+        }
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        HorizontalLayoutGroup layout = rectTransform.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.childAlignment = TextAnchor.MiddleCenter;
+        layout.spacing = 0f;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.padding = CreatePadding(0, 0, 0, 0);
+
+        LayoutElement rowLayout = rectTransform.gameObject.AddComponent<LayoutElement>();
+        rowLayout.minHeight = ModeTabsHeight;
+        rowLayout.preferredHeight = ModeTabsHeight;
+
+        _weaponModeTab = CreateModeTab(rectTransform, reference, "Weapon Expertise", StatBonusesMode.WeaponExpertise);
+        _bloodModeTab = CreateModeTab(rectTransform, reference, "Blood Legacies", StatBonusesMode.BloodLegacies);
+
+        UpdateModeTabVisuals();
+    }
+
+    private ModeTab CreateModeTab(Transform parent, TextMeshProUGUI reference, string label, StatBonusesMode mode)
+    {
+        RectTransform rectTransform = CreateRectTransformObject($"ModeTab_{mode}", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+        rectTransform.anchorMin = new Vector2(0f, 0f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
+
+        Image background = rectTransform.gameObject.AddComponent<Image>();
+        ApplySprite(background, RowSpriteNames);
+        background.color = ModeTabBackgroundColor;
+        background.raycastTarget = true;
+
+        Outline outline = rectTransform.gameObject.AddComponent<Outline>();
+        outline.effectColor = RowBorderColor;
+        outline.effectDistance = new Vector2(1f, -1f);
+
+        LayoutElement layout = rectTransform.gameObject.AddComponent<LayoutElement>();
+        layout.flexibleWidth = 1f;
+        layout.minHeight = ModeTabsHeight;
+        layout.preferredHeight = ModeTabsHeight;
+
+        SimpleStunButton button = rectTransform.gameObject.AddComponent<SimpleStunButton>();
+        if (button != null)
+        {
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener((UnityAction)(() => SetMode(mode)));
+        }
+
+        TMP_Text tmpLabel = UIFactory.CreateSubTabLabel(rectTransform, reference, label, ModeTabFontScale);
+        TextMeshProUGUI labelText = tmpLabel as TextMeshProUGUI;
+        if (labelText != null)
+        {
+            labelText.color = ModeTabInactiveTextColor;
+        }
+
+        return new ModeTab(background, outline, labelText, button, mode);
+    }
+
+    private void SetMode(StatBonusesMode mode)
+    {
+        if (_mode == mode)
+        {
+            return;
+        }
+
+        _mode = mode;
+        UpdateModeTabVisuals();
+        UpdateHintText();
+        UpdatePanel();
+    }
+
+    private void UpdateModeTabVisuals()
+    {
+        ConfigureModeTabVisual(_weaponModeTab, _mode == StatBonusesMode.WeaponExpertise);
+        ConfigureModeTabVisual(_bloodModeTab, _mode == StatBonusesMode.BloodLegacies);
+    }
+
+    private static void ConfigureModeTabVisual(ModeTab tab, bool isActive)
+    {
+        if (tab == null)
+        {
+            return;
+        }
+
+        if (tab.Background != null)
+        {
+            tab.Background.color = isActive ? ModeTabActiveBackgroundColor : ModeTabBackgroundColor;
+        }
+
+        if (tab.Border != null)
+        {
+            tab.Border.effectColor = isActive ? RowSelectedBorderColor : RowBorderColor;
+        }
+
+        if (tab.Label != null)
+        {
+            tab.Label.color = isActive ? ModeTabActiveTextColor : ModeTabInactiveTextColor;
+        }
+    }
+
+    private void UpdateHintText()
+    {
+        if (_hintText == null)
+        {
+            return;
+        }
+
+        _hintText.text = _mode == StatBonusesMode.BloodLegacies
+            ? "Click a stat to toggle. Use .bl cst [Blood] [StatIndex] in chat."
+            : "Click a stat to toggle. Use .wep cst [Weapon] [StatIndex] in chat.";
+    }
 
     private void CreateWeaponHeader(Transform parent, TextMeshProUGUI reference)
     {
@@ -286,7 +396,7 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         // Match DesignMock: background sprite + subtle border
         Image background = rectTransform.gameObject.AddComponent<Image>();
         ApplySprite(background, HeaderSpriteNames);
-        background.color = background.sprite != null ? Color.white : HeaderFallbackBackgroundColor;
+        background.color = HeaderBackgroundColor;
         background.raycastTarget = false;
 
         Outline outline = rectTransform.gameObject.AddComponent<Outline>();
@@ -431,6 +541,173 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         return rectTransform;
     }
 
+    private void UpdateWeaponExpertisePanel()
+    {
+        if (_statBonusDataReady && _weaponStatBonusData != null)
+        {
+            WeaponStatBonusData data = _weaponStatBonusData;
+
+            UpdateHeaderIcon(GetWeaponTypeIconSprites(data.WeaponType));
+            UpdateHeader(data.WeaponType, data.SelectedStats.Count, data.MaxStatChoices, data.ExpertiseLevel, data.ExpertiseProgress);
+
+            List<StatBonusEntry> entries = [];
+            foreach (StatBonusDataEntry stat in data.AvailableStats)
+            {
+                entries.Add(new StatBonusEntry(stat.StatIndex, stat.StatName, stat.Value, stat.IsSelected));
+            }
+
+            EnsureRows(entries.Count);
+
+            int rowCount = Math.Min(entries.Count, _rows.Count);
+            string weaponType = data.WeaponType;
+            Action<int> onClicked = (index) =>
+            {
+                string command = string.IsNullOrWhiteSpace(weaponType)
+                    ? $".wep cst {index}"
+                    : $".wep cst {weaponType} {index}";
+                Quips.SendCommand(command);
+            };
+
+            for (int i = 0; i < rowCount; i++)
+            {
+                UpdateRow(_rows[i], entries[i], entry => FormatWeaponStatValue(entry.StatIndex, entry.Value), onClicked);
+            }
+        }
+        else
+        {
+            UpdateHeader("Mock Sword", selectedCount: 0, maxChoices: 3, level: 67, progress01: 0.45f);
+            UpdateHeaderIcon(DefaultWeaponIconSpriteNames);
+
+            List<StatBonusEntry> mockEntries =
+            [
+                new StatBonusEntry(1, "Max Health", 250f, false),
+                new StatBonusEntry(2, "Movement Speed", 0.15f, false),
+                new StatBonusEntry(3, "Primary Attack Speed", 0.12f, false),
+                new StatBonusEntry(4, "Physical Life Leech", 0.05f, false),
+                new StatBonusEntry(5, "Spell Life Leech", 0.05f, false),
+                new StatBonusEntry(6, "Primary Life Leech", 0.05f, false),
+                new StatBonusEntry(7, "Physical Power", 15f, false),
+                new StatBonusEntry(8, "Spell Power", 15f, false),
+                new StatBonusEntry(9, "Physical Crit Chance", 0.08f, false),
+                new StatBonusEntry(10, "Physical Crit Damage", 0.25f, false),
+                new StatBonusEntry(11, "Spell Crit Chance", 0.08f, false),
+                new StatBonusEntry(12, "Spell Crit Damage", 0.25f, false)
+            ];
+
+            EnsureRows(mockEntries.Count);
+            int rowCount = Math.Min(mockEntries.Count, _rows.Count);
+
+            Action<int> onMockClicked = (statIndex) => Core.Log.LogInfo($"[Mock] Clicked weapon stat index: {statIndex}");
+            for (int i = 0; i < rowCount; i++)
+            {
+                UpdateRow(_rows[i], mockEntries[i], entry => FormatWeaponStatValue(entry.StatIndex, entry.Value), onMockClicked);
+            }
+        }
+    }
+
+    private void UpdateBloodLegaciesPanel()
+    {
+        string bloodType = _legacyType;
+        int selectedCount = CountSelectedLegacyStats(_legacyBonusStats);
+        const int maxChoices = 3;
+
+        string headerName = string.IsNullOrWhiteSpace(bloodType) ? "Blood Legacies" : bloodType;
+        UpdateHeader(headerName, selectedCount, maxChoices, _legacyLevel, _legacyProgress);
+        UpdateHeaderIcon(GetBloodTypeIconSprites(bloodType));
+
+        List<StatBonusEntry> entries = BuildBloodStatEntries(selectedNames: _legacyBonusStats);
+        EnsureRows(entries.Count);
+
+        int rowCount = Math.Min(entries.Count, _rows.Count);
+        Action<int> onClicked = (index) =>
+        {
+            string command = string.IsNullOrWhiteSpace(bloodType)
+                ? $".bl cst {index}"
+                : $".bl cst {bloodType} {index}";
+            Quips.SendCommand(command);
+        };
+
+        for (int i = 0; i < rowCount; i++)
+        {
+            UpdateRow(_rows[i], entries[i], entry => FormatBloodStatValue(entry.Value), onClicked);
+        }
+    }
+
+    private void UpdateHeaderIcon(string[] spriteNames)
+    {
+        if (_weaponImage == null)
+        {
+            return;
+        }
+
+        Sprite sprite = ResolveSprite(spriteNames);
+        if (sprite == null)
+        {
+            // No placeholder boxes if sprite can't resolve (lessons.md L-002)
+            _weaponImage.gameObject.SetActive(false);
+            return;
+        }
+
+        _weaponImage.sprite = sprite;
+        _weaponImage.gameObject.SetActive(true);
+        _weaponImage.type = Image.Type.Simple;
+        _weaponImage.preserveAspect = true;
+        _weaponImage.color = new Color(1f, 1f, 1f, 0.9f);
+    }
+
+    private static int CountSelectedLegacyStats(IReadOnlyList<string> selectedNames)
+    {
+        if (selectedNames == null)
+        {
+            return 0;
+        }
+
+        int count = 0;
+        for (int i = 0; i < selectedNames.Count; i++)
+        {
+            if (!string.IsNullOrWhiteSpace(selectedNames[i]))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static List<StatBonusEntry> BuildBloodStatEntries(IReadOnlyList<string> selectedNames)
+    {
+        List<StatBonusEntry> entries = [];
+
+        foreach (BloodStatType bloodStat in Enum.GetValues(typeof(BloodStatType)))
+        {
+            if (bloodStat == BloodStatType.None)
+            {
+                continue;
+            }
+
+            string statName = HudUtilities.SplitPascalCase(bloodStat.ToString());
+
+            bool isSelected = false;
+            if (selectedNames != null)
+            {
+                isSelected = selectedNames.Contains(bloodStat.ToString());
+            }
+
+            float statValue = 0f;
+            if (_bloodStatValues.TryGetValue(bloodStat, out float baseCap))
+            {
+                float classMultiplier = HudUtilities.ClassSynergy(bloodStat, _classType, _classStatSynergies);
+                float prestigeMultiplier = 1f + (_prestigeStatMultiplier * _legacyPrestige);
+                float levelMultiplier = _legacyMaxLevel > 0 ? ((float)_legacyLevel / _legacyMaxLevel) : 0f;
+                statValue = baseCap * prestigeMultiplier * classMultiplier * levelMultiplier;
+            }
+
+            entries.Add(new StatBonusEntry((int)bloodStat, statName, statValue, isSelected));
+        }
+
+        return entries;
+    }
+
     #endregion
 
     #region Rows
@@ -549,7 +826,11 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         return new StatBonusRow(rectTransform.gameObject, bgImage, outline, checkText, checkRect, nameText, valueText, button);
     }
 
-    private static void UpdateRow(StatBonusRow row, StatBonusEntry entry, Action<int> onClicked = null)
+    private static void UpdateRow(
+        StatBonusRow row,
+        StatBonusEntry entry,
+        Func<StatBonusEntry, string> valueFormatter,
+        Action<int> onClicked = null)
     {
         if (row == null)
         {
@@ -567,7 +848,7 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
 
         if (row.ValueText != null)
         {
-            row.ValueText.text = FormatStatValue(entry.StatIndex, entry.Value);
+            row.ValueText.text = valueFormatter != null ? valueFormatter(entry) : string.Empty;
             row.ValueText.alpha = entry.IsSelected ? 1f : StatValueUnselectedAlpha.a;
         }
 
@@ -618,7 +899,7 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         }
     }
 
-    private static string FormatStatValue(int statIndex, float value)
+    private static string FormatWeaponStatValue(int statIndex, float value)
     {
         // Client indices are 1-based because DataService maps server enums (0-based) to client enums (0=None).
         // Weapon stats:
@@ -643,6 +924,11 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         return $"+{value:0}";
     }
 
+    private static string FormatBloodStatValue(float value)
+    {
+        return $"+{value * 100f:0.#}%";
+    }
+
     #endregion
 
     #region Sprite Helpers
@@ -660,6 +946,21 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         }
 
         return DefaultWeaponIconSpriteNames;
+    }
+
+    private static string[] GetBloodTypeIconSprites(string bloodType)
+    {
+        if (string.IsNullOrWhiteSpace(bloodType))
+        {
+            return DefaultBloodIconSpriteNames;
+        }
+
+        if (BloodTypeIconSpriteNames.TryGetValue(bloodType, out string[] sprites))
+        {
+            return sprites;
+        }
+
+        return DefaultBloodIconSpriteNames;
     }
 
     private static Sprite ResolveSprite(params string[] spriteNames)
@@ -855,6 +1156,24 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
     #endregion
 
     #region Nested Types
+
+    private sealed class ModeTab
+    {
+        public Image Background { get; }
+        public Outline Border { get; }
+        public TextMeshProUGUI Label { get; }
+        public SimpleStunButton Button { get; }
+        public StatBonusesMode Mode { get; }
+
+        public ModeTab(Image background, Outline border, TextMeshProUGUI label, SimpleStunButton button, StatBonusesMode mode)
+        {
+            Background = background;
+            Border = border;
+            Label = label;
+            Button = button;
+            Mode = mode;
+        }
+    }
 
     private sealed class StatBonusRow
     {
