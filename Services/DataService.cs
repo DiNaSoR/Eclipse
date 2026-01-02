@@ -292,13 +292,18 @@ internal static class DataService
     public static string _familiarActiveBox = string.Empty;
     public static bool? _familiarCombatModeEnabled;
     public static bool? _familiarEmoteActionsEnabled;
+    public static bool? _familiarShinyEnabled;
+    public static bool? _familiarVBloodEmotesEnabled;
     public static bool _statBonusDataReady;
     public static WeaponStatBonusData _weaponStatBonusData;
     public static readonly List<FamiliarBattleGroupData> _familiarBattleGroups = [];
     public static readonly List<string> _familiarBoxNames = [];
     public static readonly List<FamiliarBoxEntryData> _familiarBoxEntries = [];
+    public static bool _familiarOverflowDataReady;
+    public static readonly List<FamiliarOverflowEntryData> _familiarOverflowEntries = [];
     static bool _familiarBoxListCaptureActive;
     static bool _familiarBoxEntriesCaptureActive;
+    static bool _familiarOverflowEntriesCaptureActive;
     static readonly Regex FamiliarColorTagRegex = new(@"<\/?color[^>]*>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     static readonly Regex FamiliarBoxEntryRegex = new(
         @"^\s*(?<slot>\d+)\s*\|\s*(?<name>.+?)\s*\[(?<level>\d+)\]\s*(\[(?<prestige>\d+)\])?\s*$",
@@ -361,6 +366,15 @@ internal static class DataService
     public class FamiliarBoxEntryData(int slotIndex, string name, int level, int prestige, bool isShiny)
     {
         public int SlotIndex { get; } = slotIndex;
+        public string Name { get; } = name;
+        public int Level { get; } = level;
+        public int Prestige { get; } = prestige;
+        public bool IsShiny { get; } = isShiny;
+    }
+
+    public class FamiliarOverflowEntryData(int index, string name, int level, int prestige, bool isShiny)
+    {
+        public int Index { get; } = index;
         public string Name { get; } = name;
         public int Level { get; } = level;
         public int Prestige { get; } = prestige;
@@ -892,11 +906,30 @@ internal static class DataService
             return true;
         }
 
+        if (cleanMessage.Equals("Overflow Familiars:", StringComparison.OrdinalIgnoreCase))
+        {
+            _familiarOverflowEntries.Clear();
+            _familiarOverflowEntriesCaptureActive = true;
+            _familiarOverflowDataReady = true;
+            _familiarBoxListCaptureActive = false;
+            _familiarBoxEntriesCaptureActive = false;
+            return true;
+        }
+
+        if (cleanMessage.Equals("Overflow storage is empty.", StringComparison.OrdinalIgnoreCase))
+        {
+            _familiarOverflowEntries.Clear();
+            _familiarOverflowEntriesCaptureActive = false;
+            _familiarOverflowDataReady = true;
+            return true;
+        }
+
         if (cleanMessage.Equals("Familiar Boxes:", StringComparison.OrdinalIgnoreCase))
         {
             _familiarBoxNames.Clear();
             _familiarBoxListCaptureActive = true;
             _familiarBoxEntriesCaptureActive = false;
+            _familiarOverflowEntriesCaptureActive = false;
             return true;
         }
 
@@ -909,6 +942,7 @@ internal static class DataService
             }
             _familiarBoxEntries.Clear();
             _familiarBoxEntriesCaptureActive = false;
+            _familiarOverflowEntriesCaptureActive = false;
             return true;
         }
 
@@ -917,6 +951,7 @@ internal static class DataService
             _familiarActiveBox = string.Empty;
             _familiarBoxEntries.Clear();
             _familiarBoxEntriesCaptureActive = false;
+            _familiarOverflowEntriesCaptureActive = false;
             return true;
         }
 
@@ -962,6 +997,16 @@ internal static class DataService
             return parsed;
         }
 
+        if (_familiarOverflowEntriesCaptureActive)
+        {
+            bool parsed = TryParseFamiliarOverflowEntry(cleanMessage);
+            if (!parsed)
+            {
+                _familiarOverflowEntriesCaptureActive = false;
+            }
+            return parsed;
+        }
+
         return false;
     }
 
@@ -983,6 +1028,40 @@ internal static class DataService
             if (cleanMessage.Contains("disabled", StringComparison.OrdinalIgnoreCase))
             {
                 _familiarEmoteActionsEnabled = false;
+                return true;
+            }
+
+            return false;
+        }
+
+        if (cleanMessage.StartsWith("Shiny familiars", StringComparison.OrdinalIgnoreCase))
+        {
+            if (cleanMessage.Contains("enabled", StringComparison.OrdinalIgnoreCase))
+            {
+                _familiarShinyEnabled = true;
+                return true;
+            }
+
+            if (cleanMessage.Contains("disabled", StringComparison.OrdinalIgnoreCase))
+            {
+                _familiarShinyEnabled = false;
+                return true;
+            }
+
+            return false;
+        }
+
+        if (cleanMessage.StartsWith("VBlood emotes", StringComparison.OrdinalIgnoreCase))
+        {
+            if (cleanMessage.Contains("enabled", StringComparison.OrdinalIgnoreCase))
+            {
+                _familiarVBloodEmotesEnabled = true;
+                return true;
+            }
+
+            if (cleanMessage.Contains("disabled", StringComparison.OrdinalIgnoreCase))
+            {
+                _familiarVBloodEmotesEnabled = false;
                 return true;
             }
 
@@ -1088,6 +1167,44 @@ internal static class DataService
         }
 
         _familiarBoxEntries.Add(new FamiliarBoxEntryData(slotIndex, name, level, prestige, isShiny));
+        return true;
+    }
+
+    static bool TryParseFamiliarOverflowEntry(string cleanMessage)
+    {
+        Match match = FamiliarBoxEntryRegex.Match(cleanMessage);
+        if (!match.Success)
+        {
+            return false;
+        }
+
+        int index = 0;
+        if (match.Groups["slot"].Success)
+        {
+            int.TryParse(match.Groups["slot"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out index);
+        }
+
+        string name = match.Groups["name"].Value.Trim();
+        bool isShiny = false;
+        if (name.EndsWith("*", StringComparison.Ordinal))
+        {
+            isShiny = true;
+            name = name.TrimEnd('*').TrimEnd();
+        }
+
+        if (!int.TryParse(match.Groups["level"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int level))
+        {
+            level = 0;
+        }
+
+        int prestige = 0;
+        if (match.Groups["prestige"].Success)
+        {
+            int.TryParse(match.Groups["prestige"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out prestige);
+        }
+
+        _familiarOverflowEntries.Add(new FamiliarOverflowEntryData(index, name, level, prestige, isShiny));
+        _familiarOverflowDataReady = true;
         return true;
     }
 
