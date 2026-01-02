@@ -30,6 +30,17 @@ Last updated: 2026-01-02
 
 ---
 
+## V Rising Mod – Stat Bonuses (current truth)
+
+- Ownership:
+  - UI: `Services/CharacterMenu/Tabs/StatBonusesTab.cs` (created/updated via `Services/CharacterMenuService.cs`)
+  - Data payload + parsing: `Docs/Bloodcraft/Interfaces/EclipseInterface.cs` → `Patches/ClientChatSystemPatch.cs` → `Services/DataService.cs` (`ParseWeaponStatBonusData`)
+  - Sprite allowlist: `Services/HUD/Shared/HudData.cs`
+
+- Stat Bonuses UI is owned by `Services/CharacterMenu/Tabs/StatBonusesTab.cs` (single owner; avoid parallel UI implementations).
+
+---
+
 ## Eclipse modular architecture (current truth)
 
 - Ownership:
