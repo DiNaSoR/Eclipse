@@ -63,6 +63,18 @@ Last updated: 2026-01-02
 
 ---
 
+## V Rising Mod – Prestige (current truth)
+
+- Ownership:
+  - UI: `Services/CharacterMenu/Tabs/PrestigeTab.cs` (panel-based; created/updated via `Services/CharacterMenuService.cs`)
+  - Data payload + parsing: `Docs/Bloodcraft/Interfaces/EclipseInterface.cs` (`PrestigeLeaderboardToClient`) → `Patches/ClientChatSystemPatch.cs` → `Services/DataService.cs` (`ParsePrestigeLeaderboardData`)
+
+- Notes:
+  - Prestige tab is now click-only and panel-based (no legacy text-entry rendering).
+  - Type selection uses a dropdown list populated from `_prestigeLeaderboardOrder`.
+
+---
+
 ## Eclipse modular architecture (current truth)
 
 - Ownership:

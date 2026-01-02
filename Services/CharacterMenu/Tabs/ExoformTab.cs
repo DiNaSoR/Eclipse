@@ -533,13 +533,24 @@ internal class ExoformTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
             return;
         }
 
-        ExoFormEntry activeForm = ResolveActiveExoFormEntry();
+        ExoFormEntry activeForm = ResolveSelectedExoFormEntry();
         string activeName = activeForm?.FormName ?? string.Empty;
 
         if (_abilitiesHeaderText != null)
         {
             string displayName = string.IsNullOrWhiteSpace(activeName) ? "None" : HudUtilities.SplitPascalCase(activeName);
-            _abilitiesHeaderText.text = $"Current: {displayName}";
+            _abilitiesHeaderText.text = string.IsNullOrWhiteSpace(activeName)
+                ? "Current: None (select a form to view abilities)"
+                : $"Current: {displayName}";
+        }
+
+        if (activeForm == null)
+        {
+            _lastAbilitiesFormName = string.Empty;
+            _renderedAbilityCount = 0;
+            _abilityRows.Clear();
+            UIFactory.ClearChildren(_abilitiesListRoot);
+            return;
         }
 
         int abilityCount = activeForm?.Abilities?.Count ?? 0;
@@ -610,25 +621,20 @@ internal class ExoformTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
 
     #region Data Helpers
 
-    private static ExoFormEntry ResolveActiveExoFormEntry()
+    private static ExoFormEntry ResolveSelectedExoFormEntry()
     {
         if (_exoFormEntries == null || _exoFormEntries.Count == 0)
         {
             return null;
         }
 
-        if (!string.IsNullOrWhiteSpace(_exoFormCurrentForm))
+        if (string.IsNullOrWhiteSpace(_exoFormCurrentForm))
         {
-            ExoFormEntry match = _exoFormEntries.FirstOrDefault(entry =>
-                entry.FormName.Equals(_exoFormCurrentForm, StringComparison.OrdinalIgnoreCase));
-
-            if (match != null)
-            {
-                return match;
-            }
+            return null;
         }
 
-        return _exoFormEntries[0];
+        return _exoFormEntries.FirstOrDefault(entry =>
+            entry.FormName.Equals(_exoFormCurrentForm, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string ResolveFormUnlockNote(string formName)
@@ -744,7 +750,7 @@ internal class ExoformTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         layout.childAlignment = TextAnchor.MiddleLeft;
         layout.spacing = 8f;
         layout.padding = CreatePadding(8, 8, 4, 4);
-        layout.childForceExpandWidth = true;
+        layout.childForceExpandWidth = false;
         layout.childForceExpandHeight = false;
         layout.childControlWidth = true;
         layout.childControlHeight = true;
@@ -771,6 +777,11 @@ internal class ExoformTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         {
             titleText.enableWordWrapping = false;
             titleText.overflowMode = TextOverflowModes.Ellipsis;
+            titleText.alignment = TextAlignmentOptions.Left;
+
+            LayoutElement titleLayout = titleText.GetComponent<LayoutElement>() ?? titleText.gameObject.AddComponent<LayoutElement>();
+            titleLayout.flexibleWidth = 1f;
+            titleLayout.minWidth = 0f;
         }
 
         return rectTransform;

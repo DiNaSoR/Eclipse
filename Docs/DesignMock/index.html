@@ -367,6 +367,47 @@
       background-image: url("./assets/sprites/Portrait_Small_Smoke_Dracula_Grey.png");
     }
 
+    .familiar-card-header.is-prestige .familiar-card-icon {
+      background-image: url("./assets/sprites/Stunlock_Icon_BannerDoubleSmall.png");
+    }
+
+    /* Prestige Tab Styles */
+    .prestige-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .prestige-hint {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.55);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .prestige-scrollable {
+      max-height: 420px;
+    }
+
+    .prestige-row-top {
+      background: linear-gradient(90deg, rgba(212, 163, 79, 0.25), rgba(88, 28, 18, 0.18));
+      border-color: rgba(212, 163, 79, 0.45);
+    }
+
+    .prestige-row-top .stat-check {
+      color: #f1d17a;
+      border-color: rgba(241, 209, 122, 0.45);
+      background: rgba(212, 163, 79, 0.14);
+    }
+
+    .prestige-row-top .stat-value {
+      color: #f1d17a;
+      opacity: 1;
+    }
+
     /* Exoform Tab Styles */
     .exo-status {
       margin-left: auto;
@@ -1655,9 +1696,62 @@
 
         <div class="content">
           <div class="content-section" id="tab-prestige">
-            <div style="text-align:center; opacity:.75;">Click type to cycle.</div>
-            <div style="text-align:center; margin-top:8px;">Type: Experience</div>
-            <div style="text-align:center; margin-top:8px;">No prestige entries yet.</div>
+            <div class="familiar-scrollable">
+              <div class="familiar-card">
+                <div class="familiar-card-header is-prestige">
+                  <span class="familiar-card-icon"></span>
+                  <span class="familiar-card-title">Prestige Leaderboard</span>
+                </div>
+
+                <div class="prestige-toolbar">
+                  <div class="prestige-hint">Click type to cycle.</div>
+                  <div class="familiar-select" style="max-width: 240px;">
+                    <select>
+                      <option>Experience</option>
+                      <option>Weapon</option>
+                      <option>Blood</option>
+                      <option>Familiar</option>
+                      <option>Professions</option>
+                    </select>
+                    <span class="familiar-select-arrow"></span>
+                  </div>
+                </div>
+
+                <div class="stat-scrollable prestige-scrollable">
+                  <div class="stat-list">
+                    <div class="stat-row prestige-row-top">
+                      <div class="stat-check">1</div>
+                      <div class="stat-name">Vlad the Enjoyer</div>
+                      <div class="stat-value">98</div>
+                    </div>
+                    <div class="stat-row">
+                      <div class="stat-check">2</div>
+                      <div class="stat-name">Nightstalker</div>
+                      <div class="stat-value">67</div>
+                    </div>
+                    <div class="stat-row">
+                      <div class="stat-check">3</div>
+                      <div class="stat-name">Crimson Baron</div>
+                      <div class="stat-value">55</div>
+                    </div>
+                    <div class="stat-row">
+                      <div class="stat-check">4</div>
+                      <div class="stat-name">Mournful Shade</div>
+                      <div class="stat-value">42</div>
+                    </div>
+                    <div class="stat-row">
+                      <div class="stat-check">5</div>
+                      <div class="stat-name">Ravenous</div>
+                      <div class="stat-value">31</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="exo-hint" style="margin-top: 10px;">
+                  Leaderboards show the top players for the selected prestige type. Some types may be disabled by the server.
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="content-section" id="tab-exoform">

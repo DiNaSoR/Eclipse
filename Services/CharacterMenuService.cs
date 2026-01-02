@@ -83,6 +83,7 @@ internal static class CharacterMenuService
     static TextMeshProUGUI professionsStatusText;
     static TextMeshProUGUI professionsSummaryText;
     static readonly List<ProfessionRow> professionRows = [];
+    static Transform prestigeRoot;
     static Transform exoformRoot;
     static Transform statBonusesRoot;
     static Transform familiarsRoot;
@@ -110,7 +111,6 @@ internal static class CharacterMenuService
     [
         BloodcraftTab.Prestige,
         BloodcraftTab.Exoform,
-        BloodcraftTab.Battles,
         BloodcraftTab.StatBonuses,
         BloodcraftTab.Professions,
         BloodcraftTab.Familiars
@@ -248,6 +248,7 @@ internal static class CharacterMenuService
         _familiarsTab.Reset();
         _statBonusesTab.Reset();
         _exoformTab.Reset();
+        _prestigeTab.Reset();
 
         inventorySubMenu = null;
         bloodcraftTab = null;
@@ -269,6 +270,7 @@ internal static class CharacterMenuService
         professionsStatusText = null;
         professionsSummaryText = null;
         professionRows.Clear();
+        prestigeRoot = null;
         statBonusesRoot = null;
         exoformRoot = null;
         familiarsRoot = null;
@@ -682,6 +684,7 @@ internal static class CharacterMenuService
         }
 
         professionsRoot = CreateProfessionPanel(bodyRoot, referenceText);
+        prestigeRoot = _prestigeTab.CreatePanel(bodyRoot, referenceText);
         exoformRoot = _exoformTab.CreatePanel(bodyRoot, referenceText);
         statBonusesRoot = _statBonusesTab.CreatePanel(bodyRoot, referenceText);
         familiarsRoot = _familiarsTab.CreatePanel(bodyRoot, entryStyle ?? referenceText);
@@ -1444,12 +1447,23 @@ internal static class CharacterMenuService
             return;
         }
 
+        // Battles are now integrated into Familiars (Battle Groups mode). If an old session
+        // somehow lands here, redirect to Familiars to avoid a dead/hidden tab.
+        if (activeTab == BloodcraftTab.Battles)
+        {
+            activeTab = BloodcraftTab.Familiars;
+        }
+
         UpdateSubTabSelection();
         UpdateSectionHeader();
 
-        bool showTextEntries = activeTab == BloodcraftTab.Prestige
-            || activeTab == BloodcraftTab.Battles;
-        entriesRoot.gameObject.SetActive(showTextEntries);
+        // Prestige is now panel-based (no text-entry UI).
+        entriesRoot.gameObject.SetActive(false);
+
+        if (prestigeRoot != null)
+        {
+            prestigeRoot.gameObject.SetActive(activeTab == BloodcraftTab.Prestige);
+        }
 
         if (professionsRoot != null)
         {
@@ -1471,30 +1485,10 @@ internal static class CharacterMenuService
             familiarsRoot.gameObject.SetActive(activeTab == BloodcraftTab.Familiars);
         }
 
-        if (showTextEntries)
+        if (activeTab == BloodcraftTab.Prestige)
         {
-            List<BloodcraftEntry> entriesToApply = BuildEntries();
-            EnsureEntries(entriesToApply.Count);
-
-            for (int i = 0; i < entriesToApply.Count; i++)
-            {
-                BloodcraftEntry entry = entriesToApply[i];
-                TextMeshProUGUI text = entries[i];
-                text.text = entry.Text;
-                text.fontSize = entryStyle != null ? entryStyle.fontSize : text.fontSize;
-                text.alignment = TextAlignmentOptions.Center;
-                text.fontStyle = entry.Style;
-                text.color = Color.white;
-
-                if (entry.Action != null)
-                {
-                    ConfigureActionButton(entryButtons[i], entry.Action, entry.Enabled);
-                }
-                else
-                {
-                    ConfigureCommandButton(entryButtons[i], entry.Command, entry.Enabled);
-                }
-            }
+            EnsureEntries(0);
+            _prestigeTab.UpdatePanel();
         }
         else if (activeTab == BloodcraftTab.Professions)
         {
@@ -1524,13 +1518,8 @@ internal static class CharacterMenuService
     /// <returns>A list of entries for the current view.</returns>
     static List<BloodcraftEntry> BuildEntries()
     {
-        // Delegate to tab components
-        return activeTab switch
-        {
-            BloodcraftTab.Battles => _battlesTab.BuildEntries(),
-            BloodcraftTab.Prestige => _prestigeTab.BuildEntries(),
-            _ => []
-        };
+        // Text-entry tabs are no longer used (Prestige/Exoform/etc are panel-based).
+        return [];
     }
 
     // Tab component instances

@@ -155,6 +155,7 @@ internal static class HudData
         "Stunlock_Icon_SpellPoint_Illusion1",
         "spell_level_icon",
         "strength_level_icon",
+        "Stunlock_Icon_BannerDoubleSmall",
         "Stunlock_Icon_NewStar",
         "Act_BG",
         "ActionSlotDivider",
