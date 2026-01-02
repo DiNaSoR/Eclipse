@@ -363,6 +363,109 @@
       background-image: url("./assets/sprites/MobLevel_Skull.png");
     }
 
+    .familiar-card-header.is-exo .familiar-card-icon {
+      background-image: url("./assets/sprites/Portrait_Small_Smoke_Dracula_Grey.png");
+    }
+
+    /* Exoform Tab Styles */
+    .exo-status {
+      margin-left: auto;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(0, 0, 0, 0.25);
+      color: rgba(255, 255, 255, 0.7);
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+      flex-shrink: 0;
+    }
+
+    .exo-status.is-on {
+      color: #9ef2b5;
+      border-color: rgba(79, 209, 84, 0.55);
+      box-shadow: inset 0 0 0 999px rgba(79, 209, 84, 0.12);
+    }
+
+    .exo-status.is-off {
+      color: #f2b0b0;
+      border-color: rgba(210, 90, 90, 0.6);
+      box-shadow: inset 0 0 0 999px rgba(210, 90, 90, 0.12);
+    }
+
+    .exo-status.is-locked {
+      opacity: 0.6;
+    }
+
+    .exo-charge-meter span {
+      background-color: rgba(118, 78, 190, 0.95);
+      box-shadow: 0 0 10px rgba(140, 110, 240, 0.65);
+    }
+
+    .exo-hint {
+      margin-top: 8px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.48);
+      line-height: 1.35;
+    }
+
+    .exo-form-note {
+      margin: 2px 0 10px 24px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.45);
+    }
+
+    .exo-form-row:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .exo-ability-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .exo-ability-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      min-height: 28px;
+      background: url("./assets/sprites/Window_Box_Background.png") center/100% 100% no-repeat;
+      background-color: rgba(9, 9, 12, 0.75);
+      background-blend-mode: multiply;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .exo-ability-icon {
+      width: 16px;
+      height: 16px;
+      background: url("./assets/sprites/spell_icon.png") center/contain no-repeat;
+      opacity: 0.9;
+      flex-shrink: 0;
+    }
+
+    .exo-ability-name {
+      flex: 1;
+      font-size: 13px;
+      color: #e8e2d7;
+      opacity: 0.85;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .exo-ability-cooldown {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.65);
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+      flex-shrink: 0;
+    }
+
     .familiar-card-title {
       font-size: var(--familiar-header-size);
       text-transform: uppercase;
@@ -1558,7 +1661,110 @@
           </div>
 
           <div class="content-section" id="tab-exoform">
-            <div style="text-align:center; opacity:.75;">Exo prestiging disabled.</div>
+            <!-- If Exo prestiging is disabled, show a simple status message instead of the UI below. -->
+            <!-- <div style="text-align:center; opacity:.75;">Exo prestiging disabled.</div> -->
+
+            <div class="familiar-scrollable">
+              <div class="familiar-layout familiar-animate">
+                <div class="familiar-column is-left">
+                  <div class="familiar-card familiar-animate delay-1">
+                    <div class="familiar-card-header is-exo">
+                      <span class="familiar-card-icon"></span>
+                      <span class="familiar-card-title">Exoform Overview</span>
+                    </div>
+
+                    <div class="familiar-active-name">Current Form: Evolved Vampire</div>
+                    <div class="familiar-active-meta">Exo Prestiges: 12 | Minimum to enter: 15.0s</div>
+
+                    <div class="familiar-bond-meter exo-charge-meter" style="--pct:72%;">
+                      <span></span>
+                    </div>
+                    <div class="familiar-bond-label">Stored Energy: 129.6 / 180.0s</div>
+
+                    <div class="familiar-action-list" style="margin-top: 10px;">
+                      <button class="familiar-action-row is-primary" type="button">
+                        <span class="familiar-action-icon is-toggle"></span>
+                        <span class="familiar-action-text">Taunt to Exoform</span>
+                        <span class="exo-status is-on">On</span>
+                      </button>
+                    </div>
+
+                    <div class="exo-hint">
+                      Charge refills over real time (about 1 day to fully recharge). When enabled, use the Taunt emote to enter Exoform.
+                    </div>
+                  </div>
+
+                  <div class="familiar-card familiar-animate delay-2">
+                    <div class="familiar-card-header is-exo">
+                      <span class="familiar-card-icon"></span>
+                      <span class="familiar-card-title">Forms</span>
+                    </div>
+
+                    <div class="familiar-action-list">
+                      <button class="familiar-action-row is-primary exo-form-row" type="button">
+                        <span class="familiar-action-icon is-list"></span>
+                        <span class="familiar-action-text">Evolved Vampire</span>
+                        <span class="exo-status">Selected</span>
+                      </button>
+                      <div class="exo-form-note">Unlocked by consuming Dracula essence.</div>
+
+                      <button class="familiar-action-row exo-form-row" type="button" disabled>
+                        <span class="familiar-action-icon is-list"></span>
+                        <span class="familiar-action-text">Corrupted Serpent</span>
+                        <span class="exo-status is-locked">Locked</span>
+                      </button>
+                      <div class="exo-form-note">Requires Megara essence.</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="familiar-column-divider" aria-hidden="true"></div>
+
+                <div class="familiar-column is-right">
+                  <div class="familiar-card familiar-animate delay-1">
+                    <div class="familiar-card-header is-exo">
+                      <span class="familiar-card-icon"></span>
+                      <span class="familiar-card-title">Active Form Abilities</span>
+                    </div>
+
+                    <div class="exo-ability-list">
+                      <div class="exo-ability-row">
+                        <span class="exo-ability-icon"></span>
+                        <span class="exo-ability-name">Ability 1</span>
+                        <span class="exo-ability-cooldown">8.0s</span>
+                      </div>
+                      <div class="exo-ability-row">
+                        <span class="exo-ability-icon"></span>
+                        <span class="exo-ability-name">Ability 2</span>
+                        <span class="exo-ability-cooldown">12.0s</span>
+                      </div>
+                      <div class="exo-ability-row">
+                        <span class="exo-ability-icon"></span>
+                        <span class="exo-ability-name">Ability 3</span>
+                        <span class="exo-ability-cooldown">30.0s</span>
+                      </div>
+                    </div>
+
+                    <div class="exo-hint">
+                      Cooldowns are form-specific and update when you select a different form.
+                    </div>
+                  </div>
+
+                  <div class="familiar-card familiar-animate delay-2">
+                    <div class="familiar-card-header is-exo">
+                      <span class="familiar-card-icon"></span>
+                      <span class="familiar-card-title">Notes</span>
+                    </div>
+
+                    <div class="exo-hint">
+                      - You need at least <b>15s</b> stored energy to enter Exoform.<br />
+                      - Energy drains while in Exoform; if it ends naturally, energy is consumed.<br />
+                      - Max duration scales with Exo Prestiges (up to <b>180s</b>).
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="content-section" id="tab-bonuses">

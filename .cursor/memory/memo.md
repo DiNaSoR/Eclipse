@@ -47,6 +47,22 @@ Last updated: 2026-01-02
 
 ---
 
+## V Rising Mod – Exoform (current truth)
+
+- Ownership:
+  - UI: `Services/CharacterMenu/Tabs/ExoformTab.cs` (panel-based; created/updated via `Services/CharacterMenuService.cs`)
+  - Data payload + parsing: `Docs/Bloodcraft/Interfaces/EclipseInterface.cs` (`ExoFormDataToClient`) → `Patches/ClientChatSystemPatch.cs` → `Services/DataService.cs` (`ParseExoFormData`)
+  - Sprite allowlist: `Services/HUD/Shared/HudData.cs`
+
+- Notes:
+  - Exoform UI no longer uses the legacy text-entry list (`BuildEntries()`).
+  - UI is click-only:
+    - Toggle Taunt-to-Exoform: `.prestige exoform`
+    - Select active form: `.prestige sf <FormName>`
+  - Ability names are resolved via prefab localization with safe fallback.
+
+---
+
 ## Eclipse modular architecture (current truth)
 
 - Ownership:

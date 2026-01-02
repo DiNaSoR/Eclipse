@@ -703,6 +703,12 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
         _ = CreateFamiliarDropdownRow(card, reference, out _boxSelectedText, ToggleFamiliarBoxDropdown);
         _boxDropdownListRoot = CreateFamiliarBoxDropdownList(card);
 
+        _ = CreateFamiliarSubHeaderRow(card, reference, "Current Box Click Action");
+        CreateBoxRowActionModeTabs(card, reference);
+
+        _ = CreateFamiliarSubHeaderRow(card, reference, "Current Box");
+        _boxListRoot = CreateFamiliarBoxList(card);
+
         _ = CreateFamiliarDivider(card);
 
         _ = CreateFamiliarSubHeaderRow(card, reference, "Box Tools");
@@ -715,15 +721,8 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
             _ = CreateFamiliarActionRow(toolsRoot, reference, "Move Active Familiar → Destination", MoveActiveFamiliarToDestination, FamiliarActionIconOverflowSpriteNames, false);
         }
 
-        _ = CreateFamiliarSubHeaderRow(card, reference, "Current Box Click Action");
-        CreateBoxRowActionModeTabs(card, reference);
-
         _ = CreateFamiliarDivider(card);
         CreateOverflowSection(card, reference);
-
-        _ = CreateFamiliarSubHeaderRow(card, reference, "Current Box");
-
-        _boxListRoot = CreateFamiliarBoxList(card);
     }
 
     private void CreateBoxRowActionModeTabs(Transform parent, TextMeshProUGUI reference)

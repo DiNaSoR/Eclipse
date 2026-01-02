@@ -83,6 +83,7 @@ internal static class CharacterMenuService
     static TextMeshProUGUI professionsStatusText;
     static TextMeshProUGUI professionsSummaryText;
     static readonly List<ProfessionRow> professionRows = [];
+    static Transform exoformRoot;
     static Transform statBonusesRoot;
     static Transform familiarsRoot;
     static BloodcraftTab activeTab = BloodcraftTab.Prestige;
@@ -246,6 +247,7 @@ internal static class CharacterMenuService
         CharacterMenuIntegration.Reset();
         _familiarsTab.Reset();
         _statBonusesTab.Reset();
+        _exoformTab.Reset();
 
         inventorySubMenu = null;
         bloodcraftTab = null;
@@ -268,6 +270,7 @@ internal static class CharacterMenuService
         professionsSummaryText = null;
         professionRows.Clear();
         statBonusesRoot = null;
+        exoformRoot = null;
         familiarsRoot = null;
         bloodcraftStatsSummary = null;
         activeTab = BloodcraftTab.Prestige;
@@ -679,6 +682,7 @@ internal static class CharacterMenuService
         }
 
         professionsRoot = CreateProfessionPanel(bodyRoot, referenceText);
+        exoformRoot = _exoformTab.CreatePanel(bodyRoot, referenceText);
         statBonusesRoot = _statBonusesTab.CreatePanel(bodyRoot, referenceText);
         familiarsRoot = _familiarsTab.CreatePanel(bodyRoot, entryStyle ?? referenceText);
         return tabRoot;
@@ -1444,13 +1448,17 @@ internal static class CharacterMenuService
         UpdateSectionHeader();
 
         bool showTextEntries = activeTab == BloodcraftTab.Prestige
-            || activeTab == BloodcraftTab.Exoform
             || activeTab == BloodcraftTab.Battles;
         entriesRoot.gameObject.SetActive(showTextEntries);
 
         if (professionsRoot != null)
         {
             professionsRoot.gameObject.SetActive(activeTab == BloodcraftTab.Professions);
+        }
+
+        if (exoformRoot != null)
+        {
+            exoformRoot.gameObject.SetActive(activeTab == BloodcraftTab.Exoform);
         }
 
         if (statBonusesRoot != null)
@@ -1493,6 +1501,11 @@ internal static class CharacterMenuService
             EnsureEntries(0);
             UpdateProfessionPanel();
         }
+        else if (activeTab == BloodcraftTab.Exoform)
+        {
+            EnsureEntries(0);
+            _exoformTab.UpdatePanel();
+        }
         else if (activeTab == BloodcraftTab.StatBonuses)
         {
             EnsureEntries(0);
@@ -1514,7 +1527,6 @@ internal static class CharacterMenuService
         // Delegate to tab components
         return activeTab switch
         {
-            BloodcraftTab.Exoform => _exoformTab.BuildEntries(),
             BloodcraftTab.Battles => _battlesTab.BuildEntries(),
             BloodcraftTab.Prestige => _prestigeTab.BuildEntries(),
             _ => []
