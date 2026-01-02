@@ -42,12 +42,12 @@ internal static class CharacterMenuService
     const float EntryFontScale = 0.87f;
     const float SubTabFontScale = 0.5f;
     const float SubTabHeightScale = 1.0f;
-    const int ContentPaddingLeft = 24;
-    const int ContentPaddingRight = 24;
+    const int ContentPaddingLeft = 10;
+    const int ContentPaddingRight = 10;
     const int ContentPaddingTop = 12;
     const int ContentPaddingBottom = 12;
-    const int SubTabPaddingLeft = 24;
-    const int SubTabPaddingRight = 24;
+    const int SubTabPaddingLeft = 10;
+    const int SubTabPaddingRight = 10;
     const int SubTabPaddingTop = 0;
     const int SubTabPaddingBottom = 0;
     const float SubTabSpacing = 0f;
