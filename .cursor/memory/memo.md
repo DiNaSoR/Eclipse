@@ -43,6 +43,7 @@ Last updated: 2026-01-02
 - Stat Bonuses panel supports two modes:
   - Weapon Expertise (interactive via `.wep cst …`)
   - Blood Legacies (interactive via `.bl cst …`)
+    - Requires Bloodcraft server behavior that supports toggling selections off (clicking an already-selected stat removes it). If the server is on older behavior (add-only), unselect will not work without `.bl rst`.
 
 ---
 

@@ -145,11 +145,13 @@ internal static class BloodCommands
 
             finalBloodType = GetCurrentBloodType(blood);
 
-            if (ChooseStat(steamId, finalBloodType, finalBloodStat))
+            if (ChooseStat(steamId, finalBloodType, finalBloodStat, out bool added))
             {
                 Buffs.RefreshStats(playerCharacter);
+                string action = added ? "selected for" : "removed from";
+                string color = added ? "#00FFFF" : "#FF0000";
                 LocalizationService.HandleReply(ctx,
-                    $"<color=#00FFFF>{finalBloodStat}</color> selected for <color=red>{finalBloodType}</color>!");
+                    $"<color={color}>{finalBloodStat}</color> has been {action} <color=red>{finalBloodType}</color>!");
             }
         }
         else
@@ -186,11 +188,13 @@ internal static class BloodCommands
 
             finalBloodStat = (BloodStatType)typedStat;
 
-            if (ChooseStat(steamId, finalBloodType, finalBloodStat))
+            if (ChooseStat(steamId, finalBloodType, finalBloodStat, out bool added))
             {
                 Buffs.RefreshStats(playerCharacter);
+                string action = added ? "selected for" : "removed from";
+                string color = added ? "#00FFFF" : "#FF0000";
                 LocalizationService.HandleReply(ctx,
-                    $"<color=#00FFFF>{finalBloodStat}</color> selected for <color=red>{finalBloodType}</color>!");
+                    $"<color={color}>{finalBloodStat}</color> has been {action} <color=red>{finalBloodType}</color>!");
             }
         }
     }

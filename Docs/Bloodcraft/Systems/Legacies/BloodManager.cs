@@ -70,18 +70,29 @@ internal static class BloodManager
             {BloodStatType.CorruptionDamageReduction, ConfigService.CorruptionDamageReduction}
         };
     }
-    public static bool ChooseStat(ulong steamId, BloodType bloodType, BloodStatType bloodStatType)
+    public static bool ChooseStat(ulong steamId, BloodType bloodType, BloodStatType bloodStatType, out bool added)
     {
+        added = false;
         if (steamId.TryGetPlayerBloodStats(out var bloodTypeStats) && bloodTypeStats.TryGetValue(bloodType, out var bloodStats))
         {
-            if (bloodStats.Count >= _legacyStatChoices || bloodStats.Contains(bloodStatType))
+            // Toggle behavior (matches Weapon Expertise): clicking an already selected stat removes it.
+            if (bloodStats.Contains(bloodStatType))
             {
-                return false; // Only allow configured amount of stats to be chosen and no duplicates
+                bloodStats.Remove(bloodStatType);
+                steamId.SetPlayerBloodStats(bloodTypeStats);
+                added = false;
+                return true;
+            }
+
+            if (bloodStats.Count >= _legacyStatChoices)
+            {
+                return false; // Only allow configured amount of stats to be chosen.
             }
 
             bloodStats.Add(bloodStatType);
             steamId.SetPlayerBloodStats(bloodTypeStats);
 
+            added = true;
             return true;
         }
 

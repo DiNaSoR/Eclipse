@@ -146,7 +146,6 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
     private TextMeshProUGUI _headerLevelText;
     private Image _levelFillImage;
     private TextMeshProUGUI _levelPercentText;
-    private TextMeshProUGUI _hintText;
     private TextMeshProUGUI _referenceText;
     private readonly List<StatBonusRow> _rows = [];
 
@@ -185,14 +184,6 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         _ = CreateDividerLine(rectTransform);
         _listRoot = CreateListRoot(rectTransform);
 
-        _hintText = UIFactory.CreateSectionSubHeader(rectTransform, reference,
-            "Click a stat to toggle. Use .wep cst [Weapon] [StatIndex] in chat.");
-        if (_hintText != null)
-        {
-            _hintText.alpha = 0.5f;
-            _hintText.alignment = TextAlignmentOptions.Center;
-        }
-
         rectTransform.gameObject.SetActive(false);
         _panelRoot = rectTransform;
         return rectTransform;
@@ -206,7 +197,6 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         }
 
         UpdateModeTabVisuals();
-        UpdateHintText();
 
         if (_mode == StatBonusesMode.WeaponExpertise)
         {
@@ -241,7 +231,6 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         _headerLevelText = null;
         _levelFillImage = null;
         _levelPercentText = null;
-        _hintText = null;
         _referenceText = null;
         _rows.Clear();
     }
@@ -335,7 +324,6 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
 
         _mode = mode;
         UpdateModeTabVisuals();
-        UpdateHintText();
         UpdatePanel();
     }
 
@@ -366,18 +354,6 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         {
             tab.Label.color = isActive ? ModeTabActiveTextColor : ModeTabInactiveTextColor;
         }
-    }
-
-    private void UpdateHintText()
-    {
-        if (_hintText == null)
-        {
-            return;
-        }
-
-        _hintText.text = _mode == StatBonusesMode.BloodLegacies
-            ? "Click a stat to toggle. Use .bl cst [Blood] [StatIndex] in chat."
-            : "Click a stat to toggle. Use .wep cst [Weapon] [StatIndex] in chat.";
     }
 
     private void CreateWeaponHeader(Transform parent, TextMeshProUGUI reference)
@@ -665,7 +641,14 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         int count = 0;
         for (int i = 0; i < selectedNames.Count; i++)
         {
-            if (!string.IsNullOrWhiteSpace(selectedNames[i]))
+            string value = selectedNames[i];
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            // Progress payload pads unselected slots with "None" (00) — treat as not selected.
+            if (Enum.TryParse(value, true, out BloodStatType stat) && stat != BloodStatType.None)
             {
                 count++;
             }
