@@ -2776,8 +2776,88 @@
 
             <!-- TALENTS TAB -->
             <div class="familiar-mode-content" id="familiar-talents-content">
+              <!-- Injected Styles for Talents to match in-game -->
+              <style>
+                #familiar-talents-content .talent-tree {
+                  display: flex;
+                  justify-content: center;
+                  gap: 20px;
+                  padding: 12px;
+                  margin-bottom: 20px;
+                }
+
+                #familiar-talents-content .talent-path {
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                  gap: 8px;
+                }
+
+                #familiar-talents-content .talent-node {
+                  width: 40px;
+                  height: 40px;
+                  border: 2px solid #555;
+                  background: #222;
+                  border-radius: 4px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  position: relative;
+                  cursor: pointer;
+                  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+                }
+
+                #familiar-talents-content .talent-node.keystone {
+                  width: 52px;
+                  height: 52px;
+                  border-color: #833;
+                }
+
+                #familiar-talents-content .talent-node.is-allocated {
+                  border-color: #3f5;
+                  box-shadow: 0 0 15px rgba(50, 255, 80, 0.6);
+                }
+
+                #familiar-talents-content .talent-node.is-available {
+                  border-color: #fc3;
+                }
+
+                #familiar-talents-content .talent-node-inner {
+                  z-index: 2;
+                  font-size: 12px;
+                }
+
+                #familiar-talents-content .talent-info-card {
+                  display: flex;
+                  flex-direction: column;
+                  justify-content: center;
+                  padding: 16px;
+                  min-height: 80px;
+                  margin-top: 5px;
+                }
+
+                #familiar-talents-content .talent-info-title {
+                  font-weight: bold;
+                  font-size: 14px;
+                  color: white;
+                  margin-bottom: 4px;
+                }
+
+                #familiar-talents-content .talent-info-desc {
+                  font-size: 13px;
+                  color: #ccc;
+                  margin-bottom: 4px;
+                }
+
+                #familiar-talents-content .talent-info-effect {
+                  font-size: 12px;
+                  font-style: italic;
+                  color: #aaf;
+                }
+              </style>
+
               <div class="familiar-scrollable">
-                <div class="familiar-card talent-card">
+                <div class="familiar-card talent-card" style="height: auto; min-height: 600px;">
                   <div class="familiar-card-header is-talent">
                     <span class="familiar-card-icon"></span>
                     <span class="familiar-card-title">Familiar Talent Tree</span>
@@ -2785,9 +2865,9 @@
 
                   <div class="talent-points-header">
                     <span class="talent-points-label">Talent Points:</span>
-                    <span class="talent-points-value">5</span>
-                    <span class="talent-points-spent">/ 12 available</span>
-                    <span class="talent-familiar-name">Scout Lv.45</span>
+                    <span class="talent-points-value">0</span>
+                    <span class="talent-points-spent">/ 3 available</span>
+                    <span class="talent-familiar-name">Wolf Lv.10</span>
                   </div>
 
                   <!-- Talent Tree Visualization -->
@@ -2795,81 +2875,69 @@
                     <!-- Speed Path (Left) -->
                     <div class="talent-path speed-path">
                       <div class="talent-path-label">Speed</div>
-                      <div class="talent-node minor is-allocated" data-id="1">
+                      <div class="talent-node minor is-available" data-id="1">
                         <div class="talent-node-inner">I</div>
-                        <div class="talent-node-name">Speed I</div>
                       </div>
-                      <div class="talent-connection is-allocated"></div>
-                      <div class="talent-node minor is-allocated" data-id="2">
+                      <div class="talent-connection"></div>
+                      <div class="talent-node minor" data-id="2">
                         <div class="talent-node-inner">II</div>
-                        <div class="talent-node-name">Speed II</div>
                       </div>
-                      <div class="talent-connection is-allocated"></div>
-                      <div class="talent-node notable is-available" data-id="3">
+                      <div class="talent-connection"></div>
+                      <div class="talent-node notable" data-id="3">
                         <div class="talent-node-inner">⚡</div>
-                        <div class="talent-node-name">Swift Strike</div>
                       </div>
                       <div class="talent-connection"></div>
                       <div class="talent-node keystone" data-id="4">
                         <div class="talent-node-inner">💀</div>
-                        <div class="talent-node-name">Berserker</div>
                       </div>
                     </div>
 
                     <!-- Power Path (Center) -->
                     <div class="talent-path power-path">
                       <div class="talent-path-label">Power</div>
-                      <div class="talent-node minor is-allocated" data-id="10">
+                      <div class="talent-node minor is-available" data-id="10">
                         <div class="talent-node-inner">I</div>
-                        <div class="talent-node-name">Power I</div>
                       </div>
-                      <div class="talent-connection is-allocated"></div>
-                      <div class="talent-node minor is-available" data-id="11">
+                      <div class="talent-connection"></div>
+                      <div class="talent-node minor" data-id="11">
                         <div class="talent-node-inner">II</div>
-                        <div class="talent-node-name">Power II</div>
                       </div>
                       <div class="talent-connection"></div>
                       <div class="talent-node notable" data-id="12">
                         <div class="talent-node-inner">⚔</div>
-                        <div class="talent-node-name">Brutal Force</div>
                       </div>
                       <div class="talent-connection"></div>
                       <div class="talent-node keystone enrage" data-id="13">
                         <div class="talent-node-inner">🔥</div>
-                        <div class="talent-node-name">Enrage</div>
                       </div>
                     </div>
 
                     <!-- Vitality Path (Right) -->
                     <div class="talent-path vitality-path">
                       <div class="talent-path-label">Vitality</div>
-                      <div class="talent-node minor is-allocated" data-id="20">
+                      <div class="talent-node minor is-available" data-id="20">
                         <div class="talent-node-inner">I</div>
-                        <div class="talent-node-name">Vitality I</div>
                       </div>
-                      <div class="talent-connection is-allocated"></div>
-                      <div class="talent-node minor is-allocated" data-id="21">
+                      <div class="talent-connection"></div>
+                      <div class="talent-node minor" data-id="21">
                         <div class="talent-node-inner">II</div>
-                        <div class="talent-node-name">Vitality II</div>
                       </div>
-                      <div class="talent-connection is-allocated"></div>
-                      <div class="talent-node notable is-available" data-id="22">
+                      <div class="talent-connection"></div>
+                      <div class="talent-node notable" data-id="22">
                         <div class="talent-node-inner">🛡</div>
-                        <div class="talent-node-name">Fortitude</div>
                       </div>
                       <div class="talent-connection"></div>
                       <div class="talent-node keystone" data-id="23">
                         <div class="talent-node-inner">🏰</div>
-                        <div class="talent-node-name">Juggernaut</div>
                       </div>
                     </div>
                   </div>
 
-                  <!-- Talent Info Panel -->
-                  <div class="talent-info-panel">
-                    <div class="talent-info-title">Enrage (Keystone)</div>
-                    <div class="talent-info-desc">+100% Damage, +50% Attack Speed, -25% Health</div>
-                    <div class="talent-info-effect">Visual Effect: Dark Red Aura</div>
+                  <!-- Talent Info Panel (Card Styled) -->
+                  <div class="familiar-card talent-info-card">
+                    <div class="talent-info-title">Hover a Talent</div>
+                    <div class="talent-info-desc">See details here.</div>
+                    <div class="talent-info-effect"></div>
                   </div>
 
                   <!-- Reset Button -->

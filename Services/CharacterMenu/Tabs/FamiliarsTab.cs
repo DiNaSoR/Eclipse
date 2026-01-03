@@ -411,6 +411,18 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
         _lastFamiliarLevel = -1;
         _lastFamiliarPrestige = -1;
         _mode = FamiliarsMode.Familiars;
+
+        // Reset talent state
+        _talentsRoot = null;
+        _talentPointsText = null;
+        _talentTreeRoot = null;
+        _talentNodes.Clear();
+        _cachedAllocatedTalents.Clear();
+        _talentsSyncedFromServer = false;
+        _lastTalentRequestTime = -1000f;
+        _infoTitleText = null;
+        _infoDescText = null;
+        _infoEffectText = null;
     }
 
     #endregion
@@ -2412,6 +2424,14 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
         if (_familiarBoxEntries.Count == 0 || _familiarBoxNames.Count == 0 || levelChanged || nameChanged)
         {
             RequestFamiliarBoxData();
+        }
+
+        // Reset talent sync state when familiar changes so we fetch fresh data
+        if (nameChanged)
+        {
+            DataService._familiarTalentsDataReady = false;
+            _talentsSyncedFromServer = false;
+            _cachedAllocatedTalents.Clear();
         }
 
         if (hasName)

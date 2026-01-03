@@ -1115,10 +1115,16 @@ internal static class DataService
         string payload = cleanMessage.Substring("TALENTS:".Length);
         _familiarAllocatedTalents.Clear();
 
-        if (payload.Equals("NONE", StringComparison.OrdinalIgnoreCase) ||
-            payload.Equals("EMPTY", StringComparison.OrdinalIgnoreCase))
+        if (payload.Equals("NONE", StringComparison.OrdinalIgnoreCase))
         {
-            // No talents allocated, cache is already cleared
+            // No active familiar - don't mark as ready, need to retry when familiar is bound
+            Core.Log.LogInfo("[DataService] Familiar talents: no active familiar, will retry");
+            return true; // Parsed successfully, but don't set ready flag
+        }
+
+        if (payload.Equals("EMPTY", StringComparison.OrdinalIgnoreCase))
+        {
+            // Active familiar exists but has no talents - this is valid data
             _familiarTalentsDataReady = true;
             Core.Log.LogInfo("[DataService] Familiar talents synced: none allocated");
             return true;

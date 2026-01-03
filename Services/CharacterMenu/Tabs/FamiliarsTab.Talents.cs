@@ -75,6 +75,9 @@ internal partial class FamiliarsTab
     private TextMeshProUGUI _infoEffectText;
 
     private readonly HashSet<int> _cachedAllocatedTalents = new();
+    private bool _talentsSyncedFromServer = false;
+    private float _lastTalentRequestTime = -1000f;
+    private const float TalentRequestCooldown = 2f; // Only request every 2 seconds
 
     private readonly Dictionary<int, TalentDef> _talentDefs = new()
     {
@@ -176,23 +179,20 @@ internal partial class FamiliarsTab
         CreateSpacer(card, 5f);
 
         // --- Talent Info Panel (between tree and Reset button) ---
-        RectTransform infoPanel = CreateRectTransformObject("TalentInfoPanel", card);
-        LayoutElement infoLayout = infoPanel.gameObject.AddComponent<LayoutElement>();
-        infoLayout.minHeight = 60f;
-        infoLayout.preferredHeight = 70f;
-        infoLayout.flexibleWidth = 1f;
-
-        // Background for info
-        Image infoBg = infoPanel.gameObject.AddComponent<Image>();
-        ApplySprite(infoBg, FamiliarCardSpriteNames);
-        infoBg.color = new Color(0.1f, 0.1f, 0.15f, 0.5f);
-
-        VerticalLayoutGroup infoVLayout = infoPanel.gameObject.AddComponent<VerticalLayoutGroup>();
-        infoVLayout.padding = CreatePadding(10, 10, 5, 5);
-        infoVLayout.spacing = 2f;
-        infoVLayout.childControlHeight = true;
-        infoVLayout.childControlWidth = true;
-        infoVLayout.childForceExpandHeight = false;
+        // --- Talent Info Panel (Card style) --
+        RectTransform infoPanel = CreateFamiliarCard(card, "TalentInfoPanel", stretchHeight: false, enforceMinimumHeight: false);
+        
+        // Adjust the card's layout settings
+        if (infoPanel != null)
+        {
+            LayoutElement infoLayout = infoPanel.GetComponent<LayoutElement>();
+            infoLayout.minHeight = 70f;
+            infoLayout.preferredHeight = 80f;
+            
+            // Allow clicking through the card background
+            Image infoBg = infoPanel.GetComponent<Image>();
+            if (infoBg != null) infoBg.raycastTarget = false;
+        }
 
         _infoTitleText = CreateFamiliarText(infoPanel, reference, "Hover a Talent", FamiliarMetaFontScale, FontStyles.Bold, TextAlignmentOptions.Left, Color.white);
         _infoDescText = CreateFamiliarText(infoPanel, reference, "See details here.", FamiliarMetaFontScale * 0.9f, FontStyles.Normal, TextAlignmentOptions.Left, new Color(0.8f, 0.8f, 0.8f));
@@ -399,6 +399,15 @@ internal partial class FamiliarsTab
         entryExit.callback.AddListener((UnityAction<BaseEventData>)delegate { ClearTalentInfoPanel(); });
         trigger.triggers.Add(entryExit);
 
+        // ADD SELECT/DESELECT (Gamepad/Keyboard Navigation)
+        EventTrigger.Entry entrySelect = new() { eventID = EventTriggerType.Select };
+        entrySelect.callback.AddListener((UnityAction<BaseEventData>)delegate { UpdateTalentInfoPanel(capturedId); });
+        trigger.triggers.Add(entrySelect);
+
+        EventTrigger.Entry entryDeselect = new() { eventID = EventTriggerType.Deselect };
+        entryDeselect.callback.AddListener((UnityAction<BaseEventData>)delegate { ClearTalentInfoPanel(); });
+        trigger.triggers.Add(entryDeselect);
+
         // Label
         TextMeshProUGUI label = CreateFamiliarText(nodeContainer, reference, name,
             FamiliarMetaFontScale * 0.8f, FontStyles.Normal, TextAlignmentOptions.Center, new Color(0.9f, 0.9f, 0.9f));
@@ -451,15 +460,21 @@ internal partial class FamiliarsTab
     {
         if (_talentTreeRoot == null) return;
 
-        // Request talent sync from server (if not already synced)
+        // Request talent sync from server (if not already synced, with rate limiting)
         if (!DataService._familiarTalentsDataReady)
         {
-            Quips.SendCommand(".fam tl");
+            float currentTime = UnityEngine.Time.realtimeSinceStartup;
+            if (currentTime - _lastTalentRequestTime >= TalentRequestCooldown)
+            {
+                _lastTalentRequestTime = currentTime;
+                Quips.SendCommand(".fam tl");
+            }
         }
-        else
+        else if (!_talentsSyncedFromServer)
         {
-            // Sync cached talents from server data
+            // Only sync ONCE when data first becomes ready, preserving optimistic updates afterward
             SyncTalentsFromServer();
+            _talentsSyncedFromServer = true;
         }
 
         // Check if we have an active familiar
