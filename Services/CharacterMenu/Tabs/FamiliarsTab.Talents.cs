@@ -64,7 +64,18 @@ internal partial class FamiliarsTab
         RectTransform card = CreateFamiliarCard(parent, "FamiliarTalentsCard", stretchHeight: false);
         if (card == null) return;
 
-        _ = CreateFamiliarSectionLabel(card, reference, "Talent Tree", FamiliarHeaderDefaultIconSpriteNames);
+        // Ensure the card has a VerticalLayoutGroup to stack Header, Tree, and Footer
+        VerticalLayoutGroup cardLayout = card.GetComponent<VerticalLayoutGroup>();
+        if (cardLayout == null) cardLayout = card.gameObject.AddComponent<VerticalLayoutGroup>();
+        cardLayout.childAlignment = TextAnchor.UpperCenter;
+        cardLayout.childControlHeight = true;
+        cardLayout.childControlWidth = true;
+        cardLayout.childForceExpandHeight = false;
+        cardLayout.childForceExpandWidth = true;
+        cardLayout.spacing = 10f;
+        cardLayout.padding = CreatePadding(16, 16, 16, 16);
+
+        _ = CreateFamiliarSectionLabel(card, reference, "Familiar Talent Tree", FamiliarHeaderDefaultIconSpriteNames);
 
         // Talent points header
         _talentPointsText = CreateFamiliarText(card, reference, "Talent Points: 0 / 0",
@@ -74,31 +85,27 @@ internal partial class FamiliarsTab
         RectTransform treeContainer = CreateRectTransformObject("TalentTreeContainer", card);
         if (treeContainer != null)
         {
-            treeContainer.anchorMin = new Vector2(0f, 1f);
-            treeContainer.anchorMax = new Vector2(1f, 1f);
-            treeContainer.pivot = new Vector2(0f, 1f);
-            treeContainer.offsetMin = Vector2.zero;
-            treeContainer.offsetMax = Vector2.zero;
-
+            // Background for the tree area
             Image bg = treeContainer.gameObject.AddComponent<Image>();
             ApplySprite(bg, FamiliarCardSpriteNames);
-            bg.color = new Color(0f, 0f, 0f, 0.25f);
+            bg.color = new Color(0f, 0f, 0f, 0.3f);
             bg.raycastTarget = false;
 
-            // Use HorizontalLayoutGroup for the 3 paths side by side
+            // Horizontal layout for the 3 paths (Speed, Power, Vitality)
             HorizontalLayoutGroup hLayout = treeContainer.gameObject.AddComponent<HorizontalLayoutGroup>();
             hLayout.childAlignment = TextAnchor.UpperCenter;
-            hLayout.spacing = 8f;
-            hLayout.padding = CreatePadding(8, 8, 8, 8);
+            hLayout.spacing = 20f; // More spacing between columns
+            hLayout.padding = CreatePadding(20, 20, 20, 20); // Inner padding
             hLayout.childForceExpandWidth = true;
-            hLayout.childForceExpandHeight = false;
+            hLayout.childForceExpandHeight = true;
             hLayout.childControlWidth = true;
             hLayout.childControlHeight = true;
 
-            // Fixed height for the tree container
+            // Height for the tree container
             LayoutElement treeLayout = treeContainer.gameObject.AddComponent<LayoutElement>();
-            treeLayout.minHeight = 280f;
-            treeLayout.preferredHeight = 280f;
+            treeLayout.minHeight = 350f;     // Increased height for better spacing
+            treeLayout.preferredHeight = 350f;
+            treeLayout.flexibleHeight = 0f;
 
             _talentTreeRoot = treeContainer;
 
@@ -125,35 +132,31 @@ internal partial class FamiliarsTab
             });
         }
 
-        // Reset talents button - create directly as an action row, not in a list
+        // Spacer to push Reset button to bottom if extra space exists
+        CreateSpacer(card, 10f);
+
+        // Reset talents button - create directly as an action row
         RectTransform resetRow = CreateRectTransformObject("ResetTalentsRow", card);
         if (resetRow != null)
         {
-            resetRow.anchorMin = new Vector2(0f, 1f);
-            resetRow.anchorMax = new Vector2(1f, 1f);
-            resetRow.pivot = new Vector2(0f, 1f);
-            resetRow.offsetMin = Vector2.zero;
-            resetRow.offsetMax = Vector2.zero;
-
             LayoutElement resetLayout = resetRow.gameObject.AddComponent<LayoutElement>();
-            resetLayout.minHeight = 32f;
-            resetLayout.preferredHeight = 32f;
+            resetLayout.minHeight = 40f;
+            resetLayout.preferredHeight = 40f;
+            resetLayout.flexibleWidth = 1f;
 
             Image resetBg = resetRow.gameObject.AddComponent<Image>();
             ApplySprite(resetBg, FamiliarRowSpriteNames);
-            resetBg.color = new Color(0.5f, 0.1f, 0.1f, 0.5f);
+            resetBg.color = new Color(0.6f, 0.1f, 0.1f, 0.8f); // Darker red background
             resetBg.raycastTarget = true;
 
             HorizontalLayoutGroup resetHLayout = resetRow.gameObject.AddComponent<HorizontalLayoutGroup>();
             resetHLayout.childAlignment = TextAnchor.MiddleCenter;
             resetHLayout.padding = CreatePadding(10, 10, 4, 4);
-            resetHLayout.childForceExpandWidth = true;
-            resetHLayout.childForceExpandHeight = false;
             resetHLayout.childControlWidth = true;
             resetHLayout.childControlHeight = true;
 
             TextMeshProUGUI resetText = CreateFamiliarText(resetRow, reference, "Reset Talents",
-                FamiliarActionFontScale, FontStyles.Normal, TextAlignmentOptions.Center, Color.white);
+                FamiliarActionFontScale, FontStyles.Bold, TextAlignmentOptions.Center, Color.white);
 
             SimpleStunButton resetButton = resetRow.gameObject.AddComponent<SimpleStunButton>();
             ConfigureCommandButton(resetButton, ".fam talent reset", true);
@@ -166,37 +169,41 @@ internal partial class FamiliarsTab
         RectTransform pathContainer = CreateRectTransformObject($"TalentPath_{pathName}", parent);
         if (pathContainer == null) return;
 
-        pathContainer.anchorMin = new Vector2(0f, 1f);
-        pathContainer.anchorMax = new Vector2(0f, 1f);
-        pathContainer.pivot = new Vector2(0.5f, 1f);
-
         // Vertical layout for nodes in this path
         VerticalLayoutGroup vLayout = pathContainer.gameObject.AddComponent<VerticalLayoutGroup>();
         vLayout.childAlignment = TextAnchor.UpperCenter;
-        vLayout.spacing = 4f;
-        vLayout.padding = CreatePadding(4, 4, 4, 4);
-        vLayout.childForceExpandWidth = false;
+        vLayout.spacing = 0f; // Spacing handled by connection lines
+        vLayout.padding = CreatePadding(0, 0, 10, 10);
+        vLayout.childForceExpandWidth = true;
         vLayout.childForceExpandHeight = false;
-        vLayout.childControlWidth = false;
-        vLayout.childControlHeight = false;
-
-        LayoutElement pathLayout = pathContainer.gameObject.AddComponent<LayoutElement>();
-        pathLayout.flexibleWidth = 1f;
+        vLayout.childControlWidth = true;
+        vLayout.childControlHeight = true;
 
         // Path label at top
         TextMeshProUGUI pathLabel = CreateFamiliarText(pathContainer, reference, pathName,
-            FamiliarMetaFontScale * 0.9f, FontStyles.Bold, TextAlignmentOptions.Center, FamiliarMetaColor);
+            FamiliarMetaFontScale, FontStyles.Bold, TextAlignmentOptions.Center, new Color(0.9f, 0.8f, 0.6f));
+        
         if (pathLabel != null)
         {
             LayoutElement labelLayout = pathLabel.gameObject.AddComponent<LayoutElement>();
-            labelLayout.minHeight = 18f;
-            labelLayout.preferredHeight = 18f;
-            labelLayout.preferredWidth = 80f;
+            labelLayout.minHeight = 24f;
+            labelLayout.preferredHeight = 24f;
+            
+            // Spacer after label
+            CreateSpacer(pathContainer, 10f);
         }
 
-        // Create talent nodes
-        foreach (var talent in talents)
+        // Create talent nodes with connections
+        for (int i = 0; i < talents.Length; i++)
         {
+            var talent = talents[i];
+            
+            // Create connection line BEFORE the node (except the first one)
+            if (i > 0)
+            {
+                CreateConnectionLine(pathContainer, 25f);
+            }
+
             TalentNodeUI nodeUI = CreateTalentNode(pathContainer, reference, talent.id, talent.name,
                 Vector2.zero, talent.isKeystone ? TalentKeystoneSize : TalentNodeSize, talent.isKeystone);
 
@@ -207,60 +214,75 @@ internal partial class FamiliarsTab
         }
     }
 
+    private void CreateConnectionLine(Transform parent, float height)
+    {
+        RectTransform line = CreateRectTransformObject("ConnectionLine", parent);
+        if (line == null) return;
+
+        LayoutElement layout = line.gameObject.AddComponent<LayoutElement>();
+        layout.minHeight = height;
+        layout.preferredHeight = height;
+        layout.minWidth = TalentConnectionWidth;
+        layout.preferredWidth = TalentConnectionWidth;
+        
+        Image img = line.gameObject.AddComponent<Image>();
+        // Use a simple white sprite (or pixel) that we can tint
+        // Since we don't have a guaranteed "pixel" sprite, we use IconBackground and squash it
+        ApplySprite(img, TalentNodeSpriteNames); 
+        img.color = TalentConnectionLockedColor;
+    }
+
+    private void CreateSpacer(Transform parent, float height)
+    {
+        RectTransform spacer = CreateRectTransformObject("Spacer", parent);
+        LayoutElement layout = spacer.gameObject.AddComponent<LayoutElement>();
+        layout.minHeight = height;
+        layout.preferredHeight = height;
+    }
+
     private TalentNodeUI CreateTalentNode(Transform parent, TextMeshProUGUI reference, 
         int talentId, string name, Vector2 position, float size, bool isKeystone)
     {
-        // Create a container for the node + label to work with VerticalLayoutGroup
+        // Container for Node + Label
         RectTransform nodeContainer = CreateRectTransformObject($"TalentNodeContainer_{talentId}", parent);
         if (nodeContainer == null) return null;
 
-        // Use layout element for proper sizing within layout groups
-        LayoutElement containerLayout = nodeContainer.gameObject.AddComponent<LayoutElement>();
-        containerLayout.minWidth = size + 24f;  // Extra width for label
-        containerLayout.preferredWidth = size + 24f;
-        containerLayout.minHeight = size + 18f;  // Extra height for label below
-        containerLayout.preferredHeight = size + 18f;
-
-        // Nested vertical layout for node icon + label
         VerticalLayoutGroup containerVLayout = nodeContainer.gameObject.AddComponent<VerticalLayoutGroup>();
         containerVLayout.childAlignment = TextAnchor.UpperCenter;
-        containerVLayout.spacing = 2f;
+        containerVLayout.spacing = 4f;
+        containerVLayout.childControlWidth = false; // Let elements size themselves
+        containerVLayout.childControlHeight = true;
         containerVLayout.childForceExpandWidth = false;
         containerVLayout.childForceExpandHeight = false;
-        containerVLayout.childControlWidth = false;
-        containerVLayout.childControlHeight = false;
 
-        // The actual node icon/button
+        // Node Icon/Button
         RectTransform nodeRect = CreateRectTransformObject($"TalentNode_{talentId}", nodeContainer);
-        if (nodeRect == null) return null;
-
         LayoutElement nodeLayout = nodeRect.gameObject.AddComponent<LayoutElement>();
         nodeLayout.minWidth = size;
         nodeLayout.preferredWidth = size;
         nodeLayout.minHeight = size;
         nodeLayout.preferredHeight = size;
 
-        // Background
         Image bg = nodeRect.gameObject.AddComponent<Image>();
         ApplySprite(bg, isKeystone ? TalentKeystoneSpriteNames : TalentNodeSpriteNames);
         bg.color = TalentNodeLockedColor;
         bg.raycastTarget = true;
 
-        // Button
         SimpleStunButton button = nodeRect.gameObject.AddComponent<SimpleStunButton>();
         int capturedId = talentId;
         button.onClick.RemoveAllListeners();
         button.onClick.AddListener((UnityAction)(() => OnTalentNodeClicked(capturedId)));
 
-        // Label below the node
+        // Label
         TextMeshProUGUI label = CreateFamiliarText(nodeContainer, reference, name,
-            FamiliarMetaFontScale * 0.7f, FontStyles.Normal, TextAlignmentOptions.Center, FamiliarMetaColor);
+            FamiliarMetaFontScale * 0.75f, FontStyles.Normal, TextAlignmentOptions.Center, new Color(0.8f, 0.8f, 0.8f));
+        
         if (label != null)
         {
             LayoutElement labelLayout = label.gameObject.AddComponent<LayoutElement>();
-            labelLayout.minHeight = 14f;
-            labelLayout.preferredHeight = 14f;
-            labelLayout.preferredWidth = size + 20f;
+            labelLayout.minHeight = 16f;
+            labelLayout.preferredHeight = 16f;
+            labelLayout.preferredWidth = 100f; // Allow text to be wider than node
         }
 
         return new TalentNodeUI
@@ -311,7 +333,7 @@ internal partial class FamiliarsTab
 
         if (_talentPointsText != null)
         {
-            _talentPointsText.text = $"Talent Points: {remainingPoints} available ({spentPoints}/{availablePoints} spent) | {displayName} Lv.{_familiarLevel}";
+            _talentPointsText.text = $"<color=#FFD700>Talent Points: {remainingPoints}</color> <color=#888>({spentPoints}/{availablePoints} spent)</color> | {displayName} Lv.{_familiarLevel}";
         }
 
         // Update node visuals based on allocation state
@@ -343,6 +365,7 @@ internal partial class FamiliarsTab
             if (isAllocated)
             {
                 node.Background.color = TalentNodeAllocatedColor;
+                // Update icon to look 'lit up' if we had separate glows
             }
             else if (isAvailable)
             {
