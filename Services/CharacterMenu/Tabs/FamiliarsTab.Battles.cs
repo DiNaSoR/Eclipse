@@ -281,7 +281,11 @@ internal partial class FamiliarsTab
 
         for (int i = 0; i < _battleGroupOptionRows.Count; i++)
         {
-            _battleGroupOptionRows[i].Root.SetActive(i < count);
+            var row = _battleGroupOptionRows[i];
+            if (row?.Root != null)
+            {
+                row.Root.SetActive(i < count);
+            }
         }
     }
 
@@ -556,7 +560,11 @@ internal partial class FamiliarsTab
 
         for (int i = 0; i < _battleSlotRows.Count; i++)
         {
-            _battleSlotRows[i].Root.SetActive(i < count);
+            var row = _battleSlotRows[i];
+            if (row?.Root != null)
+            {
+                row.Root.SetActive(i < count);
+            }
         }
     }
 

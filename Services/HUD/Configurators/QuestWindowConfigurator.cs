@@ -130,9 +130,9 @@ internal static class QuestWindowConfigurator
         header.ForceSet(questType.ToString() + " Quest");
         subHeader.ForceSet("UnitName: 0/0");
 
-        // Add to active objects
-        HudData.GameObjects.Add(questType, questObject);
-        ObjectStates.Add(questObject, true);
+        // Add to active objects (use indexer to allow re-initialization on re-login)
+        HudData.GameObjects[questType] = questObject;
+        ObjectStates[questObject] = true;
         LayoutService.RegisterElement($"Quest.{questType}", questTransform);
         windowOffset += compactQuests ? 0.055f : 0.075f;
 

@@ -22,21 +22,27 @@ internal partial class FamiliarsTab
 {
     #region Talent Constants
 
-    private const float TalentNodeSize = 36f;
-    private const float TalentKeystoneSize = 48f;
-    private const float TalentNodeSpacing = 12f;
-    private const float TalentConnectionWidth = 2f;
-    private const float TalentTreePadding = 16f;
+    private const float TalentNodeSize = 40f;
+    private const float TalentKeystoneSize = 52f;
+    private const float TalentNodeSpacing = 8f;
+    private const float TalentConnectionWidth = 3f;
+    private const float TalentTreePadding = 12f;
 
-    private static readonly Color TalentNodeAllocatedColor = new(0.35f, 0.75f, 0.35f, 1f);
-    private static readonly Color TalentNodeAvailableColor = new(0.7f, 0.6f, 0.2f, 1f);
-    private static readonly Color TalentNodeLockedColor = new(0.3f, 0.3f, 0.35f, 0.7f);
-    private static readonly Color TalentNodeKeystoneColor = new(0.8f, 0.2f, 0.2f, 1f);
-    private static readonly Color TalentConnectionAllocatedColor = new(0.35f, 0.75f, 0.35f, 0.8f);
-    private static readonly Color TalentConnectionLockedColor = new(0.4f, 0.4f, 0.45f, 0.5f);
+    // Brighter, more saturated colors for better visibility
+    private static readonly Color TalentNodeAllocatedColor = new(0.2f, 1f, 0.3f, 1f);  // Bright green
+    private static readonly Color TalentNodeAvailableColor = new(1f, 0.85f, 0.2f, 1f); // Bright gold
+    private static readonly Color TalentNodeLockedColor = new(0.5f, 0.5f, 0.55f, 0.9f); // Gray
+    private static readonly Color TalentNodeKeystoneColor = new(1f, 0.3f, 0.3f, 1f);   // Bright red
+    private static readonly Color TalentConnectionAllocatedColor = new(0.3f, 1f, 0.4f, 0.9f);
+    private static readonly Color TalentConnectionLockedColor = new(0.4f, 0.4f, 0.45f, 0.6f);
+    
+    // Glow colors for allocated talents
+    private static readonly Color TalentAllocatedGlowColor = new(0.4f, 1f, 0.5f, 0.6f);
+    private static readonly Color TalentKeystoneAllocatedGlowColor = new(1f, 0.5f, 0.3f, 0.7f);
 
-    private static readonly string[] TalentNodeSpriteNames = ["IconBackground", "spell_icon"];
-    private static readonly string[] TalentKeystoneSpriteNames = ["MobLevel_Skull", "IconBackground"];
+    // Background frames for nodes
+    private static readonly string[] TalentNodeFrameSprites = ["AbilitySlot02_64x64_Normal", "Stunlock_Icon_AbilityBackground", "IconBackground"];
+    private static readonly string[] TalentKeystoneFrameSprites = ["AbilityFrame02_Ulti_Normal", "Stunlock_Icon_UltimateBackground", "IconBackground"];
 
     #endregion
 
@@ -46,12 +52,14 @@ internal partial class FamiliarsTab
     {
         public int TalentId { get; set; }
         public RectTransform Root { get; set; }
-        public Image Background { get; set; }
-        public Image Icon { get; set; }
+        public Image Frame { get; set; }      // Background frame
+        public Image Icon { get; set; }       // Actual talent icon
+        public Image Glow { get; set; }       // Glow effect for allocated
         public TextMeshProUGUI Label { get; set; }
         public SimpleStunButton Button { get; set; }
         public bool IsAllocated { get; set; }
         public bool IsAvailable { get; set; }
+        public bool IsKeystone { get; set; }
     }
 
     private class TalentDef
@@ -59,28 +67,31 @@ internal partial class FamiliarsTab
         public string Name;
         public string Description;
         public string Effect;
+        public string Icon;
     }
 
     private TextMeshProUGUI _infoTitleText;
     private TextMeshProUGUI _infoDescText;
     private TextMeshProUGUI _infoEffectText;
 
+    private readonly HashSet<int> _cachedAllocatedTalents = new();
+
     private readonly Dictionary<int, TalentDef> _talentDefs = new()
     {
-        { 1, new() { Name = "Speed I", Description = "+5% Movement Speed" } },
-        { 2, new() { Name = "Speed II", Description = "+10% Movement Speed" } },
-        { 3, new() { Name = "Swift Strike", Description = "+25% Attack Speed" } },
-        { 4, new() { Name = "Berserker", Description = "+50% Attack Speed, +30% Move Speed", Effect = "Effect: Dark Red Aura, -15% Defense" } },
+        { 1, new() { Name = "Speed I", Description = "+5% Movement Speed", Icon = "AbilityFrame02_Travel_Normal" } },
+        { 2, new() { Name = "Speed II", Description = "+10% Movement Speed", Icon = "AbilityFrame02_Travel_Normal" } },
+        { 3, new() { Name = "Swift Strike", Description = "+25% Attack Speed", Icon = "Stunlock_Icon_BoneSword01" } },
+        { 4, new() { Name = "Berserker", Description = "+50% Attack Speed, +30% Move Speed", Effect = "Effect: Dark Red Aura, -15% Defense", Icon = "Stunlock_Icon_NewStar" } },
         
-        { 10, new() { Name = "Power I", Description = "+5% Physical & Spell Power" } },
-        { 11, new() { Name = "Power II", Description = "+10% Physical & Spell Power" } },
-        { 12, new() { Name = "Brutal Force", Description = "+25% All Damage" } },
-        { 13, new() { Name = "Enrage", Description = "+100% Damage below 50% HP", Effect = "Effect: Enrage Aura, -25% Max Health" } },
+        { 10, new() { Name = "Power I", Description = "+5% Physical & Spell Power", Icon = "Stunlock_Icon_BoneAxe01" } },
+        { 11, new() { Name = "Power II", Description = "+10% Physical & Spell Power", Icon = "Stunlock_Icon_BoneAxe01" } },
+        { 12, new() { Name = "Brutal Force", Description = "+25% All Damage", Icon = "Stunlock_Icon_BoneMace01" } },
+        { 13, new() { Name = "Enrage", Description = "+100% Damage below 50% HP", Effect = "Effect: Enrage Aura, -25% Max Health", Icon = "MobLevel_Skull" } },
 
-        { 20, new() { Name = "Vitality I", Description = "+5% Max Health" } },
-        { 21, new() { Name = "Vitality II", Description = "+10% Max Health" } },
-        { 22, new() { Name = "Fortitude", Description = "+25% Damage Reduction" } },
-        { 23, new() { Name = "Juggernaut", Description = "+100% Health, Immune to Stuns", Effect = "Effect: Iron Skin, -30% Speed" } }
+        { 20, new() { Name = "Vitality I", Description = "+5% Max Health", Icon = "Stunlock_Icon_BloodRose" } },
+        { 21, new() { Name = "Vitality II", Description = "+10% Max Health", Icon = "Stunlock_Icon_BloodRose" } },
+        { 22, new() { Name = "Fortitude", Description = "+25% Damage Reduction", Icon = "Stunlock_Icon_Chest_01_Boneguard" } },
+        { 23, new() { Name = "Juggernaut", Description = "+100% Health, Immune to Stuns", Effect = "Effect: Iron Skin, -30% Speed", Icon = "Stunlock_Icon_Item_TaintedHeart02" } }
     };
 
     #endregion
@@ -131,10 +142,10 @@ internal partial class FamiliarsTab
             hLayout.childControlWidth = true;
             hLayout.childControlHeight = true;
 
-            // Height for the tree container
+            // Height for the tree container - reduced to make room for info panel
             LayoutElement treeLayout = treeContainer.gameObject.AddComponent<LayoutElement>();
-            treeLayout.minHeight = 350f;     
-            treeLayout.preferredHeight = 350f;
+            treeLayout.minHeight = 320f;     
+            treeLayout.preferredHeight = 320f;
             treeLayout.flexibleHeight = 0f;
 
             _talentTreeRoot = treeContainer;
@@ -155,7 +166,7 @@ internal partial class FamiliarsTab
             });
 
             CreateTalentPath(treeContainer, reference, "Vitality", new[] {
-                (20, "Vitality II", false), // Corrected IDs from prev version
+                (20, "Vitality I", false),
                 (21, "Vitality II", false),
                 (22, "Fortitude", false),
                 (23, "Juggernaut", true)
@@ -164,11 +175,11 @@ internal partial class FamiliarsTab
 
         CreateSpacer(card, 5f);
 
-        // --- Talent Info Panel ---
+        // --- Talent Info Panel (between tree and Reset button) ---
         RectTransform infoPanel = CreateRectTransformObject("TalentInfoPanel", card);
         LayoutElement infoLayout = infoPanel.gameObject.AddComponent<LayoutElement>();
-        infoLayout.minHeight = 80f;
-        infoLayout.preferredHeight = 80f;
+        infoLayout.minHeight = 60f;
+        infoLayout.preferredHeight = 70f;
         infoLayout.flexibleWidth = 1f;
 
         // Background for info
@@ -213,7 +224,13 @@ internal partial class FamiliarsTab
                 FamiliarActionFontScale, FontStyles.Bold, TextAlignmentOptions.Center, Color.white);
 
             SimpleStunButton resetButton = resetRow.gameObject.AddComponent<SimpleStunButton>();
-            ConfigureCommandButton(resetButton, ".fam talent reset", true);
+            ConfigureCommandButton(resetButton, null, false);
+            resetButton.onClick.AddListener((UnityAction)(() => 
+            {
+                Quips.SendCommand(".fam talent reset");
+                _cachedAllocatedTalents.Clear();
+                UpdateFamiliarTalentsPanel();
+            }));
         }
     }
 
@@ -280,9 +297,8 @@ internal partial class FamiliarsTab
         layout.preferredWidth = TalentConnectionWidth;
         
         Image img = line.gameObject.AddComponent<Image>();
-        // Use a simple white sprite (or pixel) that we can tint
-        // Since we don't have a guaranteed "pixel" sprite, we use IconBackground and squash it
-        ApplySprite(img, TalentNodeSpriteNames); 
+        // Use a simple sprite for connection line
+        ApplySprite(img, new[] { "IconBackground", "BlackSquare" }); 
         img.color = TalentConnectionLockedColor;
     }
 
@@ -316,53 +332,97 @@ internal partial class FamiliarsTab
         nodeLayout.preferredWidth = size;
         nodeLayout.minHeight = size;
         nodeLayout.preferredHeight = size;
-        nodeRect.sizeDelta = new Vector2(size, size); // Explicitly size it
+        nodeRect.sizeDelta = new Vector2(size, size);
 
-        Image bg = nodeRect.gameObject.AddComponent<Image>();
-        ApplySprite(bg, isKeystone ? TalentKeystoneSpriteNames : TalentNodeSpriteNames);
-        bg.color = TalentNodeLockedColor;
-        bg.raycastTarget = true;
+        // === GLOW LAYER (behind everything, for allocated effect) ===
+        RectTransform glowRect = CreateRectTransformObject($"TalentGlow_{talentId}", nodeRect);
+        glowRect.anchorMin = Vector2.zero;
+        glowRect.anchorMax = Vector2.one;
+        glowRect.offsetMin = new Vector2(-6f, -6f);  // Extend beyond node
+        glowRect.offsetMax = new Vector2(6f, 6f);
+        Image glowImg = glowRect.gameObject.AddComponent<Image>();
+        ApplySprite(glowImg, new[] { "Circle", "BloodOrb", "IconBackground" });
+        glowImg.color = new Color(0, 0, 0, 0);  // Start invisible
+        glowImg.raycastTarget = false;
 
+        // === FRAME LAYER (background frame) ===
+        RectTransform frameRect = CreateRectTransformObject($"TalentFrame_{talentId}", nodeRect);
+        frameRect.anchorMin = Vector2.zero;
+        frameRect.anchorMax = Vector2.one;
+        frameRect.offsetMin = Vector2.zero;
+        frameRect.offsetMax = Vector2.zero;
+        Image frameImg = frameRect.gameObject.AddComponent<Image>();
+        ApplySprite(frameImg, isKeystone ? TalentKeystoneFrameSprites : TalentNodeFrameSprites);
+        frameImg.color = TalentNodeLockedColor;
+        frameImg.raycastTarget = false;
+
+        // === ICON LAYER (the actual talent icon on top) ===
+        float iconPadding = size * 0.15f;
+        RectTransform iconRect = CreateRectTransformObject($"TalentIcon_{talentId}", nodeRect);
+        iconRect.anchorMin = Vector2.zero;
+        iconRect.anchorMax = Vector2.one;
+        iconRect.offsetMin = new Vector2(iconPadding, iconPadding);
+        iconRect.offsetMax = new Vector2(-iconPadding, -iconPadding);
+        Image iconImg = iconRect.gameObject.AddComponent<Image>();
+        
+        // Apply the specific talent icon
+        if (_talentDefs.TryGetValue(talentId, out var def) && !string.IsNullOrEmpty(def.Icon))
+        {
+            ApplySprite(iconImg, new[] { def.Icon, "spell_icon", "IconBackground" });
+        }
+        else
+        {
+            ApplySprite(iconImg, new[] { "spell_icon", "IconBackground" });
+        }
+        iconImg.color = Color.white;  // Icon is always full color
+        iconImg.raycastTarget = false;
+        iconImg.preserveAspect = true;
+
+        // Button goes on the main node (captures clicks)
         SimpleStunButton button = nodeRect.gameObject.AddComponent<SimpleStunButton>();
+        Image buttonBg = nodeRect.gameObject.AddComponent<Image>();
+        buttonBg.color = new Color(0, 0, 0, 0);  // Invisible, just for raycasting
+        buttonBg.raycastTarget = true;
+        
         int capturedId = talentId;
         button.onClick.RemoveAllListeners();
         button.onClick.AddListener((UnityAction)(() => OnTalentNodeClicked(capturedId)));
 
         // ADD HOVER (PointerEnter/Exit)
-        // Note: EventTrigger requires GraphicRaycaster which Canvas usually has.
         EventTrigger trigger = nodeRect.gameObject.AddComponent<EventTrigger>();
         
-        // Enter
         EventTrigger.Entry entryEnter = new() { eventID = EventTriggerType.PointerEnter };
         entryEnter.callback.AddListener((UnityAction<BaseEventData>)delegate { UpdateTalentInfoPanel(capturedId); });
         trigger.triggers.Add(entryEnter);
 
-        // Exit
         EventTrigger.Entry entryExit = new() { eventID = EventTriggerType.PointerExit };
         entryExit.callback.AddListener((UnityAction<BaseEventData>)delegate { ClearTalentInfoPanel(); });
         trigger.triggers.Add(entryExit);
 
         // Label
         TextMeshProUGUI label = CreateFamiliarText(nodeContainer, reference, name,
-            FamiliarMetaFontScale * 0.75f, FontStyles.Normal, TextAlignmentOptions.Center, new Color(0.8f, 0.8f, 0.8f));
+            FamiliarMetaFontScale * 0.8f, FontStyles.Normal, TextAlignmentOptions.Center, new Color(0.9f, 0.9f, 0.9f));
         
         if (label != null)
         {
             LayoutElement labelLayout = label.gameObject.AddComponent<LayoutElement>();
-            labelLayout.minHeight = 16f;
-            labelLayout.preferredHeight = 16f;
-            labelLayout.preferredWidth = 100f; // Allow text to be wider than node
+            labelLayout.minHeight = 18f;
+            labelLayout.preferredHeight = 18f;
+            labelLayout.preferredWidth = 100f;
         }
 
         return new TalentNodeUI
         {
             TalentId = talentId,
             Root = nodeRect,
-            Background = bg,
+            Frame = frameImg,
+            Icon = iconImg,
+            Glow = glowImg,
             Label = label,
             Button = button,
             IsAllocated = false,
-            IsAvailable = false
+            IsAvailable = false,
+            IsKeystone = isKeystone
         };
     }
 
@@ -391,6 +451,17 @@ internal partial class FamiliarsTab
     {
         if (_talentTreeRoot == null) return;
 
+        // Request talent sync from server (if not already synced)
+        if (!DataService._familiarTalentsDataReady)
+        {
+            Quips.SendCommand(".fam tl");
+        }
+        else
+        {
+            // Sync cached talents from server data
+            SyncTalentsFromServer();
+        }
+
         // Check if we have an active familiar
         string displayName = ResolveFamiliarDisplayName();
         bool hasFamiliar = !displayName.Equals("None", StringComparison.OrdinalIgnoreCase);
@@ -404,9 +475,9 @@ internal partial class FamiliarsTab
 
             foreach (var node in _talentNodes)
             {
-                if (node?.Background != null)
+                if (node?.Frame != null)
                 {
-                    node.Background.color = TalentNodeLockedColor;
+                    node.Frame.color = TalentNodeLockedColor;
                 }
             }
             return;
@@ -428,19 +499,16 @@ internal partial class FamiliarsTab
 
     private int CalculateSpentTalentPoints()
     {
-        // This would query the allocated talents from server data
-        // For now, return 0 as placeholder until data sync is implemented
-        return 0;
+        return _cachedAllocatedTalents.Count;
     }
 
     private void UpdateTalentNodeVisuals(int remainingPoints)
     {
-        // Get allocated talents from cache/data
         List<int> allocatedTalents = GetAllocatedTalents();
 
         foreach (var node in _talentNodes)
         {
-            if (node?.Background == null) continue;
+            if (node?.Frame == null) continue;
 
             bool isAllocated = allocatedTalents.Contains(node.TalentId);
             bool isAvailable = remainingPoints > 0 && CanAllocateTalent(node.TalentId, allocatedTalents);
@@ -448,26 +516,88 @@ internal partial class FamiliarsTab
             node.IsAllocated = isAllocated;
             node.IsAvailable = isAvailable;
 
+            // Update Frame color based on state
             if (isAllocated)
             {
-                node.Background.color = TalentNodeAllocatedColor;
-                // Update icon to look 'lit up' if we had separate glows
+                // Bright allocated color
+                node.Frame.color = node.IsKeystone ? TalentNodeKeystoneColor : TalentNodeAllocatedColor;
+                
+                // Show glow effect
+                if (node.Glow != null)
+                {
+                    node.Glow.color = node.IsKeystone ? TalentKeystoneAllocatedGlowColor : TalentAllocatedGlowColor;
+                }
+                
+                // Make icon fully bright
+                if (node.Icon != null)
+                {
+                    node.Icon.color = Color.white;
+                }
             }
             else if (isAvailable)
             {
-                node.Background.color = TalentNodeAvailableColor;
+                // Gold color for available
+                node.Frame.color = TalentNodeAvailableColor;
+                
+                // Hide glow
+                if (node.Glow != null)
+                {
+                    node.Glow.color = new Color(0, 0, 0, 0);
+                }
+                
+                // Icon slightly dimmed
+                if (node.Icon != null)
+                {
+                    node.Icon.color = new Color(1f, 1f, 1f, 0.9f);
+                }
             }
             else
             {
-                node.Background.color = TalentNodeLockedColor;
+                // Locked/gray
+                node.Frame.color = TalentNodeLockedColor;
+                
+                // Hide glow
+                if (node.Glow != null)
+                {
+                    node.Glow.color = new Color(0, 0, 0, 0);
+                }
+                
+                // Icon desaturated/dimmed
+                if (node.Icon != null)
+                {
+                    node.Icon.color = new Color(0.6f, 0.6f, 0.6f, 0.7f);
+                }
             }
+            
+            // Update connection lines if we track them
         }
     }
 
     private List<int> GetAllocatedTalents()
     {
-        // Placeholder - would be populated from server data
-        return [];
+        // Merge server-synced talents with local optimistic cache
+        HashSet<int> combined = new(_cachedAllocatedTalents);
+        foreach (int talentId in DataService._familiarAllocatedTalents)
+        {
+            combined.Add(talentId);
+        }
+        return combined.ToList();
+    }
+
+    /// <summary>
+    /// Syncs local cache from server data when server data becomes available.
+    /// </summary>
+    private void SyncTalentsFromServer()
+    {
+        if (DataService._familiarTalentsDataReady)
+        {
+            // Clear local cache and populate from server
+            _cachedAllocatedTalents.Clear();
+            foreach (int talentId in DataService._familiarAllocatedTalents)
+            {
+                _cachedAllocatedTalents.Add(talentId);
+            }
+        }
     }
 
     private bool CanAllocateTalent(int talentId, List<int> allocatedTalents)
@@ -491,9 +621,31 @@ internal partial class FamiliarsTab
 
     private void OnTalentNodeClicked(int talentId)
     {
+        // Calculate remaining points first
+        int availablePoints = _familiarLevel / 10 + (_familiarPrestige * 2);
+        int spentPoints = CalculateSpentTalentPoints();
+        int remainingPoints = availablePoints - spentPoints;
+
+        // Check if we have points AND meet prerequisites
+        if (remainingPoints <= 0)
+        {
+            Core.Log.LogInfo($"[FamiliarsTab] No talent points available. Spent: {spentPoints}/{availablePoints}");
+            return; // Don't send command or update UI
+        }
+
+        if (!CanAllocateTalent(talentId, GetAllocatedTalents()))
+        {
+            Core.Log.LogInfo($"[FamiliarsTab] Cannot allocate talent {talentId} - prerequisites not met or already allocated");
+            return;
+        }
+
         // Send command to server to allocate talent
         string command = $".fam talent allocate {talentId}";
         Core.Log.LogInfo($"[FamiliarsTab] Talent node clicked: {talentId}, sending command: {command}");
+
+        // Optimistic update - only if validation passed
+        _cachedAllocatedTalents.Add(talentId);
+        UpdateFamiliarTalentsPanel();
 
         // Send command using the same pattern as other familiar actions
         if (!string.IsNullOrEmpty(command))

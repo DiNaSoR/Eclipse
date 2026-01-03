@@ -110,7 +110,11 @@ internal static class ClientChatSystemPatch
                         }
                         else
                         {
-                            DataService.TryParseFamiliarBoxChatMessage(message);
+                            // Try parsing talent response first, then familiar box
+                            if (!DataService.TryParseFamiliarTalentMessage(message))
+                            {
+                                DataService.TryParseFamiliarBoxChatMessage(message);
+                            }
                         }
                     }
                 }

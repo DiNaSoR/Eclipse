@@ -301,6 +301,11 @@ internal static class DataService
     public static readonly List<FamiliarBoxEntryData> _familiarBoxEntries = [];
     public static bool _familiarOverflowDataReady;
     public static readonly List<FamiliarOverflowEntryData> _familiarOverflowEntries = [];
+    
+    // Familiar Talent sync from server
+    public static readonly HashSet<int> _familiarAllocatedTalents = [];
+    public static bool _familiarTalentsDataReady = false;
+    
     static bool _familiarBoxListCaptureActive;
     static bool _familiarBoxEntriesCaptureActive;
     static bool _familiarOverflowEntriesCaptureActive;
@@ -1092,6 +1097,46 @@ internal static class DataService
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Parses TALENTS:x,y,z response from server to sync allocated talents.
+    /// </summary>
+    public static bool TryParseFamiliarTalentMessage(string message)
+    {
+        if (string.IsNullOrEmpty(message)) return false;
+
+        // Remove color tags
+        string cleanMessage = FamiliarColorTagRegex.Replace(message, "").Trim();
+
+        if (!cleanMessage.StartsWith("TALENTS:", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        string payload = cleanMessage.Substring("TALENTS:".Length);
+        _familiarAllocatedTalents.Clear();
+
+        if (payload.Equals("NONE", StringComparison.OrdinalIgnoreCase) ||
+            payload.Equals("EMPTY", StringComparison.OrdinalIgnoreCase))
+        {
+            // No talents allocated, cache is already cleared
+            _familiarTalentsDataReady = true;
+            Core.Log.LogInfo("[DataService] Familiar talents synced: none allocated");
+            return true;
+        }
+
+        // Parse comma-separated talent IDs
+        string[] talentParts = payload.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        foreach (string part in talentParts)
+        {
+            if (int.TryParse(part.Trim(), out int talentId))
+            {
+                _familiarAllocatedTalents.Add(talentId);
+            }
+        }
+
+        _familiarTalentsDataReady = true;
+        Core.Log.LogInfo($"[DataService] Familiar talents synced: {string.Join(",", _familiarAllocatedTalents)}");
+        return true;
     }
 
     static bool IsFamiliarBoxHeader(string rawMessage, string cleanMessage)

@@ -1772,6 +1772,39 @@ internal static class FamiliarCommands
         }
     }
 
+    [Command(name: "talent list", shortHand: "tl", adminOnly: false, usage: ".fam tl", description: "List allocated talents for the active familiar.")]
+    public static void ListTalentsCommand(ChatCommandContext ctx)
+    {
+        if (!ConfigService.FamiliarSystem)
+        {
+            LocalizationService.HandleReply(ctx, "Familiars are not enabled.");
+            return;
+        }
+
+        ulong steamId = ctx.User.PlatformId;
+
+        if (!steamId.HasActiveFamiliar())
+        {
+            LocalizationService.HandleReply(ctx, "TALENTS:NONE");
+            return;
+        }
+
+        ActiveFamiliarData activeFamiliar = GetActiveFamiliarData(steamId);
+        int familiarId = activeFamiliar.FamiliarId;
+
+        var allocatedTalents = FamiliarTalentManager.GetFamiliarTalents(steamId, familiarId);
+        
+        if (allocatedTalents.Count == 0)
+        {
+            LocalizationService.HandleReply(ctx, "TALENTS:EMPTY");
+            return;
+        }
+
+        // Return in parseable format: TALENTS:1,2,3,10
+        string talentList = string.Join(",", allocatedTalents);
+        LocalizationService.HandleReply(ctx, $"TALENTS:{talentList}");
+    }
+
     #endregion
 }
 
