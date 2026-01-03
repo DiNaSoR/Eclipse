@@ -479,6 +479,8 @@ internal class PrestigeTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
             return null;
         }
 
+        UIFactory.ConfigureTopLeftAnchoring(rectTransform);
+
         Image background = rectTransform.gameObject.AddComponent<Image>();
         ApplySprite(background, CardSpriteNames);
         background.color = CardBackgroundColor;
@@ -508,6 +510,8 @@ internal class PrestigeTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
             return null;
         }
 
+        UIFactory.ConfigureTopLeftAnchoring(rectTransform);
+
         Image background = rectTransform.gameObject.AddComponent<Image>();
         ApplySprite(background, HeaderSpriteNames);
         background.color = HeaderBackgroundColor;
@@ -517,7 +521,7 @@ internal class PrestigeTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         layout.childAlignment = TextAnchor.MiddleLeft;
         layout.spacing = 8f;
         layout.padding = CreatePadding(8, 8, 4, 4);
-        layout.childForceExpandWidth = false;
+        layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = false;
         layout.childControlWidth = true;
         layout.childControlHeight = true;
@@ -538,15 +542,15 @@ internal class PrestigeTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
             }
         }
 
-        TextMeshProUGUI titleText = CreateText(rectTransform, reference, title, reference.fontSize * 0.6f, FontStyles.Bold, HeaderTextColor);
-        if (titleText != null)
+        float leftOffset = 8f;
+        if (icon != null && icon.gameObject.activeSelf)
         {
-            titleText.enableWordWrapping = false;
-            titleText.overflowMode = TextOverflowModes.Ellipsis;
-            LayoutElement titleLayout = titleText.GetComponent<LayoutElement>() ?? titleText.gameObject.AddComponent<LayoutElement>();
-            titleLayout.flexibleWidth = 1f;
+            leftOffset += HeaderIconSize + 8f;
         }
 
+        _ = CreateHeaderTitleOverlay(rectTransform, reference, title, leftOffset);
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(rectTransform);
         return rectTransform;
     }
 
@@ -557,6 +561,8 @@ internal class PrestigeTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         {
             return null;
         }
+
+        UIFactory.ConfigureTopLeftAnchoring(rectTransform);
 
         HorizontalLayoutGroup layout = rectTransform.gameObject.AddComponent<HorizontalLayoutGroup>();
         layout.childAlignment = TextAnchor.MiddleLeft;
@@ -584,6 +590,8 @@ internal class PrestigeTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         {
             return null;
         }
+
+        UIFactory.ConfigureTopLeftAnchoring(rectTransform);
 
         Image background = rectTransform.gameObject.AddComponent<Image>();
         ApplySprite(background, RowSpriteNames);
@@ -630,13 +638,15 @@ internal class PrestigeTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         return rectTransform;
     }
 
-    private static RectTransform CreateDropdownList(Transform parent)
+    private static RectTransform CreateDropdownList(Transform parent)      
     {
         RectTransform rectTransform = CreateRectTransformObject("PrestigeTypeDropdownList", parent);
         if (rectTransform == null)
         {
             return null;
         }
+
+        UIFactory.ConfigureTopLeftAnchoring(rectTransform);
 
         VerticalLayoutGroup layout = rectTransform.gameObject.AddComponent<VerticalLayoutGroup>();
         layout.childAlignment = TextAnchor.UpperLeft;
@@ -660,6 +670,8 @@ internal class PrestigeTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         {
             return null;
         }
+
+        UIFactory.ConfigureTopLeftAnchoring(rectTransform);
 
         Image background = rectTransform.gameObject.AddComponent<Image>();
         ApplySprite(background, RowSpriteNames);
@@ -800,6 +812,46 @@ internal class PrestigeTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
     #endregion
 
     #region Low-level helpers
+
+    private static TextMeshProUGUI CreateHeaderTitleOverlay(
+        RectTransform parent,
+        TextMeshProUGUI reference,
+        string title,
+        float leftOffset)
+    {
+        if (parent == null || reference == null)
+        {
+            return null;
+        }
+
+        RectTransform rectTransform = CreateRectTransformObject("HeaderTitle", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+
+        rectTransform.anchorMin = new Vector2(0f, 0f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0f, 0.5f);
+        rectTransform.offsetMin = new Vector2(leftOffset, 0f);
+        rectTransform.offsetMax = new Vector2(-8f, 0f);
+
+        TextMeshProUGUI titleText = rectTransform.gameObject.AddComponent<TextMeshProUGUI>();
+        UIFactory.CopyTextStyle(reference, titleText);
+        titleText.text = title;
+        titleText.fontSize = reference.fontSize * 0.6f;
+        titleText.fontStyle = FontStyles.Bold;
+        titleText.color = HeaderTextColor;
+        titleText.alignment = TextAlignmentOptions.Left;
+        titleText.enableWordWrapping = false;
+        titleText.overflowMode = TextOverflowModes.Ellipsis;
+        titleText.raycastTarget = false;
+        titleText.ForceMeshUpdate();
+
+        LayoutElement layout = rectTransform.gameObject.AddComponent<LayoutElement>();
+        layout.ignoreLayout = true;
+        return titleText;
+    }
 
     private static TextMeshProUGUI CreateText(
         Transform parent,

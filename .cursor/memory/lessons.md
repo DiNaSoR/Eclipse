@@ -227,3 +227,36 @@
 
 ### Rule
 > Do not rely on Unity EventSystems pointer handler interfaces for UI hover in this project; use ProjectM-compatible interaction paths.
+
+---
+
+## L-008 — UI: Non-interactive TMP text must not block raycasts
+
+### Status
+- Active
+
+### Tags
+- [UI] [Layout]
+
+### Introduced
+- 2026-01-02
+
+### Symptom
+- Header/title text appears missing (invisible), and UI elements underneath become unclickable.
+
+### Root cause
+- `CopyTextStyle(...)` can inherit a fully-transparent reference color, and `TextMeshProUGUI` defaults `raycastTarget = true`, so an invisible text element can still block raycasts.
+
+### Wrong approach (DO NOT REPEAT)
+- Creating non-interactive TMP elements without explicitly disabling raycasts and ensuring the text color is visible.
+
+### Correct approach
+- For non-interactive TMP text, always set `raycastTarget = false`.
+- For header/title text created from a style reference, force a visible alpha (do not inherit a potentially-transparent reference color).
+
+### Rule
+> Any non-interactive TMP text must set `raycastTarget = false` and must not rely on a potentially-transparent reference color.
+
+### References
+- Files:
+  - `Services/CharacterMenu/Shared/UIFactory.cs`

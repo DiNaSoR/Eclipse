@@ -181,6 +181,12 @@ internal static class UIFactory
         textComponent.fontSize = reference.fontSize * HeaderFontScale;
         textComponent.fontStyle = FontStyles.Bold;
         textComponent.alignment = TextAlignmentOptions.Center;
+        textComponent.enableWordWrapping = false;
+        textComponent.overflowMode = TextOverflowModes.Ellipsis;
+        textComponent.raycastTarget = false;
+
+        Color baseColor = textComponent.color;
+        textComponent.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0.95f);
 
         var layout = rectTransform.gameObject.AddComponent<LayoutElement>();
         layout.preferredHeight = textComponent.fontSize * 1.5f;

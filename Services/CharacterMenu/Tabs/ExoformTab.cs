@@ -55,6 +55,7 @@ internal class ExoformTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
     private static readonly Color RowBackgroundColor = new(0.05f, 0.05f, 0.08f, 0.75f);
     private static readonly Color PrimaryRowBackgroundColor = new(0.5f, 0.22f, 0.12f, 0.45f);
     private static readonly Color HeaderBackgroundColor = new(0.1f, 0.1f, 0.12f, 0.95f);
+    private static readonly Color HeaderTextColor = new(0.9f, 0.87f, 0.83f, 1f);
     private static readonly Color ColumnDividerColor = new(1f, 1f, 1f, 0.4f);
     private static readonly Color TitleColor = new(0.95f, 0.84f, 0.7f, 1f);
     private static readonly Color MetaColor = new(1f, 1f, 1f, 0.55f);
@@ -750,7 +751,7 @@ internal class ExoformTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         layout.childAlignment = TextAnchor.MiddleLeft;
         layout.spacing = 8f;
         layout.padding = CreatePadding(8, 8, 4, 4);
-        layout.childForceExpandWidth = false;
+        layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = false;
         layout.childControlWidth = true;
         layout.childControlHeight = true;
@@ -772,19 +773,56 @@ internal class ExoformTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
             }
         }
 
-        TextMeshProUGUI titleText = CreateText(rectTransform, reference, title, reference.fontSize * 0.6f, FontStyles.Bold, new Color(0.9f, 0.87f, 0.83f, 1f));
-        if (titleText != null)
+        float leftOffset = 8f;
+        if (icon != null && icon.gameObject.activeSelf)
         {
-            titleText.enableWordWrapping = false;
-            titleText.overflowMode = TextOverflowModes.Ellipsis;
-            titleText.alignment = TextAlignmentOptions.Left;
-
-            LayoutElement titleLayout = titleText.GetComponent<LayoutElement>() ?? titleText.gameObject.AddComponent<LayoutElement>();
-            titleLayout.flexibleWidth = 1f;
-            titleLayout.minWidth = 0f;
+            leftOffset += HeaderIconSize + 8f;
         }
 
+        _ = CreateHeaderTitleOverlay(rectTransform, reference, title, leftOffset);
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(rectTransform);
         return rectTransform;
+    }
+
+    private static TextMeshProUGUI CreateHeaderTitleOverlay(
+        RectTransform parent,
+        TextMeshProUGUI reference,
+        string title,
+        float leftOffset)
+    {
+        if (parent == null || reference == null)
+        {
+            return null;
+        }
+
+        RectTransform rectTransform = CreateRectTransformObject("HeaderTitle", parent);
+        if (rectTransform == null)
+        {
+            return null;
+        }
+
+        rectTransform.anchorMin = new Vector2(0f, 0f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(0f, 0.5f);
+        rectTransform.offsetMin = new Vector2(leftOffset, 0f);
+        rectTransform.offsetMax = new Vector2(-8f, 0f);
+
+        TextMeshProUGUI titleText = rectTransform.gameObject.AddComponent<TextMeshProUGUI>();
+        UIFactory.CopyTextStyle(reference, titleText);
+        titleText.text = title;
+        titleText.fontSize = reference.fontSize * 0.6f;
+        titleText.fontStyle = FontStyles.Bold;
+        titleText.color = HeaderTextColor;
+        titleText.alignment = TextAlignmentOptions.Left;
+        titleText.enableWordWrapping = false;
+        titleText.overflowMode = TextOverflowModes.Ellipsis;
+        titleText.raycastTarget = false;
+        titleText.ForceMeshUpdate();
+
+        LayoutElement layout = rectTransform.gameObject.AddComponent<LayoutElement>();
+        layout.ignoreLayout = true;
+        return titleText;
     }
 
     private static RectTransform CreateDivider(Transform parent)

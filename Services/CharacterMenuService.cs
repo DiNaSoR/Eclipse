@@ -46,7 +46,9 @@ internal static class CharacterMenuService
     const int ContentPaddingRight = 10;
     const int ContentPaddingTop = 12;
     const int ContentPaddingBottom = 12;
-    const int SubTabPaddingLeft = 10;
+    const int TabContentPaddingTop = 1;
+    const float TabContentSpacing = 0f;
+    const int SubTabPaddingLeft = 5;
     const int SubTabPaddingRight = 10;
     const int SubTabPaddingTop = 0;
     const int SubTabPaddingBottom = 0;
@@ -56,6 +58,7 @@ internal static class CharacterMenuService
     static RectTransform bloodcraftTab;
     static SimpleStunButton bloodcraftTabButton;
     static Transform contentRoot;
+    static Transform tabContentRoot;
     static TextMeshProUGUI headerText;
     static RectTransform headerDivider;
     static TextMeshProUGUI subHeaderText;
@@ -217,6 +220,7 @@ internal static class CharacterMenuService
             return;
         }
 
+        ApplyTabContentLayoutOverrides(tabContentRoot);
         UpdateSubTabSizing();
         ApplyTabVisibility();
         UpdateEntries();
@@ -240,6 +244,7 @@ internal static class CharacterMenuService
         bloodcraftTab = null;
         bloodcraftTabButton = null;
         contentRoot = null;
+        tabContentRoot = null;
         headerText = null;
         headerDivider = null;
         subHeaderText = null;
@@ -631,9 +636,10 @@ internal static class CharacterMenuService
         tabRoot.gameObject.SetActive(false);
 
         TextMeshProUGUI referenceText = templateTab.GetComponentInChildren<TextMeshProUGUI>(true);
-        contentRoot = tabRoot.Find(TabContentPath) ?? tabRoot;
-        ClearChildren(contentRoot);
-        contentRoot = CreateContentRoot(contentRoot);
+        tabContentRoot = tabRoot.Find(TabContentPath) ?? tabRoot;
+        ApplyTabContentLayoutOverrides(tabContentRoot);
+        ClearChildren(tabContentRoot);
+        contentRoot = CreateContentRoot(tabContentRoot);
 
         if (referenceText == null)
         {
@@ -679,6 +685,61 @@ internal static class CharacterMenuService
     /// <param name="root">The parent transform to clear.</param>
     // Delegates to UIFactory
     static void ClearChildren(Transform root) => UIFactory.ClearChildren(root);
+
+    static void ApplyTabContentLayoutOverrides(Transform root)
+    {
+        if (root == null || root.Equals(null))
+        {
+            return;
+        }
+
+        VerticalLayoutGroup layout = root.GetComponent<VerticalLayoutGroup>();
+        if (layout == null)
+        {
+            return;
+        }
+
+        RectOffset padding = layout.padding ?? new RectOffset();
+        bool needsRebuild = false;
+        if (padding.top != TabContentPaddingTop)
+        {
+            padding.top = TabContentPaddingTop;
+            needsRebuild = true;
+        }
+
+        if (layout.spacing != TabContentSpacing)
+        {
+            layout.spacing = TabContentSpacing;
+            needsRebuild = true;
+        }
+
+        if (layout.childAlignment != TextAnchor.UpperLeft)
+        {
+            layout.childAlignment = TextAnchor.UpperLeft;
+            needsRebuild = true;
+        }
+
+        if (!layout.childControlWidth || !layout.childControlHeight)
+        {
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            needsRebuild = true;
+        }
+
+        if (!layout.childForceExpandWidth || layout.childForceExpandHeight)
+        {
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+            needsRebuild = true;
+        }
+
+        layout.padding = padding;
+
+        if (needsRebuild && root is RectTransform rectTransform)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(rectTransform);
+        }
+    }
 
     // Delegates to UIFactory with additional spacing and ContentSizeFitter
     static void EnsureVerticalLayout(Transform root, int paddingLeft = 0, int paddingRight = 0,
@@ -732,7 +793,7 @@ internal static class CharacterMenuService
         rectTransform.offsetMin = Vector2.zero;
         rectTransform.offsetMax = Vector2.zero;
 
-        EnsureVerticalLayout(rectTransform, spacing: 10f);
+        EnsureVerticalLayout(rectTransform, spacing: 5f);
         return rectTransform;
     }
 
