@@ -299,7 +299,9 @@ internal class PrestigeTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
             row.Label.text = display;
             row.Background.color = isSelected ? TopRowBackgroundColor : DropdownBackgroundColor;
 
-            ConfigureActionButton(row.Button, () => SelectTypeIndex(i), enabled: true);
+            // CRITICAL: Capture loop variable in local to avoid closure bug
+            int capturedIndex = i;
+            ConfigureActionButton(row.Button, () => SelectTypeIndex(capturedIndex), enabled: true);
         }
     }
 
