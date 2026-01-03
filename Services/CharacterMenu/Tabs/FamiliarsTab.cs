@@ -27,7 +27,8 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
     private enum FamiliarsMode
     {
         Familiars,
-        BattleGroups
+        BattleGroups,
+        Talents
     }
 
     private enum BoxRowActionMode
@@ -156,6 +157,13 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
 
     private ModeTab _familiarsModeTab;
     private ModeTab _battleGroupsModeTab;
+    private ModeTab _talentsModeTab;
+
+    // Talents UI
+    private RectTransform _talentsRoot;
+    private TextMeshProUGUI _talentPointsText;
+    private Transform _talentTreeRoot;
+    private readonly List<TalentNodeUI> _talentNodes = [];
 
     private TextMeshProUGUI _activeNameText;
     private TextMeshProUGUI _activeStatsText;
@@ -269,13 +277,20 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
         UpdateModeTabVisuals();
 
         bool showFamiliars = _mode == FamiliarsMode.Familiars;
+        bool showBattles = _mode == FamiliarsMode.BattleGroups;
+        bool showTalents = _mode == FamiliarsMode.Talents;
+
         if (_manageRoot != null)
         {
             _manageRoot.gameObject.SetActive(showFamiliars);
         }
         if (_battlesRoot != null)
         {
-            _battlesRoot.gameObject.SetActive(!showFamiliars);
+            _battlesRoot.gameObject.SetActive(showBattles);
+        }
+        if (_talentsRoot != null)
+        {
+            _talentsRoot.gameObject.SetActive(showTalents);
         }
 
         if (showFamiliars)
@@ -325,9 +340,13 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
             UpdateFamiliarBoxPanel(hasFamiliar, displayName);
             UpdateSettingsConfirmations();
         }
-        else
+        else if (showBattles)
         {
             UpdateFamiliarBattlesPanel();
+        }
+        else if (showTalents)
+        {
+            UpdateFamiliarTalentsPanel();
         }
     }
 
@@ -425,7 +444,8 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
         rowLayout.preferredHeight = FamiliarModeTabsHeight;
 
         _familiarsModeTab = CreateModeTab(rectTransform, reference, "Familiars", FamiliarsMode.Familiars);
-        _battleGroupsModeTab = CreateModeTab(rectTransform, reference, "Battle Groups", FamiliarsMode.BattleGroups);
+        _battleGroupsModeTab = CreateModeTab(rectTransform, reference, "Battles", FamiliarsMode.BattleGroups);
+        _talentsModeTab = CreateModeTab(rectTransform, reference, "Talents", FamiliarsMode.Talents);
 
         UpdateModeTabVisuals();
     }
@@ -490,6 +510,7 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
     {
         ConfigureModeTabVisual(_familiarsModeTab, _mode == FamiliarsMode.Familiars);
         ConfigureModeTabVisual(_battleGroupsModeTab, _mode == FamiliarsMode.BattleGroups);
+        ConfigureModeTabVisual(_talentsModeTab, _mode == FamiliarsMode.Talents);
     }
 
     private static void ConfigureModeTabVisual(ModeTab tab, bool isActive)
@@ -554,6 +575,17 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
             EnsureVerticalLayout(_battlesRoot, spacing: FamiliarSectionSpacing);
         }
 
+        _talentsRoot = CreateRectTransformObject("FamiliarsTalentsRoot", rectTransform);
+        if (_talentsRoot != null)
+        {
+            _talentsRoot.anchorMin = new Vector2(0f, 1f);
+            _talentsRoot.anchorMax = new Vector2(1f, 1f);
+            _talentsRoot.pivot = new Vector2(0f, 1f);
+            _talentsRoot.offsetMin = Vector2.zero;
+            _talentsRoot.offsetMax = Vector2.zero;
+            EnsureVerticalLayout(_talentsRoot, spacing: FamiliarSectionSpacing);
+        }
+
         RectTransform topRow = CreateRectTransformObject("FamiliarTopRow", _manageRoot);
         if (topRow == null)
         {
@@ -586,6 +618,7 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
         CreateFamiliarBoxCard(rightColumn, reference);
 
         CreateFamiliarBattlesPanel(_battlesRoot, reference);
+        CreateFamiliarTalentsPanel(_talentsRoot, reference);
 
         return rectTransform;
     }

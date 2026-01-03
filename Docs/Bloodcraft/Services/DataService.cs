@@ -1179,6 +1179,71 @@ internal static class DataService
                 return JsonSerializer.Deserialize<FamiliarBuffsData>(jsonString);
             }
         }
+        public static class FamiliarTalentManager
+        {
+            [Serializable]
+            public class FamiliarTalentData
+            {
+                /// <summary>
+                /// Key: familiarId (GuidHash), Value: List of allocated talent node IDs
+                /// </summary>
+                public Dictionary<int, List<int>> AllocatedTalents { get; set; } = [];
+            }
+            static string GetFilePath(ulong steamId) => Path.Combine(DirectoryPaths[8], $"{steamId}_familiar_talents.json");
+            public static void SaveFamiliarTalentData(ulong steamId, FamiliarTalentData data)
+            {
+                string filePath = GetFilePath(steamId);
+                string jsonString = JsonSerializer.Serialize(data, _jsonOptions);
+
+                File.WriteAllText(filePath, jsonString);
+            }
+            public static FamiliarTalentData LoadFamiliarTalentData(ulong steamId)
+            {
+                string filePath = GetFilePath(steamId);
+                if (!File.Exists(filePath))
+                    return new FamiliarTalentData();
+
+                string jsonString = File.ReadAllText(filePath);
+                return JsonSerializer.Deserialize<FamiliarTalentData>(jsonString) ?? new FamiliarTalentData();
+            }
+            public static List<int> GetFamiliarTalents(ulong steamId, int familiarId)
+            {
+                var data = LoadFamiliarTalentData(steamId);
+                return data.AllocatedTalents.TryGetValue(familiarId, out var talents) ? talents : [];
+            }
+            public static bool AllocateTalent(ulong steamId, int familiarId, int talentId)
+            {
+                var data = LoadFamiliarTalentData(steamId);
+                
+                if (!data.AllocatedTalents.ContainsKey(familiarId))
+                    data.AllocatedTalents[familiarId] = [];
+
+                var currentTalents = data.AllocatedTalents[familiarId];
+                
+                // Check if already allocated
+                if (currentTalents.Contains(talentId))
+                    return false;
+
+                // Check prerequisites using FamiliarTalentSystem
+                if (!Bloodcraft.Systems.Familiars.FamiliarTalentSystem.CanAllocateTalent(talentId, currentTalents))
+                    return false;
+
+                currentTalents.Add(talentId);
+                SaveFamiliarTalentData(steamId, data);
+                return true;
+            }
+            public static bool ResetTalents(ulong steamId, int familiarId)
+            {
+                var data = LoadFamiliarTalentData(steamId);
+                
+                if (!data.AllocatedTalents.ContainsKey(familiarId))
+                    return false;
+
+                data.AllocatedTalents[familiarId] = [];
+                SaveFamiliarTalentData(steamId, data);
+                return true;
+            }
+        }
         public static class FamiliarBattleGroupsManager
         {
             const int MAX_BATTLE_GROUPS = 10;

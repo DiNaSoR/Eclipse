@@ -17,6 +17,7 @@ using static Bloodcraft.Services.DataService.FamiliarPersistence;
 using static Bloodcraft.Services.DataService.FamiliarPersistence.FamiliarBuffsManager;
 using static Bloodcraft.Services.DataService.FamiliarPersistence.FamiliarEquipmentManager;
 using static Bloodcraft.Services.DataService.FamiliarPersistence.FamiliarExperienceManager;
+using static Bloodcraft.Services.DataService.FamiliarPersistence.FamiliarTalentManager;
 using static Bloodcraft.Utilities.Misc.PlayerBoolsManager;
 using static Bloodcraft.Utilities.Progression;
 
@@ -572,7 +573,69 @@ internal static class FamiliarBindingSystem
             health.Value = maxHealth;
         });
 
+        // Apply talent bonuses
+        ApplyTalentBonuses(familiar, steamId, famKey, ref familiarUnitStats, ref familiarAbilityBarShared, ref familiarAiMoveSpeeds, ref maxHealth);
+
         RemoveMisc(familiar, familiarId);
+    }
+
+    /// <summary>
+    /// Apply talent stat bonuses and visual effects to the familiar
+    /// </summary>
+    static void ApplyTalentBonuses(Entity familiar, ulong steamId, int famKey, 
+        ref UnitStats unitStats, ref AbilityBar_Shared abilityBar, ref AiMoveSpeeds moveSpeeds, ref float maxHealth)
+    {
+        List<int> allocatedTalents = GetFamiliarTalents(steamId, famKey);
+        if (allocatedTalents.Count == 0) return;
+
+        var bonuses = FamiliarTalentSystem.CalculateTalentBonuses(allocatedTalents);
+
+        // Apply stat modifiers
+        foreach (var bonus in bonuses)
+        {
+            switch (bonus.Key)
+            {
+                case FamiliarTalentSystem.TalentStatType.PhysicalPower:
+                    unitStats.PhysicalPower._Value *= (1f + bonus.Value);
+                    break;
+                case FamiliarTalentSystem.TalentStatType.SpellPower:
+                    unitStats.SpellPower._Value *= (1f + bonus.Value);
+                    break;
+                case FamiliarTalentSystem.TalentStatType.AttackSpeed:
+                    abilityBar.AbilityAttackSpeed._Value *= (1f + bonus.Value);
+                    break;
+                case FamiliarTalentSystem.TalentStatType.MovementSpeed:
+                    moveSpeeds.Walk._Value *= (1f + bonus.Value);
+                    moveSpeeds.Run._Value *= (1f + bonus.Value);
+                    break;
+                case FamiliarTalentSystem.TalentStatType.MaxHealth:
+                    maxHealth *= (1f + bonus.Value);
+                    break;
+                // Note: CritChance and CritDamage would require different component access
+                // These are defined in the talent system but not applied here yet
+            }
+        }
+
+        // Write updated stats
+        familiar.Write(unitStats);
+        familiar.Write(abilityBar);
+        familiar.Write(moveSpeeds);
+
+        // Update health with talent bonus
+        float finalHealth = maxHealth;
+        familiar.With((ref Health health) =>
+        {
+            health.MaxHealth._Value = finalHealth;
+            health.Value = finalHealth;
+        });
+
+        // Apply visual buffs (e.g., dark red enrage aura)
+        var visualBuffs = FamiliarTalentSystem.GetVisualBuffs(allocatedTalents);
+        foreach (int buffId in visualBuffs)
+        {
+            PrefabGUID buffGuid = new(buffId);
+            familiar.TryApplyBuff(buffGuid);
+        }
     }
     public static void ModifyBloodSource(Entity familiar, int level)
     {

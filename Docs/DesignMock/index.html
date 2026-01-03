@@ -157,6 +157,248 @@
       background-image: url("./assets/sprites/MobLevel_Skull.png");
     }
 
+    .familiar-mode-tab-icon.is-talent {
+      background-image: url("./assets/sprites/spell_icon.png");
+    }
+
+    /* Talent Tree Styles */
+    .familiar-card-header.is-talent .familiar-card-icon {
+      background-image: url("./assets/sprites/spell_icon.png");
+    }
+
+    .talent-card {
+      min-height: 400px;
+    }
+
+    .talent-points-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 12px;
+    }
+
+    .talent-points-label {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .talent-points-value {
+      font-size: 16px;
+      font-weight: bold;
+      color: #f1d17a;
+      text-shadow: 0 0 8px rgba(241, 209, 122, 0.5);
+    }
+
+    .talent-points-spent {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .talent-familiar-name {
+      margin-left: auto;
+      color: #f1d7b2;
+      font-style: italic;
+    }
+
+    .talent-tree {
+      display: flex;
+      justify-content: space-around;
+      gap: 16px;
+      padding: 16px 8px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      min-height: 320px;
+    }
+
+    .talent-path {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      flex: 1;
+    }
+
+    .talent-path-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: rgba(255, 255, 255, 0.6);
+      margin-bottom: 12px;
+      padding: 4px 12px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .speed-path .talent-path-label {
+      color: #7ec8e3;
+      border-color: rgba(126, 200, 227, 0.3);
+    }
+
+    .power-path .talent-path-label {
+      color: #e87e4f;
+      border-color: rgba(232, 126, 79, 0.3);
+    }
+
+    .vitality-path .talent-path-label {
+      color: #7ed47e;
+      border-color: rgba(126, 212, 126, 0.3);
+    }
+
+    .talent-connection {
+      width: 3px;
+      height: 20px;
+      background: rgba(80, 80, 90, 0.6);
+      border-radius: 2px;
+    }
+
+    .talent-connection.is-allocated {
+      background: linear-gradient(180deg, #5cc25c, #3fbf44);
+      box-shadow: 0 0 6px rgba(95, 191, 72, 0.5);
+    }
+
+    .talent-node {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .talent-node:hover {
+      transform: scale(1.1);
+    }
+
+    .talent-node-inner {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      font-size: 16px;
+      font-weight: bold;
+      border: 2px solid rgba(80, 80, 90, 0.8);
+      background: rgba(40, 40, 50, 0.9);
+      color: rgba(255, 255, 255, 0.5);
+      transition: all 0.2s;
+    }
+
+    .talent-node.notable .talent-node-inner {
+      width: 48px;
+      height: 48px;
+      font-size: 18px;
+      border-width: 3px;
+    }
+
+    .talent-node.keystone .talent-node-inner {
+      width: 56px;
+      height: 56px;
+      font-size: 22px;
+      border-width: 4px;
+      border-color: rgba(180, 60, 60, 0.7);
+      background: rgba(60, 30, 30, 0.9);
+    }
+
+    /* Allocated state */
+    .talent-node.is-allocated .talent-node-inner {
+      background: linear-gradient(135deg, #2c6b2c, #3d8b3d);
+      border-color: #5cc25c;
+      color: #ffffff;
+      box-shadow: 0 0 12px rgba(92, 194, 92, 0.4);
+    }
+
+    /* Available state */
+    .talent-node.is-available .talent-node-inner {
+      background: linear-gradient(135deg, #6b5c2c, #8b7a3d);
+      border-color: #c2a85c;
+      color: #f1d17a;
+      box-shadow: 0 0 12px rgba(194, 168, 92, 0.4);
+      animation: pulse-available 2s infinite;
+    }
+
+    @keyframes pulse-available {
+
+      0%,
+      100% {
+        box-shadow: 0 0 12px rgba(194, 168, 92, 0.4);
+      }
+
+      50% {
+        box-shadow: 0 0 20px rgba(194, 168, 92, 0.7);
+      }
+    }
+
+    /* Enrage Keystone special style */
+    .talent-node.keystone.enrage .talent-node-inner {
+      border-color: rgba(180, 30, 30, 0.9);
+      background: linear-gradient(135deg, #4a1515, #6b2020);
+    }
+
+    .talent-node.keystone.enrage.is-allocated .talent-node-inner {
+      background: linear-gradient(135deg, #8b2020, #c03030);
+      border-color: #ff4444;
+      box-shadow: 0 0 20px rgba(255, 68, 68, 0.6), 0 0 40px rgba(139, 0, 0, 0.4);
+      animation: enrage-pulse 1.5s infinite;
+    }
+
+    @keyframes enrage-pulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 20px rgba(255, 68, 68, 0.6), 0 0 40px rgba(139, 0, 0, 0.4);
+      }
+
+      50% {
+        box-shadow: 0 0 30px rgba(255, 68, 68, 0.8), 0 0 60px rgba(139, 0, 0, 0.6);
+      }
+    }
+
+    .talent-node-name {
+      margin-top: 4px;
+      font-size: 9px;
+      color: rgba(255, 255, 255, 0.55);
+      text-align: center;
+      max-width: 60px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .talent-node.is-allocated .talent-node-name,
+    .talent-node.is-available .talent-node-name {
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    /* Talent Info Panel */
+    .talent-info-panel {
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: rgba(0, 0, 0, 0.35);
+      border-left: 3px solid rgba(180, 30, 30, 0.8);
+    }
+
+    .talent-info-title {
+      font-size: 13px;
+      font-weight: bold;
+      color: #f1d7b2;
+      margin-bottom: 4px;
+    }
+
+    .talent-info-desc {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.75);
+      margin-bottom: 4px;
+    }
+
+    .talent-info-effect {
+      font-size: 10px;
+      color: #ff6b6b;
+      font-style: italic;
+    }
+
     .familiar-mode-content {
       display: none;
     }
@@ -918,6 +1160,7 @@
         opacity: 0;
         transform: translateY(6px);
       }
+
       to {
         opacity: 1;
         transform: translateY(0);
@@ -1616,27 +1859,49 @@
 
         <!-- Equipment Slots -->
         <div class="equipment-slots">
-          <div class="equipment-slot"><div class="equipment-slot-icon"></div></div>
-          <div class="equipment-slot has-item"><div class="equipment-slot-icon"></div><div class="equipment-slot-upgrade"></div></div>
-          <div class="equipment-slot has-item"><div class="equipment-slot-icon"></div></div>
-          <div class="equipment-slot has-item"><div class="equipment-slot-icon"></div><div class="equipment-slot-upgrade"></div></div>
-          <div class="equipment-slot has-item"><div class="equipment-slot-icon"></div></div>
-          <div class="equipment-slot"><div class="equipment-slot-icon"></div></div>
-          <div class="equipment-slot has-item"><div class="equipment-slot-icon"></div></div>
+          <div class="equipment-slot">
+            <div class="equipment-slot-icon"></div>
+          </div>
+          <div class="equipment-slot has-item">
+            <div class="equipment-slot-icon"></div>
+            <div class="equipment-slot-upgrade"></div>
+          </div>
+          <div class="equipment-slot has-item">
+            <div class="equipment-slot-icon"></div>
+          </div>
+          <div class="equipment-slot has-item">
+            <div class="equipment-slot-icon"></div>
+            <div class="equipment-slot-upgrade"></div>
+          </div>
+          <div class="equipment-slot has-item">
+            <div class="equipment-slot-icon"></div>
+          </div>
+          <div class="equipment-slot">
+            <div class="equipment-slot-icon"></div>
+          </div>
+          <div class="equipment-slot has-item">
+            <div class="equipment-slot-icon"></div>
+          </div>
         </div>
 
         <!-- Hotbar -->
         <div class="hotbar-slots">
           <div class="hotbar-group">
             <div class="hotbar-slot has-item"><span class="hotbar-slot-number">1</span></div>
-            <div class="hotbar-slot has-item"><span class="hotbar-slot-number">2</span><div class="equipment-slot-upgrade"></div></div>
-            <div class="hotbar-slot has-item"><span class="hotbar-slot-number">3</span><div class="equipment-slot-upgrade"></div></div>
+            <div class="hotbar-slot has-item"><span class="hotbar-slot-number">2</span>
+              <div class="equipment-slot-upgrade"></div>
+            </div>
+            <div class="hotbar-slot has-item"><span class="hotbar-slot-number">3</span>
+              <div class="equipment-slot-upgrade"></div>
+            </div>
             <div class="hotbar-slot"><span class="hotbar-slot-number">4</span></div>
           </div>
           <div class="hotbar-divider"></div>
           <div class="hotbar-group">
             <div class="hotbar-slot"><span class="hotbar-slot-number">5</span></div>
-            <div class="hotbar-slot has-item"><span class="hotbar-slot-number">6</span><div class="equipment-slot-upgrade"></div></div>
+            <div class="hotbar-slot has-item"><span class="hotbar-slot-number">6</span>
+              <div class="equipment-slot-upgrade"></div>
+            </div>
             <div class="hotbar-slot"><span class="hotbar-slot-number">7</span></div>
             <div class="hotbar-slot"><span class="hotbar-slot-number">8</span></div>
           </div>
@@ -1748,7 +2013,8 @@
                 </div>
 
                 <div class="exo-hint" style="margin-top: 10px;">
-                  Leaderboards show the top players for the selected prestige type. Some types may be disabled by the server.
+                  Leaderboards show the top players for the selected prestige type. Some types may be disabled by the
+                  server.
                 </div>
               </div>
             </div>
@@ -1784,7 +2050,8 @@
                     </div>
 
                     <div class="exo-hint">
-                      Charge refills over real time (about 1 day to fully recharge). When enabled, use the Taunt emote to enter Exoform.
+                      Charge refills over real time (about 1 day to fully recharge). When enabled, use the Taunt emote
+                      to enter Exoform.
                     </div>
                   </div>
 
@@ -1963,7 +2230,8 @@
             <div class="stat-bonus-content" id="stat-blood-content">
               <!-- Blood Header -->
               <div class="stat-header">
-                <div class="stat-header-icon" style="background-image:url('./assets/sprites/BloodType_Rogue_Big.png')"></div>
+                <div class="stat-header-icon" style="background-image:url('./assets/sprites/BloodType_Rogue_Big.png')">
+                </div>
                 <div class="stat-header-info">
                   <div class="stat-header-name">Warrior</div>
                   <div class="stat-header-meta">
@@ -2134,7 +2402,11 @@
               </button>
               <button class="familiar-mode-tab" data-fam-mode="battles">
                 <span class="familiar-mode-tab-icon is-battle"></span>
-                <span>Battle Groups</span>
+                <span>Battles</span>
+              </button>
+              <button class="familiar-mode-tab" data-fam-mode="talents">
+                <span class="familiar-mode-tab-icon is-talent"></span>
+                <span>Talents</span>
               </button>
             </div>
 
@@ -2339,7 +2611,8 @@
                           <button class="familiar-danger-btn" type="button">Delete Active Box</button>
                         </div>
                         <div class="familiar-tool-row">
-                          <button class="familiar-mini-btn is-wide" type="button">Move Active Familiar → Destination Box</button>
+                          <button class="familiar-mini-btn is-wide" type="button">Move Active Familiar → Destination
+                            Box</button>
                         </div>
                         <div class="familiar-subheader-row">
                           <span class="familiar-subheader">Current Box Click Action</span>
@@ -2368,7 +2641,8 @@
                         </button>
                         <div class="familiar-tools">
                           <div class="familiar-tool-row">
-                            <button class="familiar-mini-btn is-wide" type="button">Move Selected Overflow → Destination Box</button>
+                            <button class="familiar-mini-btn is-wide" type="button">Move Selected Overflow → Destination
+                              Box</button>
                           </div>
                           <div class="familiar-tool-row">
                             <button class="familiar-mini-btn is-wide" type="button">Refresh Overflow</button>
@@ -2499,13 +2773,120 @@
                 </div>
               </div>
             </div>
-          </div>
+
+            <!-- TALENTS TAB -->
+            <div class="familiar-mode-content" id="familiar-talents-content">
+              <div class="familiar-scrollable">
+                <div class="familiar-card talent-card">
+                  <div class="familiar-card-header is-talent">
+                    <span class="familiar-card-icon"></span>
+                    <span class="familiar-card-title">Familiar Talent Tree</span>
+                  </div>
+
+                  <div class="talent-points-header">
+                    <span class="talent-points-label">Talent Points:</span>
+                    <span class="talent-points-value">5</span>
+                    <span class="talent-points-spent">/ 12 available</span>
+                    <span class="talent-familiar-name">Scout Lv.45</span>
+                  </div>
+
+                  <!-- Talent Tree Visualization -->
+                  <div class="talent-tree">
+                    <!-- Speed Path (Left) -->
+                    <div class="talent-path speed-path">
+                      <div class="talent-path-label">Speed</div>
+                      <div class="talent-node minor is-allocated" data-id="1">
+                        <div class="talent-node-inner">I</div>
+                        <div class="talent-node-name">Speed I</div>
+                      </div>
+                      <div class="talent-connection is-allocated"></div>
+                      <div class="talent-node minor is-allocated" data-id="2">
+                        <div class="talent-node-inner">II</div>
+                        <div class="talent-node-name">Speed II</div>
+                      </div>
+                      <div class="talent-connection is-allocated"></div>
+                      <div class="talent-node notable is-available" data-id="3">
+                        <div class="talent-node-inner">⚡</div>
+                        <div class="talent-node-name">Swift Strike</div>
+                      </div>
+                      <div class="talent-connection"></div>
+                      <div class="talent-node keystone" data-id="4">
+                        <div class="talent-node-inner">💀</div>
+                        <div class="talent-node-name">Berserker</div>
+                      </div>
+                    </div>
+
+                    <!-- Power Path (Center) -->
+                    <div class="talent-path power-path">
+                      <div class="talent-path-label">Power</div>
+                      <div class="talent-node minor is-allocated" data-id="10">
+                        <div class="talent-node-inner">I</div>
+                        <div class="talent-node-name">Power I</div>
+                      </div>
+                      <div class="talent-connection is-allocated"></div>
+                      <div class="talent-node minor is-available" data-id="11">
+                        <div class="talent-node-inner">II</div>
+                        <div class="talent-node-name">Power II</div>
+                      </div>
+                      <div class="talent-connection"></div>
+                      <div class="talent-node notable" data-id="12">
+                        <div class="talent-node-inner">⚔</div>
+                        <div class="talent-node-name">Brutal Force</div>
+                      </div>
+                      <div class="talent-connection"></div>
+                      <div class="talent-node keystone enrage" data-id="13">
+                        <div class="talent-node-inner">🔥</div>
+                        <div class="talent-node-name">Enrage</div>
+                      </div>
+                    </div>
+
+                    <!-- Vitality Path (Right) -->
+                    <div class="talent-path vitality-path">
+                      <div class="talent-path-label">Vitality</div>
+                      <div class="talent-node minor is-allocated" data-id="20">
+                        <div class="talent-node-inner">I</div>
+                        <div class="talent-node-name">Vitality I</div>
+                      </div>
+                      <div class="talent-connection is-allocated"></div>
+                      <div class="talent-node minor is-allocated" data-id="21">
+                        <div class="talent-node-inner">II</div>
+                        <div class="talent-node-name">Vitality II</div>
+                      </div>
+                      <div class="talent-connection is-allocated"></div>
+                      <div class="talent-node notable is-available" data-id="22">
+                        <div class="talent-node-inner">🛡</div>
+                        <div class="talent-node-name">Fortitude</div>
+                      </div>
+                      <div class="talent-connection"></div>
+                      <div class="talent-node keystone" data-id="23">
+                        <div class="talent-node-inner">🏰</div>
+                        <div class="talent-node-name">Juggernaut</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Talent Info Panel -->
+                  <div class="talent-info-panel">
+                    <div class="talent-info-title">Enrage (Keystone)</div>
+                    <div class="talent-info-desc">+100% Damage, +50% Attack Speed, -25% Health</div>
+                    <div class="talent-info-effect">Visual Effect: Dark Red Aura</div>
+                  </div>
+
+                  <!-- Reset Button -->
+                  <div class="familiar-tools" style="margin-top:12px;">
+                    <button class="familiar-danger-btn" type="button">Reset All Talents</button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
-        <div class="note">Edit CSS variables at top to tweak sizing.</div>
       </div>
     </div>
+
+    <div class="note">Edit CSS variables at top to tweak sizing.</div>
+  </div>
+  </div>
   </div>
 
   <script>
