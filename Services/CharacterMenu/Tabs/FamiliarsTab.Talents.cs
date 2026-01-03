@@ -8,6 +8,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using static Eclipse.Services.CanvasService.DataHUD;
 using static Eclipse.Services.DataService;
 
@@ -53,6 +54,35 @@ internal partial class FamiliarsTab
         public bool IsAvailable { get; set; }
     }
 
+    private class TalentDef
+    {
+        public string Name;
+        public string Description;
+        public string Effect;
+    }
+
+    private TextMeshProUGUI _infoTitleText;
+    private TextMeshProUGUI _infoDescText;
+    private TextMeshProUGUI _infoEffectText;
+
+    private readonly Dictionary<int, TalentDef> _talentDefs = new()
+    {
+        { 1, new() { Name = "Speed I", Description = "+5% Movement Speed" } },
+        { 2, new() { Name = "Speed II", Description = "+10% Movement Speed" } },
+        { 3, new() { Name = "Swift Strike", Description = "+25% Attack Speed" } },
+        { 4, new() { Name = "Berserker", Description = "+50% Attack Speed, +30% Move Speed", Effect = "Effect: Dark Red Aura, -15% Defense" } },
+        
+        { 10, new() { Name = "Power I", Description = "+5% Physical & Spell Power" } },
+        { 11, new() { Name = "Power II", Description = "+10% Physical & Spell Power" } },
+        { 12, new() { Name = "Brutal Force", Description = "+25% All Damage" } },
+        { 13, new() { Name = "Enrage", Description = "+100% Damage below 50% HP", Effect = "Effect: Enrage Aura, -25% Max Health" } },
+
+        { 20, new() { Name = "Vitality I", Description = "+5% Max Health" } },
+        { 21, new() { Name = "Vitality II", Description = "+10% Max Health" } },
+        { 22, new() { Name = "Fortitude", Description = "+25% Damage Reduction" } },
+        { 23, new() { Name = "Juggernaut", Description = "+100% Health, Immune to Stuns", Effect = "Effect: Iron Skin, -30% Speed" } }
+    };
+
     #endregion
 
     #region Talent Panel Creation
@@ -64,7 +94,7 @@ internal partial class FamiliarsTab
         RectTransform card = CreateFamiliarCard(parent, "FamiliarTalentsCard", stretchHeight: false);
         if (card == null) return;
 
-        // Ensure the card has a VerticalLayoutGroup to stack Header, Tree, and Footer
+        // Ensure the card has a VerticalLayoutGroup to stack Header, Tree, Info, and Footer
         VerticalLayoutGroup cardLayout = card.GetComponent<VerticalLayoutGroup>();
         if (cardLayout == null) cardLayout = card.gameObject.AddComponent<VerticalLayoutGroup>();
         cardLayout.childAlignment = TextAnchor.UpperCenter;
@@ -72,7 +102,7 @@ internal partial class FamiliarsTab
         cardLayout.childControlWidth = true;
         cardLayout.childForceExpandHeight = false;
         cardLayout.childForceExpandWidth = true;
-        cardLayout.spacing = 10f;
+        cardLayout.spacing = 8f;
         cardLayout.padding = CreatePadding(16, 16, 16, 16);
 
         _ = CreateFamiliarSectionLabel(card, reference, "Familiar Talent Tree", FamiliarHeaderDefaultIconSpriteNames);
@@ -94,8 +124,8 @@ internal partial class FamiliarsTab
             // Horizontal layout for the 3 paths (Speed, Power, Vitality)
             HorizontalLayoutGroup hLayout = treeContainer.gameObject.AddComponent<HorizontalLayoutGroup>();
             hLayout.childAlignment = TextAnchor.UpperCenter;
-            hLayout.spacing = 20f; // More spacing between columns
-            hLayout.padding = CreatePadding(20, 20, 20, 20); // Inner padding
+            hLayout.spacing = 20f; 
+            hLayout.padding = CreatePadding(20, 20, 20, 20); 
             hLayout.childForceExpandWidth = true;
             hLayout.childForceExpandHeight = true;
             hLayout.childControlWidth = true;
@@ -103,7 +133,7 @@ internal partial class FamiliarsTab
 
             // Height for the tree container
             LayoutElement treeLayout = treeContainer.gameObject.AddComponent<LayoutElement>();
-            treeLayout.minHeight = 350f;     // Increased height for better spacing
+            treeLayout.minHeight = 350f;     
             treeLayout.preferredHeight = 350f;
             treeLayout.flexibleHeight = 0f;
 
@@ -125,28 +155,52 @@ internal partial class FamiliarsTab
             });
 
             CreateTalentPath(treeContainer, reference, "Vitality", new[] {
-                (20, "Vitality I", false),
+                (20, "Vitality II", false), // Corrected IDs from prev version
                 (21, "Vitality II", false),
                 (22, "Fortitude", false),
                 (23, "Juggernaut", true)
             });
         }
 
-        // Spacer to push Reset button to bottom if extra space exists
-        CreateSpacer(card, 10f);
+        CreateSpacer(card, 5f);
 
-        // Reset talents button - create directly as an action row
+        // --- Talent Info Panel ---
+        RectTransform infoPanel = CreateRectTransformObject("TalentInfoPanel", card);
+        LayoutElement infoLayout = infoPanel.gameObject.AddComponent<LayoutElement>();
+        infoLayout.minHeight = 80f;
+        infoLayout.preferredHeight = 80f;
+        infoLayout.flexibleWidth = 1f;
+
+        // Background for info
+        Image infoBg = infoPanel.gameObject.AddComponent<Image>();
+        ApplySprite(infoBg, FamiliarCardSpriteNames);
+        infoBg.color = new Color(0.1f, 0.1f, 0.15f, 0.5f);
+
+        VerticalLayoutGroup infoVLayout = infoPanel.gameObject.AddComponent<VerticalLayoutGroup>();
+        infoVLayout.padding = CreatePadding(10, 10, 5, 5);
+        infoVLayout.spacing = 2f;
+        infoVLayout.childControlHeight = true;
+        infoVLayout.childControlWidth = true;
+        infoVLayout.childForceExpandHeight = false;
+
+        _infoTitleText = CreateFamiliarText(infoPanel, reference, "Hover a Talent", FamiliarMetaFontScale, FontStyles.Bold, TextAlignmentOptions.Left, Color.white);
+        _infoDescText = CreateFamiliarText(infoPanel, reference, "See details here.", FamiliarMetaFontScale * 0.9f, FontStyles.Normal, TextAlignmentOptions.Left, new Color(0.8f, 0.8f, 0.8f));
+        _infoEffectText = CreateFamiliarText(infoPanel, reference, "", FamiliarMetaFontScale * 0.8f, FontStyles.Italic, TextAlignmentOptions.Left, new Color(0.6f, 0.6f, 1f));
+
+        CreateSpacer(card, 5f);
+
+        // Users might want the Reset button at the bottom
         RectTransform resetRow = CreateRectTransformObject("ResetTalentsRow", card);
         if (resetRow != null)
         {
             LayoutElement resetLayout = resetRow.gameObject.AddComponent<LayoutElement>();
-            resetLayout.minHeight = 40f;
-            resetLayout.preferredHeight = 40f;
+            resetLayout.minHeight = 36f;
+            resetLayout.preferredHeight = 36f;
             resetLayout.flexibleWidth = 1f;
 
             Image resetBg = resetRow.gameObject.AddComponent<Image>();
             ApplySprite(resetBg, FamiliarRowSpriteNames);
-            resetBg.color = new Color(0.6f, 0.1f, 0.1f, 0.8f); // Darker red background
+            resetBg.color = new Color(0.6f, 0.1f, 0.1f, 0.8f);
             resetBg.raycastTarget = true;
 
             HorizontalLayoutGroup resetHLayout = resetRow.gameObject.AddComponent<HorizontalLayoutGroup>();
@@ -155,7 +209,7 @@ internal partial class FamiliarsTab
             resetHLayout.childControlWidth = true;
             resetHLayout.childControlHeight = true;
 
-            TextMeshProUGUI resetText = CreateFamiliarText(resetRow, reference, "Reset Talents",
+            CreateFamiliarText(resetRow, reference, "Reset Talents",
                 FamiliarActionFontScale, FontStyles.Bold, TextAlignmentOptions.Center, Color.white);
 
             SimpleStunButton resetButton = resetRow.gameObject.AddComponent<SimpleStunButton>();
@@ -250,7 +304,7 @@ internal partial class FamiliarsTab
         VerticalLayoutGroup containerVLayout = nodeContainer.gameObject.AddComponent<VerticalLayoutGroup>();
         containerVLayout.childAlignment = TextAnchor.UpperCenter;
         containerVLayout.spacing = 4f;
-        containerVLayout.childControlWidth = false; // Let elements size themselves
+        containerVLayout.childControlWidth = true; // Changed to TRUE to prevent stretching if force expand is false
         containerVLayout.childControlHeight = true;
         containerVLayout.childForceExpandWidth = false;
         containerVLayout.childForceExpandHeight = false;
@@ -262,6 +316,7 @@ internal partial class FamiliarsTab
         nodeLayout.preferredWidth = size;
         nodeLayout.minHeight = size;
         nodeLayout.preferredHeight = size;
+        nodeRect.sizeDelta = new Vector2(size, size); // Explicitly size it
 
         Image bg = nodeRect.gameObject.AddComponent<Image>();
         ApplySprite(bg, isKeystone ? TalentKeystoneSpriteNames : TalentNodeSpriteNames);
@@ -272,6 +327,20 @@ internal partial class FamiliarsTab
         int capturedId = talentId;
         button.onClick.RemoveAllListeners();
         button.onClick.AddListener((UnityAction)(() => OnTalentNodeClicked(capturedId)));
+
+        // ADD HOVER (PointerEnter/Exit)
+        // Note: EventTrigger requires GraphicRaycaster which Canvas usually has.
+        EventTrigger trigger = nodeRect.gameObject.AddComponent<EventTrigger>();
+        
+        // Enter
+        EventTrigger.Entry entryEnter = new() { eventID = EventTriggerType.PointerEnter };
+        entryEnter.callback.AddListener((UnityAction<BaseEventData>)delegate { UpdateTalentInfoPanel(capturedId); });
+        trigger.triggers.Add(entryEnter);
+
+        // Exit
+        EventTrigger.Entry entryExit = new() { eventID = EventTriggerType.PointerExit };
+        entryExit.callback.AddListener((UnityAction<BaseEventData>)delegate { ClearTalentInfoPanel(); });
+        trigger.triggers.Add(entryExit);
 
         // Label
         TextMeshProUGUI label = CreateFamiliarText(nodeContainer, reference, name,
@@ -295,6 +364,23 @@ internal partial class FamiliarsTab
             IsAllocated = false,
             IsAvailable = false
         };
+    }
+
+    private void UpdateTalentInfoPanel(int talentId)
+    {
+        if (_talentDefs.TryGetValue(talentId, out var def))
+        {
+            if (_infoTitleText != null) _infoTitleText.text = def.Name;
+            if (_infoDescText != null) _infoDescText.text = def.Description;
+            if (_infoEffectText != null) _infoEffectText.text = def.Effect ?? "";
+        }
+    }
+
+    private void ClearTalentInfoPanel()
+    {
+        if (_infoTitleText != null) _infoTitleText.text = "Hover a Talent";
+        if (_infoDescText != null) _infoDescText.text = "See details here.";
+        if (_infoEffectText != null) _infoEffectText.text = "";
     }
 
     #endregion

@@ -1,4 +1,4 @@
-﻿using BepInEx;
+using BepInEx;
 using Bloodcraft.Patches;
 using Bloodcraft.Resources;
 using Bloodcraft.Services;
@@ -19,6 +19,7 @@ using static Bloodcraft.Services.DataService.FamiliarPersistence.FamiliarBuffsMa
 using static Bloodcraft.Services.DataService.FamiliarPersistence.FamiliarExperienceManager;
 using static Bloodcraft.Services.DataService.FamiliarPersistence.FamiliarPrestigeManager;
 using static Bloodcraft.Services.DataService.FamiliarPersistence.FamiliarUnlocksManager;
+using static Bloodcraft.Services.DataService.FamiliarPersistence.FamiliarTalentManager;
 using static Bloodcraft.Services.PlayerService;
 using static Bloodcraft.Systems.Familiars.FamiliarBindingSystem;
 using static Bloodcraft.Systems.Familiars.FamiliarLevelingSystem;
@@ -1663,5 +1664,114 @@ internal static class FamiliarCommands
             LocalizationService.HandleReply(ctx, "Familiar arena position changed! (only one arena currently allowed)");
         }
     }
+
+    #region Talent Commands
+
+    [Command(name: "talent allocate", shortHand: "ta", adminOnly: false, usage: ".fam ta [TalentId]", description: "Allocate a talent point to a specific talent node.")]
+    public static void AllocateTalentCommand(ChatCommandContext ctx, int talentId)
+    {
+        if (!ConfigService.FamiliarSystem)
+        {
+            LocalizationService.HandleReply(ctx, "Familiars are not enabled.");
+            return;
+        }
+
+        ulong steamId = ctx.User.PlatformId;
+
+        if (!steamId.HasActiveFamiliar())
+        {
+            LocalizationService.HandleReply(ctx, "You need an active familiar to allocate talents!");
+            return;
+        }
+
+        ActiveFamiliarData activeFamiliar = GetActiveFamiliarData(steamId);
+        int familiarId = activeFamiliar.FamiliarId;
+
+        // Get familiar level and prestige to calculate available points
+        var xpData = GetFamiliarExperience(steamId, familiarId);
+        int level = xpData.Key;
+        FamiliarPrestigeData prestigeData = LoadFamiliarPrestigeData(steamId);
+        int prestige = prestigeData.FamiliarPrestige.TryGetValue(familiarId, out var p) ? p : 0;
+
+        // Calculate available and spent points
+        int availablePoints = (level / 10) + (prestige * 2);
+        var allocatedTalents = FamiliarTalentManager.GetFamiliarTalents(steamId, familiarId);
+        int spentPoints = allocatedTalents.Count;
+
+        if (spentPoints >= availablePoints)
+        {
+            LocalizationService.HandleReply(ctx, $"No talent points available! (Spent: <color=white>{spentPoints}/{availablePoints}</color>)");
+            return;
+        }
+
+        // Try to allocate
+        if (FamiliarTalentManager.AllocateTalent(steamId, familiarId, talentId))
+        {
+            LocalizationService.HandleReply(ctx, $"<color=green>Talent {talentId} allocated!</color> ({spentPoints + 1}/{availablePoints} points spent)");
+
+            // Refresh familiar stats if it's currently spawned
+            Entity familiar = GetActiveFamiliar(ctx.Event.SenderCharacterEntity);
+            if (familiar.Exists())
+            {
+                // Re-apply stats with new talents
+                ModifyUnitStats(familiar, level, steamId, familiarId);
+            }
+        }
+        else
+        {
+            LocalizationService.HandleReply(ctx, $"<color=red>Failed to allocate talent {talentId}.</color> Check prerequisites or if already allocated.");
+        }
+    }
+
+    [Command(name: "talent reset", shortHand: "tr", adminOnly: false, usage: ".fam tr", description: "Reset all allocated talents for the active familiar.")]
+    public static void ResetTalentsCommand(ChatCommandContext ctx)
+    {
+        if (!ConfigService.FamiliarSystem)
+        {
+            LocalizationService.HandleReply(ctx, "Familiars are not enabled.");
+            return;
+        }
+
+        ulong steamId = ctx.User.PlatformId;
+
+        if (!steamId.HasActiveFamiliar())
+        {
+            LocalizationService.HandleReply(ctx, "You need an active familiar to reset talents!");
+            return;
+        }
+
+        ActiveFamiliarData activeFamiliar = GetActiveFamiliarData(steamId);
+        int familiarId = activeFamiliar.FamiliarId;
+
+        var allocatedTalents = FamiliarTalentManager.GetFamiliarTalents(steamId, familiarId);
+        if (allocatedTalents.Count == 0)
+        {
+            LocalizationService.HandleReply(ctx, "No talents allocated to reset.");
+            return;
+        }
+
+        if (FamiliarTalentManager.ResetTalents(steamId, familiarId))
+        {
+            LocalizationService.HandleReply(ctx, $"<color=yellow>All talents reset!</color> ({allocatedTalents.Count} points refunded)");
+
+            // Refresh familiar stats
+            Entity familiar = GetActiveFamiliar(ctx.Event.SenderCharacterEntity);
+            if (familiar.Exists())
+            {
+                var xpData = GetFamiliarExperience(steamId, familiarId);
+                int level = xpData.Key;
+                FamiliarPrestigeData prestigeData = LoadFamiliarPrestigeData(steamId);
+                int prestige = prestigeData.FamiliarPrestige.TryGetValue(familiarId, out var p) ? p : 0;
+
+                ModifyUnitStats(familiar, level, steamId, familiarId);
+            }
+        }
+        else
+        {
+            LocalizationService.HandleReply(ctx, "<color=red>Failed to reset talents.</color>");
+        }
+    }
+
+    #endregion
 }
 
