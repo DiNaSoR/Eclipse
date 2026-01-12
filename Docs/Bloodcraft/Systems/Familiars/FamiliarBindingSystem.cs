@@ -509,11 +509,7 @@ internal static class FamiliarBindingSystem
         familiarUnitStats.PhysicalPower._Value = unitStats.PhysicalPower._Value * powerFactor; // scaling these with prestige not a great idea in retrospect, nerfed that a bit but they also start at higher base power per prestige then probably rebalancing when equipment stats come into play
         familiarUnitStats.SpellPower._Value = unitStats.SpellPower._Value * powerFactor;
 
-        // Boost familiar movement speed so they can catch up to players
-        const float RUN_SPEED_MULTIPLIER = 1.5f; // 50% faster run speed
-        const float MIN_RUN_SPEED = 7f; // Player run speed is ~7
-        
-        familiarAiMoveSpeeds.Run._Value = Math.Max(aiMoveSpeeds.Run._Value * RUN_SPEED_MULTIPLIER, MIN_RUN_SPEED);
+        // Speed is now handled dynamically by FamiliarService based on distance from player
 
         /*
         foreach (FamiliarStatType prestigeStat in familiarPrestigeStats)
@@ -617,8 +613,12 @@ internal static class FamiliarBindingSystem
                 case FamiliarTalentSystem.TalentStatType.MaxHealth:
                     maxHealth *= (1f + bonus.Value);
                     break;
-                // Note: CritChance and CritDamage would require different component access
-                // These are defined in the talent system but not applied here yet
+                case FamiliarTalentSystem.TalentStatType.DamageReduction:
+                    unitStats.PhysicalResistance._Value += bonus.Value;
+                    unitStats.SpellResistance._Value += bonus.Value;
+                    break;
+                // TODO: CritChance and CritDamage require buff-based application
+                // UnitStats doesn't have direct fields for these stats
             }
         }
 

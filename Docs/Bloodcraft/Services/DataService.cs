@@ -1295,10 +1295,11 @@ internal static class DataService
             public static FamiliarTalentData LoadFamiliarTalentData(ulong steamId)
             {
                 string filePath = GetFilePath(steamId);
-                if (!File.Exists(filePath))
+                string jsonString = SafeReadJson(filePath);
+                
+                if (string.IsNullOrEmpty(jsonString))
                     return new FamiliarTalentData();
 
-                string jsonString = File.ReadAllText(filePath);
                 return JsonSerializer.Deserialize<FamiliarTalentData>(jsonString) ?? new FamiliarTalentData();
             }
             public static List<int> GetFamiliarTalents(ulong steamId, int familiarId)

@@ -23,6 +23,7 @@ using static Bloodcraft.Services.DataService.FamiliarPersistence.FamiliarTalentM
 using static Bloodcraft.Services.PlayerService;
 using static Bloodcraft.Systems.Familiars.FamiliarBindingSystem;
 using static Bloodcraft.Systems.Familiars.FamiliarLevelingSystem;
+using static Bloodcraft.Systems.Familiars.FamiliarTalentSystem;
 using static Bloodcraft.Systems.Familiars.FamiliarUnlockSystem;
 using static Bloodcraft.Utilities.Familiars;
 using static Bloodcraft.Utilities.Familiars.ActiveFamiliarManager;
@@ -1694,9 +1695,9 @@ internal static class FamiliarCommands
         int prestige = prestigeData.FamiliarPrestige.TryGetValue(familiarId, out var p) ? p : 0;
 
         // Calculate available and spent points
-        int availablePoints = (level / 10) + (prestige * 2);
+        int availablePoints = CalculateAvailableTalentPoints(level, prestige, ConfigService.MaxFamiliarLevel);
         var allocatedTalents = FamiliarTalentManager.GetFamiliarTalents(steamId, familiarId);
-        int spentPoints = allocatedTalents.Count;
+        int spentPoints = CalculatePointsSpent(allocatedTalents);
 
         if (spentPoints >= availablePoints)
         {
