@@ -78,8 +78,8 @@ internal class Plugin : BasePlugin
         _professions = InitConfigEntry("UIOptions", "Professions", true, "Enable/Disable the professions tab, requires both ClientCompanion/ProfessionSystem to be enabled in Bloodcraft.");
         _quests = InitConfigEntry("UIOptions", "QuestTrackers", true, "Enable/Disable the quest tracker, requires both ClientCompanion/QuestSystem to be enabled in Bloodcraft.");
         _shiftSlot = InitConfigEntry("UIOptions", "ShiftSlot", true, "Enable/Disable the shift slot, requires both ClientCompanion and shift slot spell to be enabled in Bloodcraft.");
-        _classUi = InitConfigEntry("UIOptions", "ClassUI", true, "Enable/Disable the class selection and spell list panels, requires both ClientCompanion/ClassSystem to be enabled in Bloodcraft.");
-        _tabsUi = InitConfigEntry("UIOptions", "TabsUI", true, "Enable/Disable the prestige leaderboard, exoform/shapeshift, and familiar battle tabs.");
+        _classUi = InitConfigEntry("UIOptions", "ClassUI", false, "Enable/Disable the class selection and spell list panels, requires both ClientCompanion/ClassSystem to be enabled in Bloodcraft.");
+        _tabsUi = InitConfigEntry("UIOptions", "TabsUI", false, "Enable/Disable the prestige leaderboard, exoform/shapeshift, and familiar battle tabs.");
         _attributeBuffs = InitConfigEntry("UIOptions", "AttributeBuffs", true, "Enable/Disable applying Bloodcraft stats to the Attributes tab. Disable if you see ModifiableFloat/StatType errors on newer game versions.");
 
         _eclipsed = InitConfigEntry("UIOptions", "Eclipsed", true, "Set to false for slower update intervals (0.1s -> 1s) if performance is negatively impacted.");

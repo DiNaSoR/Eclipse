@@ -509,6 +509,12 @@ internal static class FamiliarBindingSystem
         familiarUnitStats.PhysicalPower._Value = unitStats.PhysicalPower._Value * powerFactor; // scaling these with prestige not a great idea in retrospect, nerfed that a bit but they also start at higher base power per prestige then probably rebalancing when equipment stats come into play
         familiarUnitStats.SpellPower._Value = unitStats.SpellPower._Value * powerFactor;
 
+        // Boost familiar movement speed so they can catch up to players
+        const float RUN_SPEED_MULTIPLIER = 1.5f; // 50% faster run speed
+        const float MIN_RUN_SPEED = 7f; // Player run speed is ~7
+        
+        familiarAiMoveSpeeds.Run._Value = Math.Max(aiMoveSpeeds.Run._Value * RUN_SPEED_MULTIPLIER, MIN_RUN_SPEED);
+
         /*
         foreach (FamiliarStatType prestigeStat in familiarPrestigeStats)
         {

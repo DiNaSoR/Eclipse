@@ -80,6 +80,98 @@ internal static class DataService
         }
     }
 
+    /// <summary>
+    /// Safely writes JSON to a file using atomic write pattern.
+    /// Creates a .tmp file, backs up existing .bak, then renames to prevent data loss.
+    /// </summary>
+    static void SafeWriteJson(string filePath, string jsonContent)
+    {
+        string tempPath = filePath + ".tmp";
+        string backupPath = filePath + ".bak";
+
+        try
+        {
+            // Ensure directory exists
+            string directory = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
+
+            // Write to temp file first
+            File.WriteAllText(tempPath, jsonContent);
+
+            // Backup existing file
+            if (File.Exists(filePath))
+                File.Copy(filePath, backupPath, true);
+
+            // Atomic rename (overwrites existing)
+            File.Move(tempPath, filePath, true);
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"[SafeWriteJson] Failed to save {filePath}: {ex.Message}");
+
+            // Cleanup temp file if it exists
+            try
+            {
+                if (File.Exists(tempPath))
+                    File.Delete(tempPath);
+            }
+            catch { }
+
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Safely reads JSON from a file with automatic backup recovery.
+    /// If main file is missing, empty, or corrupted, attempts to restore from .bak file.
+    /// </summary>
+    static string SafeReadJson(string filePath)
+    {
+        string backupPath = filePath + ".bak";
+
+        // Try reading main file
+        if (File.Exists(filePath))
+        {
+            try
+            {
+                string content = File.ReadAllText(filePath);
+                if (!string.IsNullOrWhiteSpace(content) && content.TrimStart().StartsWith("{"))
+                    return content;
+
+                Core.Log.LogWarning($"[SafeReadJson] Main file empty or invalid: {filePath}");
+            }
+            catch (Exception ex)
+            {
+                Core.Log.LogWarning($"[SafeReadJson] Failed to read main file: {filePath} - {ex.Message}");
+            }
+        }
+
+        // Try backup file
+        if (File.Exists(backupPath))
+        {
+            try
+            {
+                string backupContent = File.ReadAllText(backupPath);
+                if (!string.IsNullOrWhiteSpace(backupContent) && backupContent.TrimStart().StartsWith("{"))
+                {
+                    Core.Log.LogWarning($"[SafeReadJson] Restored from backup: {backupPath}");
+                    
+                    // Restore backup to main file
+                    try { File.Copy(backupPath, filePath, true); } catch { }
+                    
+                    return backupContent;
+                }
+            }
+            catch (Exception ex)
+            {
+                Core.Log.LogWarning($"[SafeReadJson] Failed to read backup: {backupPath} - {ex.Message}");
+            }
+        }
+
+        return null;
+    }
+
     public static bool TryGetPlayerExperience(this ulong steamId, out KeyValuePair<int, float> experience)
     {
         return _playerExperience.TryGetValue(steamId, out experience);
@@ -872,7 +964,7 @@ internal static class DataService
             try
             {
                 string json = JsonSerializer.Serialize(data, _jsonOptions);
-                File.WriteAllText(path, json);
+                SafeWriteJson(path, json);
             }
             catch (IOException ex)
             {
@@ -895,7 +987,7 @@ internal static class DataService
             try
             {
                 string json = JsonSerializer.Serialize(data, _jsonOptions);
-                File.WriteAllText(path, json);
+                SafeWriteJson(path, json);
             }
             catch (IOException ex)
             {
@@ -918,7 +1010,7 @@ internal static class DataService
             try
             {
                 string json = JsonSerializer.Serialize(data, _jsonOptions);
-                File.WriteAllText(path, json);
+                SafeWriteJson(path, json);
             }
             catch (IOException ex)
             {
@@ -1037,7 +1129,7 @@ internal static class DataService
             var options = new JsonSerializerOptions { WriteIndented = true };
             string jsonString = JsonSerializer.Serialize(preferences, options);
 
-            File.WriteAllText(filePath, jsonString);
+            SafeWriteJson(filePath, jsonString);
         }
         public static Dictionary<string, bool> LoadPlayerBools(ulong steamId)
         {
@@ -1086,15 +1178,16 @@ internal static class DataService
                 string filePath = GetFilePath(steamId);
                 string jsonString = JsonSerializer.Serialize(data, _jsonOptions);
 
-                File.WriteAllText(filePath, jsonString);
+                SafeWriteJson(filePath, jsonString);
             }
             public static FamiliarUnlocksData LoadFamiliarUnlocksData(ulong steamId)
             {
                 string filePath = GetFilePath(steamId);
-                if (!File.Exists(filePath))
+                string jsonString = SafeReadJson(filePath);
+                
+                if (string.IsNullOrEmpty(jsonString))
                     return new FamiliarUnlocksData();
 
-                string jsonString = File.ReadAllText(filePath);
                 FamiliarUnlocksData data = JsonSerializer.Deserialize<FamiliarUnlocksData>(jsonString) ?? new FamiliarUnlocksData();
 
                 data.FamiliarUnlocks ??= [];
@@ -1116,16 +1209,17 @@ internal static class DataService
                 string filePath = GetFilePath(steamId);
                 string jsonString = JsonSerializer.Serialize(data, _jsonOptions);
 
-                File.WriteAllText(filePath, jsonString);
+                SafeWriteJson(filePath, jsonString);
             }
             public static FamiliarExperienceData LoadFamiliarExperienceData(ulong steamId)
             {
                 string filePath = GetFilePath(steamId);
-                if (!File.Exists(filePath))
+                string jsonString = SafeReadJson(filePath);
+                
+                if (string.IsNullOrEmpty(jsonString))
                     return new FamiliarExperienceData();
 
-                string jsonString = File.ReadAllText(filePath);
-                return JsonSerializer.Deserialize<FamiliarExperienceData>(jsonString);
+                return JsonSerializer.Deserialize<FamiliarExperienceData>(jsonString) ?? new FamiliarExperienceData();
             }
         }
         public static class FamiliarPrestigeManager // redo this with class for prestige data when adding traits or something
@@ -1141,17 +1235,17 @@ internal static class DataService
                 string filePath = GetFilePath(steamId);
                 string jsonString = JsonSerializer.Serialize(data, _jsonOptions);
 
-                File.WriteAllText(filePath, jsonString);
+                SafeWriteJson(filePath, jsonString);
             }
             public static FamiliarPrestigeData LoadFamiliarPrestigeData(ulong steamId)
             {
                 string filePath = GetFilePath(steamId);
-
-                if (!File.Exists(filePath))
+                string jsonString = SafeReadJson(filePath);
+                
+                if (string.IsNullOrEmpty(jsonString))
                     return new FamiliarPrestigeData();
 
-                string jsonString = File.ReadAllText(filePath);
-                return JsonSerializer.Deserialize<FamiliarPrestigeData>(jsonString);
+                return JsonSerializer.Deserialize<FamiliarPrestigeData>(jsonString) ?? new FamiliarPrestigeData();
             }
         }
         public static class FamiliarBuffsManager
@@ -1167,16 +1261,17 @@ internal static class DataService
                 string filePath = GetFilePath(steamId);
                 string jsonString = JsonSerializer.Serialize(data, _jsonOptions);
 
-                File.WriteAllText(filePath, jsonString);
+                SafeWriteJson(filePath, jsonString);
             }
             public static FamiliarBuffsData LoadFamiliarBuffsData(ulong steamId)
             {
                 string filePath = GetFilePath(steamId);
-                if (!File.Exists(filePath))
+                string jsonString = SafeReadJson(filePath);
+                
+                if (string.IsNullOrEmpty(jsonString))
                     return new FamiliarBuffsData();
 
-                string jsonString = File.ReadAllText(filePath);
-                return JsonSerializer.Deserialize<FamiliarBuffsData>(jsonString);
+                return JsonSerializer.Deserialize<FamiliarBuffsData>(jsonString) ?? new FamiliarBuffsData();
             }
         }
         public static class FamiliarTalentManager
@@ -1195,7 +1290,7 @@ internal static class DataService
                 string filePath = GetFilePath(steamId);
                 string jsonString = JsonSerializer.Serialize(data, _jsonOptions);
 
-                File.WriteAllText(filePath, jsonString);
+                SafeWriteJson(filePath, jsonString);
             }
             public static FamiliarTalentData LoadFamiliarTalentData(ulong steamId)
             {
@@ -1267,7 +1362,7 @@ internal static class DataService
                 string filePath = GetFilePath(steamId);
                 string jsonString = JsonSerializer.Serialize(data, _jsonOptions);
 
-                File.WriteAllText(filePath, jsonString);
+                SafeWriteJson(filePath, jsonString);
             }
             public static FamiliarBattleGroupsData LoadFamiliarBattleGroupsData(ulong steamId)
             {
@@ -1418,7 +1513,7 @@ internal static class DataService
             {
                 try
                 {
-                    File.WriteAllText(GetFilePath(steamId), JsonSerializer.Serialize(data, _jsonOptions));
+                    SafeWriteJson(GetFilePath(steamId), JsonSerializer.Serialize(data, _jsonOptions));
                 }
                 catch (Exception ex)
                 {
@@ -1707,7 +1802,7 @@ internal static class DataService
             {
                 try
                 {
-                    File.WriteAllText(GetFilePath(steamId), JsonSerializer.Serialize(data, _jsonOptions));
+                    SafeWriteJson(GetFilePath(steamId), JsonSerializer.Serialize(data, _jsonOptions));
                 }
                 catch (Exception ex)
                 {
@@ -2400,7 +2495,7 @@ public static class FamiliarEquipmentManager
         try
         {
             string jsonString = JsonSerializer.Serialize(data, _jsonOptions);
-            File.WriteAllText(filePath, jsonString);
+            SafeWriteJson(filePath, jsonString);
         }
         catch (Exception ex)
         {

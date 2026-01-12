@@ -1,5 +1,6 @@
 ﻿using Bloodcraft.Systems.Expertise;
 using Bloodcraft.Systems.Legacies;
+using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using static Bloodcraft.Interfaces.BloodLegacyManager;
@@ -40,8 +41,23 @@ internal abstract class DataManager<T> : IDataManager where T : class, new()
     {
         if (!DataMap.TryGetValue(steamId, out T data)) return;
         string path = GetPlayerPath(steamId);
-        string json = JsonSerializer.Serialize(data, _options);
-        File.WriteAllText(path, json);
+        string tempPath = path + ".tmp";
+        string backupPath = path + ".bak";
+        
+        try
+        {
+            string json = JsonSerializer.Serialize(data, _options);
+            File.WriteAllText(tempPath, json);
+            if (File.Exists(path))
+                File.Copy(path, backupPath, true);
+            File.Move(tempPath, path, true);
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"[DataManager.Save] Failed: {path} - {ex.Message}");
+            if (File.Exists(tempPath))
+                try { File.Delete(tempPath); } catch { }
+        }
     }
     public virtual void Load(ulong steamId)
     {
